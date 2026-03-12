@@ -13,7 +13,53 @@
     <string name="mainScreenText">Main Screen</string>
     <string name="screen1TitleText">Screen 1</string>
     <string name="screen2TitleText">Screen 2</string>
-    <string name="screen3TitleText">Screen 3</string>
+    <string name="screen3TitleText">Screen 3 — Action Pad Soundboard</string>
     <string name="screen4TitleText">Screen 4</string>
+    <string name="device_status_placeholder">Loading host device status…</string>
+    <string name="device_status_header">Host device status (SDK %1$d)</string>
+    <string name="device_status_camera">Camera module: hardware=%1$s, permission=%2$s</string>
+    <string name="device_status_microphone">Microphone module: hardware=%1$s, permission=%2$s</string>
+    <string name="device_status_gps">Location module: gps-hardware=%1$s, network-hardware=%2$s, fine=%3$s, coarse=%4$s</string>
+    <string name="device_status_sensor_accel">Sensor module (accelerometer): hardware=%1$s, regular-rate=%2$s, high-rate=%3$s, high-rate-permission=%4$s</string>
+    <string name="device_status_files">File module: model=%1$s, read-external=%2$s, media-audio=%3$s</string>
+    <string name="device_status_gate_recorder">Screen 1 Recorder gate-ready: %1$s</string>
+    <string name="device_status_gate_logger">Screen 4 GPS logger gate-ready: %1$s</string>
+    <string name="status_yes">Yes</string>
+    <string name="status_no">No</string>
+    <string name="permission_granted">Granted</string>
+    <string name="permission_denied">Denied</string>
+    <string name="permission_not_applicable">N/A</string>
+    <string name="storage_model_legacy">Legacy External Storage</string>
+    <string name="storage_model_scoped">Scoped Storage</string>
+
+
+    <string name="request_permissions_button">Request Missing Permissions</string>
+    <string name="permission_request_none_needed">All requestable permissions are already granted.</string>
+    <string name="permission_request_none_missing_label">None</string>
+    <string name="device_status_missing_permissions">Missing requestable permissions: %1$s</string>
+    <string name="device_status_fine_coordinate">Fine GPS coordinate: %1$s</string>
+    <string name="device_status_coarse_coordinate">Coarse GPS coordinate: %1$s</string>
+    <string name="coordinate_unavailable">Unavailable</string>
+    <string name="permission_camera">Camera</string>
+    <string name="permission_microphone">Microphone</string>
+    <string name="permission_location_fine">Location (Fine)</string>
+    <string name="permission_location_coarse">Location (Coarse)</string>
+    <string name="permission_read_external_storage">Read External Storage</string>
+    <string name="permission_read_media_audio">Read Media Audio</string>
+
+
+    <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
+    <string name="screen3_soundboard_help">Screen 3 scans device shared Music storage. Use folder back/forward to browse subfolders (for example Dirt-Samples/808); only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="soundboard_button_empty">(empty)</string>
+    <string name="soundboard_folder_prev">&lt; Folder</string>
+    <string name="soundboard_folder_next">Folder &gt;</string>
+    <string name="soundboard_folder_none">No playable folder</string>
+    <string name="soundboard_state_loading">Soundboard state: loading catalog…</string>
+    <string name="soundboard_state_ready">Soundboard state: ready (%1$d playable files)</string>
+    <string name="soundboard_state_playing">Soundboard state: playing %1$s</string>
+    <string name="soundboard_state_error">Soundboard state: error (%1$s)</string>
+    <string name="soundboard_state_error_missing">Missing or unsupported asset: %1$s</string>
+    <string name="soundboard_state_error_playback">Playback failed for: %1$s</string>
+    <string name="soundboard_state_error_permission_required">Grant audio/storage permission from Main Screen to read Music folder clips.</string>
 
 </resources>
