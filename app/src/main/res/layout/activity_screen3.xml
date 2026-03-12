@@ -40,7 +40,131 @@
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/topNavInclude" />
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:id="@+id/buttonGridContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/buttonGridTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/screen3_soundboard_grid_title"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/soundboardHelpText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/screen3_soundboard_help" />
+
+                <TextView
+                    android:id="@+id/soundboardStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/soundboard_state_loading"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/soundboardSelectFolderButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/soundboard_select_folder" />
+
+                <!-- Folder browser for sample packs (e.g., Dirt-Samples/808, 808bd...). -->
+                <LinearLayout
+                    android:id="@+id/soundboardFolderNavRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/soundboardFolderPrevButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/soundboard_folder_prev" />
+
+                    <TextView
+                        android:id="@+id/soundboardFolderNameText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_weight="2"
+                        android:gravity="center"
+                        android:text="@string/soundboard_folder_none"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/soundboardFolderNextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/soundboard_folder_next" />
+                </LinearLayout>
+
+                <GridLayout
+                    android:id="@+id/buttonGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:alignmentMode="alignMargins"
+                    android:columnCount="3"
+                    android:rowCount="12"
+                    android:useDefaultMargins="true">
+
+                    <!-- Row 1 -->
+                    <Button
+                        android:id="@+id/gridButton01"
+                        android:layout_width="0dp"
+                        android:layout_height="88dp"
+                        android:layout_columnWeight="1"
+                        android:text="B01" />
+
+                    <Button
+                        android:id="@+id/gridButton02"
+                        android:layout_width="0dp"
+                        android:layout_height="88dp"
+                        android:layout_columnWeight="1"
+                        android:text="B02" />
+
+                    <Button
+                        android:id="@+id/gridButton03"
+                        android:layout_width="0dp"
+                        android:layout_height="88dp"
+                        android:layout_columnWeight="1"
+                        android:text="B03" />
+
+                    <!-- Row 2 -->
+                    <Button
+                        android:id="@+id/gridButton04"
+                        android:layout_width="0dp"
+                        android:layout_height="88dp"
+                        android:layout_columnWeight="1"
+                        android:text="B04" />
+
+                    <Button
+                        android:id="@+id/gridButton05"
+                        android:layout_width="0dp"
+                        android:layout_height="88dp"
+                        android:layout_columnWeight="1"
+                        android:text="B05" />
+
+                    <Button
+                        android:id="@+id/gridButton06"
+                        android:layout_width="0dp"
+                        android:layout_height="88dp"
+                        android:layout_columnWeight="1"
+                        android:text="B06" />
 
         <Button
             android:id="@+id/soundboardSelectFolderButton"
