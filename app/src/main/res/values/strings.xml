@@ -14,7 +14,6 @@
     <string name="button4text">Go to Screen 4</string>
 
     <!-- Soundboard Assignment -->
-    <string name="soundboard_assignment_target_default">Assignment Target: Slot 1</string>
 
     <!-- Device Status -->
     <string name="device_status_placeholder">Loading host device status...</string>
@@ -50,7 +49,7 @@
     <string name="permission_read_media_audio">Read Media Audio</string>
 
     <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
-    <string name="screen3_soundboard_help">Choose a folder level using system file explorer, then browse only that level's sibling folders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="screen3_soundboard_help">Choose a folder level using system file explorer, then browse only that levels sibling folders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
     <string name="soundboard_button_empty">(empty)</string>
     <string name="soundboard_select_folder">Choose Sample Folder</string>
     <string name="soundboard_folder_prev">&lt; Folder</string>
