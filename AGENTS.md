@@ -3,7 +3,7 @@
 Operational guidance for agents working in this repository.
 
 ## Scope
-This file applies to the full repository rooted at `/workspace/AndroidAppScaffold1`.
+This file applies to the full repository rooted at `/workspace/PaulsWackyRecorder`.
 
 ## Repository intent
 This repo is an Android scaffold for **highly reproducible iteration** by humans and agents.
@@ -12,15 +12,24 @@ Core idea:
 - Avoid overfitting to one domain's app knowledge.
 - Prefer repeatable structures and automation.
 - Keep app scaffolding simple so domain work can move faster.
+- Keep capability/permission visibility explicit so feature gating is obvious early.
 
-## Default product shape
+## Current scaffolding baseline (codebase-aligned)
 Maintain this baseline unless a task explicitly requests changes:
 
-- `activity_main.xml` is the launcher/menu page.
-- `activity_screen1.xml` ... `activity_screen4.xml` are page-oriented activity shells.
-- `view_top_navigation.xml` provides cross-page navigation.
-- Activity classes should remain lightweight and easy to scan.
-- Pages may be duplicated for parallel contexts while preserving structure.
+- `MainActivity` is the launcher/menu and currently acts as a **device capability + permission status console**.
+- `activity_main.xml` remains the primary routing surface to Screens 1-4.
+- `view_top_navigation.xml` provides cross-page navigation and should stay shared.
+- `Screen1Activity`, `Screen2Activity`, and `Screen4Activity` are lightweight shell hosts by design.
+- `Screen3Activity` is the most feature-forward page and represents the **Action Pad / Soundboard** axis.
+- Keep activity classes lightweight, easy to scan, and XML-first for this scaffold layer.
+- Compose modules under `ui/*` are present for incremental adoption; do not force a full migration unless requested.
+
+## Near-term product direction
+- Continue using Main screen as the host-readiness dashboard (hardware + permission + gate status).
+- Keep screen-level feature work modular (e.g., `feature/soundboard`, `device/*`) and avoid coupling unrelated page logic.
+- Preserve reproducible page shells so domain-specific variants can be duplicated quickly.
+- Keep docs (`README.md`, map notes, and this file) synchronized whenever scaffold behavior changes.
 
 ## Working conventions
 - Prefer small, incremental commits with clear messages.
@@ -29,9 +38,8 @@ Maintain this baseline unless a task explicitly requests changes:
 - If introducing new activities, declare them in `AndroidManifest.xml`.
 - Preserve package namespace: `com.example.templei`.
 
-
 ## Screen 3 soundboard scaffold contract
-- Screen 3 now represents the **Action Pad / Soundboard** boolean axis.
+- Screen 3 represents the **Action Pad / Soundboard** boolean axis.
 - Sound files are discovered from a user-selected folder via system file picker; browsing is lateral across sibling folders at that selected level.
 - Supported formats: `.wav` and `.mp3`.
 - Soundboard clips must be `<= 6 seconds`; longer clips are treated as non-playable.
@@ -87,8 +95,10 @@ Use these markdown notes to create richer graph intersections across pages and s
 - [[app/src/main/java/com/example/templei/Screen2Activity.kt]]
 - [[app/src/main/java/com/example/templei/Screen3Activity.kt]]
 - [[app/src/main/java/com/example/templei/Screen4Activity.kt]]
+- [[app/src/main/java/com/example/templei/device/DeviceCapabilityProbe.kt]]
 - [[app/src/main/java/com/example/templei/feature/camera/CameraFeature.kt]]
 - [[app/src/main/java/com/example/templei/feature/export/ExportFeature.kt]]
+- [[app/src/main/java/com/example/templei/feature/soundboard/SoundboardStateMachine.kt]]
 - [[app/src/main/java/com/example/templei/ui/components/PulseButton.kt]]
 - [[app/src/main/java/com/example/templei/ui/components/UiPaletteBar.kt]]
 - [[app/src/main/java/com/example/templei/ui/navigation/NavGraph.kt]]
