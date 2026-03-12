@@ -383,6 +383,8 @@ class Screen3Activity : ComponentActivity() {
             }
             clipBrowserContainer.addView(clipButton)
         }
+
+        playClip(clip, currentFolderClips.map { it.displayName })
     }
 
     private fun assignClipToSelectedFavoriteSlot(clip: AudioClip) {
