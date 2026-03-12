@@ -9,12 +9,14 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.templei.device.CoordinateSample
 import com.example.templei.device.DeviceCapabilityProbe
 import com.example.templei.device.DeviceCapabilityRegistry
 import com.example.templei.device.DeviceCapabilitySnapshot
 import com.example.templei.device.PermissionState
 import com.example.templei.device.StorageModel
 import com.example.templei.ui.navigation.TopNavigation
+import java.util.Locale
 
 /**
  * Entry screen shell that routes to Screens 1-4 and observes host-device readiness.
@@ -81,17 +83,36 @@ class MainActivity : ComponentActivity() {
             appendLine(getString(R.string.device_status_camera, yesNo(snapshot.hasCamera), permission(snapshot.cameraPermission)))
             appendLine(getString(R.string.device_status_microphone, yesNo(snapshot.hasMicrophone), permission(snapshot.microphonePermission)))
             appendLine(getString(R.string.device_status_gps, yesNo(snapshot.hasGps), permission(snapshot.fineLocationPermission), permission(snapshot.coarseLocationPermission)))
-            appendLine(getString(R.string.device_status_sensor_accel, yesNo(snapshot.hasAccelerometer)))
+            appendLine(getString(
+                R.string.device_status_sensor_accel,
+                yesNo(snapshot.hasAccelerometer),
+                yesNo(snapshot.regularSensorRateUsable),
+                yesNo(snapshot.highSensorRateUsable),
+                permission(snapshot.highSamplingRateSensorsPermission)
+            ))
             appendLine(getString(
                 R.string.device_status_files,
                 storageModel(snapshot.storageModel),
                 permission(snapshot.readExternalStoragePermission),
                 permission(snapshot.mediaAudioPermission)
             ))
+            appendLine(getString(R.string.device_status_fine_coordinate, formatCoordinate(snapshot.fineLocationSample)))
+            appendLine(getString(R.string.device_status_coarse_coordinate, formatCoordinate(snapshot.coarseLocationSample)))
             appendLine(getString(R.string.device_status_gate_recorder, yesNo(snapshot.recorderUsable)))
             appendLine(getString(R.string.device_status_gate_logger, yesNo(snapshot.gpsLoggerUsable)))
             appendLine(getString(R.string.device_status_missing_permissions, missingRequestable))
         }
+    }
+
+    private fun formatCoordinate(sample: CoordinateSample?): String {
+        return sample?.let {
+            val lat = String.format(Locale.US, "%.6f", it.latitude)
+            val lon = String.format(Locale.US, "%.6f", it.longitude)
+            val accuracy = it.accuracyMeters?.let { meters ->
+                String.format(Locale.US, " ±%.1fm", meters)
+            }.orEmpty()
+            "$lat, $lon$accuracy"
+        } ?: getString(R.string.coordinate_unavailable)
     }
 
     private fun collectRequestableMissingPermissions(snapshot: DeviceCapabilitySnapshot): List<String> {
