@@ -15,5 +15,36 @@
     <string name="screen2TitleText">Screen 2</string>
     <string name="screen3TitleText">Screen 3</string>
     <string name="screen4TitleText">Screen 4</string>
+    <string name="device_status_placeholder">Loading host device status…</string>
+    <string name="device_status_header">Host device status (SDK %1$d)</string>
+    <string name="device_status_camera">Camera module: hardware=%1$s, permission=%2$s</string>
+    <string name="device_status_microphone">Microphone module: hardware=%1$s, permission=%2$s</string>
+    <string name="device_status_gps">GPS module: hardware=%1$s, fine=%2$s, coarse=%3$s</string>
+    <string name="device_status_sensor_accel">Sensor module (accelerometer): hardware=%1$s, regular-rate=%2$s, high-rate=%3$s, high-rate-permission=%4$s</string>
+    <string name="device_status_files">File module: model=%1$s, read-external=%2$s, media-audio=%3$s</string>
+    <string name="device_status_gate_recorder">Screen 1 Recorder gate-ready: %1$s</string>
+    <string name="device_status_gate_logger">Screen 4 GPS logger gate-ready: %1$s</string>
+    <string name="status_yes">Yes</string>
+    <string name="status_no">No</string>
+    <string name="permission_granted">Granted</string>
+    <string name="permission_denied">Denied</string>
+    <string name="permission_not_applicable">N/A</string>
+    <string name="storage_model_legacy">Legacy External Storage</string>
+    <string name="storage_model_scoped">Scoped Storage</string>
+
+
+    <string name="request_permissions_button">Request Missing Permissions</string>
+    <string name="permission_request_none_needed">All requestable permissions are already granted.</string>
+    <string name="permission_request_none_missing_label">None</string>
+    <string name="device_status_missing_permissions">Missing requestable permissions: %1$s</string>
+    <string name="device_status_fine_coordinate">Fine GPS coordinate: %1$s</string>
+    <string name="device_status_coarse_coordinate">Coarse GPS coordinate: %1$s</string>
+    <string name="coordinate_unavailable">Unavailable</string>
+    <string name="permission_camera">Camera</string>
+    <string name="permission_microphone">Microphone</string>
+    <string name="permission_location_fine">Location (Fine)</string>
+    <string name="permission_location_coarse">Location (Coarse)</string>
+    <string name="permission_read_external_storage">Read External Storage</string>
+    <string name="permission_read_media_audio">Read Media Audio</string>
 
 </resources>
