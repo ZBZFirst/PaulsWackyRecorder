@@ -30,6 +30,14 @@
         android:textAppearance="@android:style/TextAppearance.Material.Small"
         tools:text="SDK 34\nCamera: HW=Yes, Permission=No" />
 
+
+    <Button
+        android:id="@+id/requestPermissionsButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/request_permissions_button" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/frameLayout"
         android:layout_width="match_parent"

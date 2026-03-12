@@ -1,9 +1,14 @@
 package com.example.templei
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
+import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import com.example.templei.device.DeviceCapabilityProbe
 import com.example.templei.device.DeviceCapabilityRegistry
 import com.example.templei.device.DeviceCapabilitySnapshot
@@ -19,12 +24,22 @@ import com.example.templei.ui.navigation.TopNavigation
 class MainActivity : ComponentActivity() {
     private lateinit var deviceStatusText: TextView
 
+    private val permissionRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        refreshDeviceStatus()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
         deviceStatusText = findViewById(R.id.deviceStatusText)
+
+        findViewById<Button>(R.id.requestPermissionsButton).setOnClickListener {
+            requestMissingPermissions()
+        }
 
         TopNavigation.bind(activity = this)
         TopNavigation.bindMainMenuGrid(activity = this)
@@ -37,6 +52,19 @@ class MainActivity : ComponentActivity() {
         refreshDeviceStatus()
     }
 
+    private fun requestMissingPermissions() {
+        val snapshot = DeviceCapabilityProbe.snapshot(this)
+        val permissionsToRequest = collectRequestableMissingPermissions(snapshot)
+
+        if (permissionsToRequest.isEmpty()) {
+            Toast.makeText(this, getString(R.string.permission_request_none_needed), Toast.LENGTH_SHORT).show()
+            refreshDeviceStatus()
+            return
+        }
+
+        permissionRequestLauncher.launch(permissionsToRequest.toTypedArray())
+    }
+
     private fun refreshDeviceStatus() {
         val snapshot = DeviceCapabilityProbe.snapshot(this)
         DeviceCapabilityRegistry.update(snapshot)
@@ -44,6 +72,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun formatSnapshot(snapshot: DeviceCapabilitySnapshot): String {
+        val missingRequestable = collectRequestableMissingPermissions(snapshot)
+            .joinToString(separator = ", ") { permissionLabel(it) }
+            .ifEmpty { getString(R.string.permission_request_none_missing_label) }
+
         return buildString {
             appendLine(getString(R.string.device_status_header, snapshot.sdkInt))
             appendLine(getString(R.string.device_status_camera, yesNo(snapshot.hasCamera), permission(snapshot.cameraPermission)))
@@ -58,7 +90,43 @@ class MainActivity : ComponentActivity() {
             ))
             appendLine(getString(R.string.device_status_gate_recorder, yesNo(snapshot.recorderUsable)))
             appendLine(getString(R.string.device_status_gate_logger, yesNo(snapshot.gpsLoggerUsable)))
+            appendLine(getString(R.string.device_status_missing_permissions, missingRequestable))
         }
+    }
+
+    private fun collectRequestableMissingPermissions(snapshot: DeviceCapabilitySnapshot): List<String> {
+        val requestables = mutableListOf<String>()
+
+        if (snapshot.hasCamera && snapshot.cameraPermission == PermissionState.DENIED) {
+            requestables += Manifest.permission.CAMERA
+        }
+        if (snapshot.hasMicrophone && snapshot.microphonePermission == PermissionState.DENIED) {
+            requestables += Manifest.permission.RECORD_AUDIO
+        }
+        if (snapshot.hasGps && snapshot.fineLocationPermission == PermissionState.DENIED) {
+            requestables += Manifest.permission.ACCESS_FINE_LOCATION
+        }
+        if (snapshot.hasGps && snapshot.coarseLocationPermission == PermissionState.DENIED) {
+            requestables += Manifest.permission.ACCESS_COARSE_LOCATION
+        }
+        if (snapshot.readExternalStoragePermission == PermissionState.DENIED) {
+            requestables += Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        if (snapshot.mediaAudioPermission == PermissionState.DENIED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestables += Manifest.permission.READ_MEDIA_AUDIO
+        }
+
+        return requestables.distinct()
+    }
+
+    private fun permissionLabel(permission: String): String = when (permission) {
+        Manifest.permission.CAMERA -> getString(R.string.permission_camera)
+        Manifest.permission.RECORD_AUDIO -> getString(R.string.permission_microphone)
+        Manifest.permission.ACCESS_FINE_LOCATION -> getString(R.string.permission_location_fine)
+        Manifest.permission.ACCESS_COARSE_LOCATION -> getString(R.string.permission_location_coarse)
+        Manifest.permission.READ_EXTERNAL_STORAGE -> getString(R.string.permission_read_external_storage)
+        Manifest.permission.READ_MEDIA_AUDIO -> getString(R.string.permission_read_media_audio)
+        else -> permission
     }
 
     private fun yesNo(value: Boolean): String = if (value) {
