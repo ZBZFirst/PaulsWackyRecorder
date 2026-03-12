@@ -13,7 +13,7 @@
     <string name="mainScreenText">Main Screen</string>
     <string name="screen1TitleText">Screen 1</string>
     <string name="screen2TitleText">Screen 2</string>
-    <string name="screen3TitleText">Screen 3</string>
+    <string name="screen3TitleText">Screen 3 — Action Pad Soundboard</string>
     <string name="screen4TitleText">Screen 4</string>
     <string name="device_status_placeholder">Loading host device status…</string>
     <string name="device_status_header">Host device status (SDK %1$d)</string>
@@ -46,5 +46,19 @@
     <string name="permission_location_coarse">Location (Coarse)</string>
     <string name="permission_read_external_storage">Read External Storage</string>
     <string name="permission_read_media_audio">Read Media Audio</string>
+
+
+    <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
+    <string name="screen3_soundboard_help">Load Dirt-Samples or other packs into app/src/main/assets/soundboard. Use folder back/forward to browse subfolders; only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="soundboard_button_empty">(empty)</string>
+    <string name="soundboard_folder_prev">&lt; Folder</string>
+    <string name="soundboard_folder_next">Folder &gt;</string>
+    <string name="soundboard_folder_none">No playable folder</string>
+    <string name="soundboard_state_loading">Soundboard state: loading catalog…</string>
+    <string name="soundboard_state_ready">Soundboard state: ready (%1$d playable files)</string>
+    <string name="soundboard_state_playing">Soundboard state: playing %1$s</string>
+    <string name="soundboard_state_error">Soundboard state: error (%1$s)</string>
+    <string name="soundboard_state_error_missing">Missing or unsupported asset: %1$s</string>
+    <string name="soundboard_state_error_playback">Playback failed for: %1$s</string>
 
 </resources>
