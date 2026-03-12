@@ -40,7 +40,8 @@
     <string name="permission_request_none_missing_label">None</string>
     <string name="device_status_fine_coordinate">Fine GPS coordinate: %1$s</string>
     <string name="device_status_coarse_coordinate">Coarse GPS coordinate: %1$s</string>
-    <string name="device_status_missing_permissions">Missing requestable permissions: %1$s</string>
+    <string name="coordinate_unavailable">Unavailable</string>
+    <string name="coordinate_unavaiable">Unavailable</string>
     <string name="permission_camera">Camera</string>
     <string name="permission_microphone">Microphone</string>
     <string name="permission_location_fine">Location (Fine)</string>

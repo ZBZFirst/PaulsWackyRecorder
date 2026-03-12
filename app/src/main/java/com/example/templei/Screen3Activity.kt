@@ -71,22 +71,6 @@ class Screen3Activity : ComponentActivity() {
     private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
 
-    private var folderEntries: List<FolderEntry> = emptyList()
-    private var currentFolderIndex: Int = 0
-    private var activeFolderClips: List<ClipMetadata> = emptyList()
-
-    private val clipById = linkedMapOf<String, ClipMetadata>()
-    private val favoriteSlotClipIds = mutableMapOf<Int, String>()
-    private var selectedAssignmentSlotIndex: Int = 0
-
-    private val clipCache = linkedMapOf<String, CacheEntry>()
-    private val pendingLoadCallbacks = mutableMapOf<Int, MutableList<(Boolean) -> Unit>>()
-    private val soundIdToClipId = mutableMapOf<Int, String>()
-    private val activeStreamIds = mutableSetOf<Int>()
-    private val lastPlayByClipIdMs = mutableMapOf<String, Long>()
-    private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
-    private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
-
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             Log.i(TAG, "Folder picked: $uri")
@@ -964,6 +948,10 @@ class Screen3Activity : ComponentActivity() {
         val unloadOnFolderChange: Boolean = DEFAULT_UNLOAD_ON_FOLDER_CHANGE,
         val cachePolicy: CachePolicy = DEFAULT_CACHE_POLICY
     )
+
+    private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
+
+    private enum class TrimReason { FOLDER_SWITCH, MEMORY_PRESSURE, SETTINGS_APPLY }
 
     private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
 
