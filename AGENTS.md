@@ -29,6 +29,16 @@ Maintain this baseline unless a task explicitly requests changes:
 - If introducing new activities, declare them in `AndroidManifest.xml`.
 - Preserve package namespace: `com.example.templei`.
 
+
+## Screen 3 soundboard scaffold contract
+- Screen 3 now represents the **Action Pad / Soundboard** boolean axis.
+- Sound files are discovered from `app/src/main/assets/soundboard`.
+- Supported formats: `.wav` and `.mp3`.
+- Soundboard clips must be `<= 6 seconds`; longer clips are treated as non-playable.
+- Playback is button-press driven only (no autoplay state transitions).
+- Screen 3 includes folder back/forward navigation; the centered label must show the active sample folder name.
+- Keep Screen 3 state vocabulary explicit (`Loading`, `Ready`, `Playing`, `Error`) when extending behavior.
+
 ## Validation guidance
 - Run Gradle checks where environment permits.
 - If Android SDK is unavailable, still perform static validation and report the limitation.
