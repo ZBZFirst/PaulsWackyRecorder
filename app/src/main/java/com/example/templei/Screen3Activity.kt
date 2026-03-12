@@ -23,6 +23,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Screen 3: folder-scoped soundboard with explicit favorites and folder clip browser.
@@ -198,6 +200,25 @@ class Screen3Activity : ComponentActivity() {
             return
         }
 
+        // Phase 5 refinement: hydrate from persisted catalog cache first to avoid full rescan on reopen.
+        val cachedCatalog = readCachedCatalog(rootUriString)
+        if (cachedCatalog != null) {
+            clipsByFolder = cachedCatalog
+            folderNames = clipsByFolder.keys.sorted()
+            availableClipByUri = clipsByFolder.values.flatten().associateBy { it.uri.toString() }
+            currentFolderIndex = currentFolderIndex.coerceIn(
+                minimumValue = 0,
+                maximumValue = (folderNames.size - 1).coerceAtLeast(0)
+            )
+            loadedRootUriString = rootUriString
+            bindCurrentFolder()
+            renderFavoriteSlots()
+
+            stateMachine.onCatalogLoaded(currentFolderClips.map { it.displayName })
+            renderState(stateMachine.currentState())
+            return
+        }
+
         loadFolderJob?.cancel()
         loadFolderJob = activityScope.launch {
             stateMachine.onLoadingProgress(
@@ -228,6 +249,7 @@ class Screen3Activity : ComponentActivity() {
 
             loadedRootUriString = rootUriString
             clipsByFolder = loaded
+            writeCachedCatalog(rootUriString, loaded)
             folderNames = clipsByFolder.keys.sorted()
             availableClipByUri = clipsByFolder.values.flatten().associateBy { it.uri.toString() }
             currentFolderIndex = currentFolderIndex.coerceIn(
@@ -552,6 +574,66 @@ class Screen3Activity : ComponentActivity() {
         return supported
     }
 
+    private fun writeCachedCatalog(rootUriString: String, catalog: Map<String, List<AudioClip>>) {
+        val payload = JSONObject().apply {
+            put(JSON_ROOT_URI, rootUriString)
+            put(JSON_CLIPS, JSONArray().apply {
+                catalog.forEach { (folderName, clips) ->
+                    clips.forEach { clip ->
+                        put(JSONObject().apply {
+                            put(JSON_FOLDER, folderName)
+                            put(JSON_NAME, clip.displayName)
+                            put(JSON_URI, clip.uri.toString())
+                        })
+                    }
+                }
+            })
+        }
+
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putString(KEY_CACHED_CATALOG_JSON, payload.toString())
+            .apply()
+    }
+
+    private fun readCachedCatalog(rootUriString: String): Map<String, List<AudioClip>>? {
+        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getString(KEY_CACHED_CATALOG_JSON, null)
+            ?: return null
+
+        return runCatching {
+            val payload = JSONObject(raw)
+            if (payload.optString(JSON_ROOT_URI) != rootUriString) {
+                return null
+            }
+
+            val byFolder = linkedMapOf<String, MutableList<AudioClip>>()
+            val clips = payload.optJSONArray(JSON_CLIPS) ?: JSONArray()
+            for (i in 0 until clips.length()) {
+                val item = clips.optJSONObject(i) ?: continue
+                val folder = item.optString(JSON_FOLDER)
+                val displayName = item.optString(JSON_NAME)
+                val uriString = item.optString(JSON_URI)
+                if (folder.isBlank() || displayName.isBlank() || uriString.isBlank()) continue
+
+                byFolder.getOrPut(folder) { mutableListOf() }
+                    .add(
+                        AudioClip(
+                            displayName = displayName,
+                            uri = Uri.parse(uriString),
+                            folderName = folder
+                        )
+                    )
+            }
+
+            byFolder
+                .mapValues { entry -> entry.value.sortedBy { it.displayName } }
+                .toSortedMap()
+        }.onFailure {
+            Log.w(TAG, "Failed reading cached catalog", it)
+        }.getOrNull()
+    }
+
     private fun saveRootFolderUri(uri: Uri) {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .edit()
@@ -571,10 +653,6 @@ class Screen3Activity : ComponentActivity() {
             editor.putString("$KEY_FAVORITE_SLOT_PREFIX$index", uri)
         }
         editor.apply()
-    }
-
-    private fun findFavoriteSlotByUri(uri: Uri): Int {
-        return favoriteSlotUris.indexOf(uri.toString())
     }
 
     private fun restoreFavoriteSlots() {
@@ -673,7 +751,14 @@ class Screen3Activity : ComponentActivity() {
         private const val PREFS_NAME = "screen3_soundboard"
         private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
         private const val KEY_FAVORITE_SLOT_PREFIX = "favorite_slot_"
+        private const val KEY_CACHED_CATALOG_JSON = "cached_catalog_json"
         private const val MAX_SOUND_DURATION_MS = 6_000L
         private const val FAVORITE_SLOT_COUNT = 9
+
+        private const val JSON_ROOT_URI = "rootUri"
+        private const val JSON_CLIPS = "clips"
+        private const val JSON_FOLDER = "folder"
+        private const val JSON_NAME = "name"
+        private const val JSON_URI = "uri"
     }
 }

@@ -28,3 +28,4 @@ Screen 3 is now a bounded soundboard surface:
 - phase-4 folder clip action list: dynamic buttons support tap-to-play and long-press-to-assign, with per-folder wav/mp3 counts
 - phase-5 playback hardening: MediaPlayer SAF URI async playback path, with long-press clear on favorite slots
 - phase-5 discovery visibility refinement: separate discovery/validation progress and one-button-per-playable-wav browser rendering
+- phase-5 persistence refinement: cached folder catalog hydration by root URI to skip repeated full rescans on reopen

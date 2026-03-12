@@ -177,3 +177,4 @@ Use this section to keep incremental delivery transparent and reproducible.
 - Favorites and browser hints are explicit in UI copy to clarify tap vs long-press actions.
 - Loading now surfaces two explicit sub-stages in UI: discovery (folders/files found) and validation (processed/playable progress).
 - Clip browser renders one dynamic button per discovered playable `.wav` in the active folder.
+- Folder catalog results are persisted per selected root URI and hydrated on reopen to avoid multi-minute rescans for large libraries.
