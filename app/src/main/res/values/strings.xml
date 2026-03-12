@@ -19,7 +19,7 @@
     <string name="device_status_header">Host device status (SDK %1$d)</string>
     <string name="device_status_camera">Camera module: hardware=%1$s, permission=%2$s</string>
     <string name="device_status_microphone">Microphone module: hardware=%1$s, permission=%2$s</string>
-    <string name="device_status_gps">GPS module: hardware=%1$s, fine=%2$s, coarse=%3$s</string>
+    <string name="device_status_gps">Location module: gps-hardware=%1$s, network-hardware=%2$s, fine=%3$s, coarse=%4$s</string>
     <string name="device_status_sensor_accel">Sensor module (accelerometer): hardware=%1$s, regular-rate=%2$s, high-rate=%3$s, high-rate-permission=%4$s</string>
     <string name="device_status_files">File module: model=%1$s, read-external=%2$s, media-audio=%3$s</string>
     <string name="device_status_gate_recorder">Screen 1 Recorder gate-ready: %1$s</string>

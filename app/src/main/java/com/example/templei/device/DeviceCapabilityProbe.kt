@@ -48,6 +48,7 @@ data class DeviceCapabilitySnapshot(
     val hasCamera: Boolean,
     val hasMicrophone: Boolean,
     val hasGps: Boolean,
+    val hasNetworkLocation: Boolean,
     val hasAccelerometer: Boolean,
     val cameraPermission: PermissionState,
     val microphonePermission: PermissionState,
@@ -71,10 +72,10 @@ data class DeviceCapabilitySnapshot(
             microphonePermission == PermissionState.GRANTED
 
     /**
-     * Logger precondition for Screen 4 (GPS path): GPS HW + at least one location permission.
+     * Logger precondition for Screen 4 (location path): location hardware + location permission.
      */
     val gpsLoggerUsable: Boolean
-        get() = hasGps &&
+        get() = (hasGps || hasNetworkLocation) &&
             (fineLocationPermission == PermissionState.GRANTED ||
                 coarseLocationPermission == PermissionState.GRANTED)
 }
@@ -102,10 +103,17 @@ object DeviceCapabilityProbe {
         val finePermission = permissionState(context, Manifest.permission.ACCESS_FINE_LOCATION)
         val coarsePermission = permissionState(context, Manifest.permission.ACCESS_COARSE_LOCATION)
 
+        val hasGps = packageManager.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS)
+        val hasNetworkLocation = packageManager.hasSystemFeature(PackageManager.FEATURE_LOCATION_NETWORK)
+
         val fineLocation = if (finePermission == PermissionState.GRANTED) {
             lastKnownLocation(
                 context = context,
-                providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+                providers = listOf(
+                    LocationManager.GPS_PROVIDER,
+                    LocationManager.NETWORK_PROVIDER,
+                    LocationManager.PASSIVE_PROVIDER
+                )
             )
         } else {
             null
@@ -132,7 +140,8 @@ object DeviceCapabilityProbe {
             sdkInt = Build.VERSION.SDK_INT,
             hasCamera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
             hasMicrophone = packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE),
-            hasGps = packageManager.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS),
+            hasGps = hasGps,
+            hasNetworkLocation = hasNetworkLocation,
             hasAccelerometer = hasAccelerometer,
             cameraPermission = permissionState(context, Manifest.permission.CAMERA),
             microphonePermission = permissionState(context, Manifest.permission.RECORD_AUDIO),

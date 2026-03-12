@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
             appendLine(getString(R.string.device_status_header, snapshot.sdkInt))
             appendLine(getString(R.string.device_status_camera, yesNo(snapshot.hasCamera), permission(snapshot.cameraPermission)))
             appendLine(getString(R.string.device_status_microphone, yesNo(snapshot.hasMicrophone), permission(snapshot.microphonePermission)))
-            appendLine(getString(R.string.device_status_gps, yesNo(snapshot.hasGps), permission(snapshot.fineLocationPermission), permission(snapshot.coarseLocationPermission)))
+            appendLine(getString(R.string.device_status_gps, yesNo(snapshot.hasGps), yesNo(snapshot.hasNetworkLocation), permission(snapshot.fineLocationPermission), permission(snapshot.coarseLocationPermission)))
             appendLine(getString(
                 R.string.device_status_sensor_accel,
                 yesNo(snapshot.hasAccelerometer),
@@ -124,10 +124,10 @@ class MainActivity : ComponentActivity() {
         if (snapshot.hasMicrophone && snapshot.microphonePermission == PermissionState.DENIED) {
             requestables += Manifest.permission.RECORD_AUDIO
         }
-        if (snapshot.hasGps && snapshot.fineLocationPermission == PermissionState.DENIED) {
+        if ((snapshot.hasGps || snapshot.hasNetworkLocation) && snapshot.fineLocationPermission == PermissionState.DENIED) {
             requestables += Manifest.permission.ACCESS_FINE_LOCATION
         }
-        if (snapshot.hasGps && snapshot.coarseLocationPermission == PermissionState.DENIED) {
+        if ((snapshot.hasGps || snapshot.hasNetworkLocation) && snapshot.coarseLocationPermission == PermissionState.DENIED) {
             requestables += Manifest.permission.ACCESS_COARSE_LOCATION
         }
         if (snapshot.readExternalStoragePermission == PermissionState.DENIED) {
