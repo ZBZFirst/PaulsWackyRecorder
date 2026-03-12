@@ -65,7 +65,7 @@ class SoundboardStateMachine {
     )
 
     sealed interface State {
-        data object Loading : State
+        data object Loading : State // No parameters needed
         data class Ready(
             val folderName: String?,
             val playableCount: Int,
@@ -100,14 +100,8 @@ class SoundboardStateMachine {
         Validating
     }
 
-    private var state: State = State.Loading(
-        stage = LoadingStage.Discovering,
-        processedFiles = 0,
-        totalFiles = 0,
-        playableFiles = 0,
-        discoveredFolders = 0,
-        discoveredFiles = 0
-    )
+    // Corrected the initialization to match the object, no parameters needed
+    private var state: State = State.Loading
 
     fun currentState(): State = state
 

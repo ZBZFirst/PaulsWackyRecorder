@@ -31,6 +31,7 @@
     <string name="status_no">No</string>
     <string name="permission_granted">Granted</string>
     <string name="permission_denied">Denied</string>
+    <string name="device_status_missing_permissions">Missing Permissions: %1$s</string>
     <string name="permission_not_applicable">N/A</string>
     <string name="storage_model_legacy">Legacy External Storage</string>
     <string name="storage_model_scoped">Scoped Storage</string>
