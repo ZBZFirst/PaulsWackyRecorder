@@ -8,15 +8,31 @@ package com.example.templei.feature.soundboard
  */
 class SoundboardStateMachine {
     sealed interface State {
-        data object Loading : State
+        data class Loading(
+            val processedFiles: Int,
+            val totalFiles: Int,
+            val playableFiles: Int
+        ) : State
         data class Ready(val playableFiles: List<String>) : State
         data class Playing(val fileName: String) : State
         data class Error(val message: String) : State
     }
 
-    private var state: State = State.Loading
+    private var state: State = State.Loading(
+        processedFiles = 0,
+        totalFiles = 0,
+        playableFiles = 0
+    )
 
     fun currentState(): State = state
+
+    fun onLoadingProgress(processedFiles: Int, totalFiles: Int, playableFiles: Int) {
+        state = State.Loading(
+            processedFiles = processedFiles,
+            totalFiles = totalFiles,
+            playableFiles = playableFiles
+        )
+    }
 
     fun onCatalogLoaded(playableFiles: List<String>) {
         state = State.Ready(playableFiles)

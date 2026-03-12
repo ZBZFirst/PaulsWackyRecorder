@@ -5,7 +5,10 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,7 +16,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import com.example.templei.feature.soundboard.SoundboardStateMachine
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Screen 3: folder-scoped soundboard with a 3x3 favorite pad.
@@ -23,25 +32,44 @@ import kotlinx.coroutines.*
  * - Immediate child folders are browsed laterally.
  * - Direct audio files in the selected root are also supported.
  * - Only .wav and .mp3 files with duration <= 6 seconds are accepted.
- * - The visible 3x3 pad is rebound to the current folder contents.
+ * - Favorites are explicit user assignments and do not auto-populate from folder scans.
  */
 class Screen3Activity : ComponentActivity() {
 
     private val stateMachine = SoundboardStateMachine()
+    private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private lateinit var soundboardAudioEngine: SoundboardAudioEngine
 
     private lateinit var statusText: TextView
+    private lateinit var loadingDetailText: TextView
+    private lateinit var loadingProgressBar: ProgressBar
     private lateinit var folderNameText: TextView
     private lateinit var previousFolderButton: Button
     private lateinit var nextFolderButton: Button
     private lateinit var selectFolderButton: Button
+    private lateinit var assignmentTargetText: TextView
+    private lateinit var clearSelectedSlotButton: Button
+    private lateinit var toggleFavoritesSectionButton: Button
+    private lateinit var toggleBrowserSectionButton: Button
+    private lateinit var favoritesSectionBody: LinearLayout
+    private lateinit var browserSectionBody: LinearLayout
+    private lateinit var clipBrowserContainer: LinearLayout
+    private lateinit var browserCountText: TextView
 
     private lateinit var favoritePadButtons: List<Button>
 
     private var folderNames: List<String> = emptyList()
     private var currentFolderIndex: Int = 0
     private var clipsByFolder: Map<String, List<AudioClip>> = emptyMap()
+    private var currentFolderClips: List<AudioClip> = emptyList()
+    private var availableClipByUri: Map<String, AudioClip> = emptyMap()
+    private var loadFolderJob: Job? = null
+
+    private var selectedFavoriteSlotIndex: Int = 0
+    private var favoritesSectionExpanded: Boolean = true
+    private var browserSectionExpanded: Boolean = true
+    private val favoriteSlotUris = MutableList<String?>(FAVORITE_SLOT_COUNT) { null }
 
     private val pickFolderLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -73,10 +101,20 @@ class Screen3Activity : ComponentActivity() {
             setContentView(R.layout.activity_screen3)
 
             statusText = findViewById(R.id.soundboardStatusText)
+            loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
+            loadingProgressBar = findViewById(R.id.soundboardLoadingProgressBar)
             folderNameText = findViewById(R.id.soundboardFolderNameText)
             previousFolderButton = findViewById(R.id.soundboardFolderPrevButton)
             nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
             selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
+            assignmentTargetText = findViewById(R.id.soundboardAssignmentTargetText)
+            clearSelectedSlotButton = findViewById(R.id.soundboardClearSelectedSlotButton)
+            toggleFavoritesSectionButton = findViewById(R.id.soundboardToggleFavoritesSectionButton)
+            toggleBrowserSectionButton = findViewById(R.id.soundboardToggleBrowserSectionButton)
+            favoritesSectionBody = findViewById(R.id.soundboardFavoritesSectionBody)
+            browserSectionBody = findViewById(R.id.soundboardBrowserSectionBody)
+            clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
+            browserCountText = findViewById(R.id.soundboardBrowserCountText)
 
             favoritePadButtons = listOf(
                 findViewById(R.id.favoritePadButton1),
@@ -95,7 +133,38 @@ class Screen3Activity : ComponentActivity() {
                 pickFolderLauncher.launch(savedRootFolderUri())
             }
 
+            previousFolderButton.setOnClickListener {
+                moveFolderSelection(-1)
+            }
+            nextFolderButton.setOnClickListener {
+                moveFolderSelection(1)
+            }
+
+            toggleFavoritesSectionButton.setOnClickListener {
+                favoritesSectionExpanded = !favoritesSectionExpanded
+                renderSectionVisibility()
+            }
+
+            toggleBrowserSectionButton.setOnClickListener {
+                browserSectionExpanded = !browserSectionExpanded
+                renderSectionVisibility()
+            }
+
+            clearSelectedSlotButton.setOnClickListener {
+                favoriteSlotUris[selectedFavoriteSlotIndex] = null
+                saveFavoriteSlots()
+                renderFavoriteSlots()
+                Toast.makeText(
+                    this,
+                    getString(R.string.soundboard_assignment_cleared, selectedFavoriteSlotIndex + 1),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
             soundboardAudioEngine = SoundboardAudioEngine.getInstance(this)
+            restoreFavoriteSlots()
+            renderFavoriteSlots()
+            renderSectionVisibility()
 
             bindFolderBrowser()
         }.onFailure(::failToMainMenu)
@@ -109,7 +178,17 @@ class Screen3Activity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        loadFolderJob?.cancel()
+        activityScope.cancel()
         soundboardAudioEngine.release()
+    }
+
+    private fun moveFolderSelection(direction: Int) {
+        if (folderNames.isEmpty()) {
+            return
+        }
+        currentFolderIndex = (currentFolderIndex + direction + folderNames.size) % folderNames.size
+        bindCurrentFolder()
     }
 
     private fun bindFolderBrowser() {
@@ -127,35 +206,75 @@ class Screen3Activity : ComponentActivity() {
             return
         }
 
-        // Load clips in a coroutine to offload this work from the main thread
-        CoroutineScope(Dispatchers.IO).launch {
-            clipsByFolder = loadClipsByFolderAtSingleLevel(rootFolder)
+        loadFolderJob?.cancel()
+        loadFolderJob = activityScope.launch {
+            stateMachine.onLoadingProgress(
+                processedFiles = 0,
+                totalFiles = 0,
+                playableFiles = 0
+            )
+            renderState(stateMachine.currentState())
 
-            // Update UI on the main thread after loading is complete
-            withContext(Dispatchers.Main) {
-                folderNames = clipsByFolder.keys.sorted()
-                currentFolderIndex = currentFolderIndex.coerceIn(
-                    minimumValue = 0,
-                    maximumValue = (folderNames.size - 1).coerceAtLeast(0)
-                )
-
-                Log.i(TAG, "Loaded ${folderNames.size} playable folder buckets")
-
-                bindCurrentFolder()
+            val loaded = withContext(Dispatchers.IO) {
+                loadClipsByFolderAtSingleLevel(rootFolder) { processed, total, playable ->
+                    withContext(Dispatchers.Main) {
+                        stateMachine.onLoadingProgress(
+                            processedFiles = processed,
+                            totalFiles = total,
+                            playableFiles = playable
+                        )
+                        renderState(stateMachine.currentState())
+                    }
+                }
             }
+
+            clipsByFolder = loaded
+            folderNames = clipsByFolder.keys.sorted()
+            availableClipByUri = clipsByFolder.values.flatten().associateBy { it.uri.toString() }
+            currentFolderIndex = currentFolderIndex.coerceIn(
+                minimumValue = 0,
+                maximumValue = (folderNames.size - 1).coerceAtLeast(0)
+            )
+
+            Log.i(TAG, "Loaded ${folderNames.size} playable folder buckets")
+
+            bindCurrentFolder()
+            renderFavoriteSlots()
+        }
+    }
+
+
+    private fun renderSectionVisibility() {
+        favoritesSectionBody.visibility = if (favoritesSectionExpanded) View.VISIBLE else View.GONE
+        browserSectionBody.visibility = if (browserSectionExpanded) View.VISIBLE else View.GONE
+
+        toggleFavoritesSectionButton.text = if (favoritesSectionExpanded) {
+            getString(R.string.soundboard_section_collapse)
+        } else {
+            getString(R.string.soundboard_section_expand)
+        }
+
+        toggleBrowserSectionButton.text = if (browserSectionExpanded) {
+            getString(R.string.soundboard_section_collapse)
+        } else {
+            getString(R.string.soundboard_section_expand)
         }
     }
 
     private fun renderFolderSelectionRequired() {
         folderNames = emptyList()
         clipsByFolder = emptyMap()
+        currentFolderClips = emptyList()
+        availableClipByUri = emptyMap()
         currentFolderIndex = 0
 
         folderNameText.text = getString(R.string.soundboard_folder_none)
         previousFolderButton.isEnabled = false
         nextFolderButton.isEnabled = false
 
-        bindButtons(emptyList())
+        browserCountText.text = getString(R.string.soundboard_browser_count_value, 0, 0, 0)
+        renderClipBrowser(emptyList())
+        renderFavoriteSlots()
 
         stateMachine.onError(getString(R.string.soundboard_state_error_select_folder))
         renderState(stateMachine.currentState())
@@ -167,8 +286,9 @@ class Screen3Activity : ComponentActivity() {
             folderNameText.text = getString(R.string.soundboard_folder_none)
             previousFolderButton.isEnabled = false
             nextFolderButton.isEnabled = false
-
-            bindButtons(emptyList())
+            currentFolderClips = emptyList()
+            browserCountText.text = getString(R.string.soundboard_browser_count_value, 0, 0, 0)
+            renderClipBrowser(emptyList())
 
             stateMachine.onCatalogLoaded(emptyList())
             renderState(stateMachine.currentState())
@@ -176,6 +296,7 @@ class Screen3Activity : ComponentActivity() {
         }
 
         val clips = clipsByFolder[folderName].orEmpty().sortedBy { it.displayName }
+        currentFolderClips = clips
 
         folderNameText.text = folderName
         previousFolderButton.isEnabled = folderNames.size > 1
@@ -183,35 +304,135 @@ class Screen3Activity : ComponentActivity() {
 
         Log.d(TAG, "Binding folder '$folderName' with ${clips.size} clips")
 
+        val wavCount = clips.count { it.displayName.endsWith(".wav", ignoreCase = true) }
+        val mp3Count = clips.count { it.displayName.endsWith(".mp3", ignoreCase = true) }
+        browserCountText.text = getString(
+            R.string.soundboard_browser_count_value,
+            clips.size,
+            wavCount,
+            mp3Count
+        )
+
         stateMachine.onCatalogLoaded(clips.map { it.displayName })
         renderState(stateMachine.currentState())
-        bindButtons(clips)
+        renderClipBrowser(clips)
     }
 
-    private fun bindButtons(clips: List<AudioClip>) {
+    private fun renderFavoriteSlots() {
+        assignmentTargetText.text = getString(
+            R.string.soundboard_assignment_target,
+            selectedFavoriteSlotIndex + 1
+        )
+
         favoritePadButtons.forEachIndexed { index, button ->
-            val clip = clips.getOrNull(index)
-            if (clip == null) {
-                button.isEnabled = false
-                button.text = getString(R.string.soundboard_button_empty)
-                button.setOnClickListener(null)
-            } else {
-                button.isEnabled = true
+            val assignedUri = favoriteSlotUris[index]
+            val clip = assignedUri?.let(availableClipByUri::get)
+
+            if (assignedUri == null) {
+                button.text = getString(R.string.soundboard_favorite_slot_empty)
+            } else if (clip != null) {
                 button.text = clip.displayName
-                button.setOnClickListener {
-                    playClip(clip, clips.map { it.displayName })
-                }
+            } else {
+                button.text = getString(R.string.soundboard_favorite_slot_missing)
+            }
+
+            button.isEnabled = true
+            button.isSelected = index == selectedFavoriteSlotIndex
+            button.setOnClickListener {
+                selectedFavoriteSlotIndex = index
+                renderFavoriteSlots()
+                playFavoriteSlot(index)
+            }
+            button.setOnLongClickListener {
+                selectedFavoriteSlotIndex = index
+                favoriteSlotUris[index] = null
+                saveFavoriteSlots()
+                renderFavoriteSlots()
+                Toast.makeText(
+                    this,
+                    getString(R.string.soundboard_assignment_cleared, index + 1),
+                    Toast.LENGTH_SHORT
+                ).show()
+                true
             }
         }
+    }
+
+    private fun renderClipBrowser(clips: List<AudioClip>) {
+        clipBrowserContainer.removeAllViews()
+
+        if (clips.isEmpty()) {
+            val emptyText = TextView(this).apply {
+                text = getString(R.string.soundboard_browser_empty)
+            }
+            clipBrowserContainer.addView(emptyText)
+            return
+        }
+
+        clips.forEach { clip ->
+            val clipButton = Button(this).apply {
+                text = clip.displayName
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 8
+                }
+                setOnClickListener {
+                    playClip(clip, currentFolderClips.map { it.displayName })
+                }
+                setOnLongClickListener {
+                    assignClipToSelectedFavoriteSlot(clip)
+                    true
+                }
+            }
+            clipBrowserContainer.addView(clipButton)
+        }
+    }
+
+    private fun assignClipToSelectedFavoriteSlot(clip: AudioClip) {
+        favoriteSlotUris[selectedFavoriteSlotIndex] = clip.uri.toString()
+        saveFavoriteSlots()
+        renderFavoriteSlots()
+        Toast.makeText(
+            this,
+            getString(
+                R.string.soundboard_assignment_saved,
+                selectedFavoriteSlotIndex + 1,
+                clip.displayName
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun playFavoriteSlot(slotIndex: Int) {
+        val assignedUri = favoriteSlotUris[slotIndex]
+        if (assignedUri == null) {
+            Toast.makeText(
+                this,
+                getString(R.string.soundboard_reject_not_assigned, slotIndex + 1),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val clip = availableClipByUri[assignedUri]
+        if (clip == null) {
+            Toast.makeText(this, getString(R.string.soundboard_reject_missing), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        playClip(clip, currentFolderClips.map { it.displayName })
     }
 
     private fun playClip(clip: AudioClip, playableFiles: List<String>) {
         Log.d(TAG, "Play pressed: ${clip.displayName} (${clip.folderName})")
 
         runCatching {
-            // Pass the URI as a String instead of a Uri object
-            val soundId = soundboardAudioEngine.loadClip(this, clip.uri.toString())  // Convert URI to String
-            soundboardAudioEngine.playClip(soundId)
+            val queued = soundboardAudioEngine.playClipUri(this, clip.uri)
+            if (!queued) {
+                error("Clip queue/play failed")
+            }
 
             stateMachine.onPlayPressed(clip.displayName)
             renderState(stateMachine.currentState())
@@ -225,61 +446,68 @@ class Screen3Activity : ComponentActivity() {
         }
     }
 
-    private fun loadClipsByFolderAtSingleLevel(rootFolder: DocumentFile): Map<String, List<AudioClip>> {
+    private suspend fun loadClipsByFolderAtSingleLevel(
+        rootFolder: DocumentFile,
+        onProgress: suspend (processedFiles: Int, totalFiles: Int, playableFiles: Int) -> Unit
+    ): Map<String, List<AudioClip>> {
         val byFolder = linkedMapOf<String, MutableList<AudioClip>>()
+        val candidateFiles = mutableListOf<CandidateAudioFile>()
 
         rootFolder.listFiles()
             .filter { it.isDirectory }
             .forEach { childFolder ->
                 val folderName = childFolder.name ?: getString(R.string.soundboard_folder_unknown)
-
-                val clips = childFolder.listFiles()
+                childFolder.listFiles()
                     .filter { it.isFile }
-                    .mapNotNull { file ->
-                        val fileName = file.name ?: return@mapNotNull null
-                        if (!isSupportedExtension(fileName)) return@mapNotNull null
-                        if (!isSupportedDuration(file.uri)) return@mapNotNull null
+                    .forEach { file ->
+                        candidateFiles.add(CandidateAudioFile(folderName, file))
+                    }
+            }
 
+        val currentFolderName = getString(R.string.soundboard_folder_current)
+        rootFolder.listFiles()
+            .filter { it.isFile }
+            .forEach { file ->
+                candidateFiles.add(CandidateAudioFile(currentFolderName, file))
+            }
+
+        val totalFiles = candidateFiles.size
+        var processedFiles = 0
+        var playableFiles = 0
+
+        onProgress(processedFiles, totalFiles, playableFiles)
+
+        candidateFiles.forEach { candidate ->
+            val file = candidate.file
+            val fileName = file.name
+
+            if (fileName != null &&
+                isSupportedExtension(fileName) &&
+                isSupportedDuration(file.uri)
+            ) {
+                byFolder.getOrPut(candidate.folderName) { mutableListOf() }
+                    .add(
                         AudioClip(
                             displayName = fileName,
                             uri = file.uri,
-                            folderName = folderName
+                            folderName = candidate.folderName
                         )
-                    }
-                    .sortedBy { it.displayName }
-
-                if (clips.isNotEmpty()) {
-                    byFolder.getOrPut(folderName) { mutableListOf() }
-                        .addAll(clips)
-                }
+                    )
+                playableFiles += 1
             }
 
-        val rootFiles = rootFolder.listFiles()
-            .filter { it.isFile }
-            .mapNotNull { file ->
-                val fileName = file.name ?: return@mapNotNull null
-                if (!isSupportedExtension(fileName)) return@mapNotNull null
-                if (!isSupportedDuration(file.uri)) return@mapNotNull null
-
-                AudioClip(
-                    displayName = fileName,
-                    uri = file.uri,
-                    folderName = getString(R.string.soundboard_folder_current)
-                )
-            }
-            .sortedBy { it.displayName }
-
-        if (rootFiles.isNotEmpty()) {
-            byFolder.getOrPut(getString(R.string.soundboard_folder_current)) { mutableListOf() }
-                .addAll(rootFiles)
+            processedFiles += 1
+            onProgress(processedFiles, totalFiles, playableFiles)
         }
 
-        return byFolder.mapValues { entry -> entry.value.toList() }
+        return byFolder
+            .mapValues { entry -> entry.value.sortedBy { it.displayName } }
+            .toSortedMap()
     }
 
     private fun isSupportedExtension(displayName: String): Boolean {
         return displayName.endsWith(".wav", ignoreCase = true) ||
-                displayName.endsWith(".mp3", ignoreCase = true)
+            displayName.endsWith(".mp3", ignoreCase = true)
     }
 
     private fun isSupportedDuration(uri: Uri): Boolean {
@@ -309,12 +537,55 @@ class Screen3Activity : ComponentActivity() {
         return raw?.let(Uri::parse)
     }
 
+    private fun saveFavoriteSlots() {
+        val editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+        favoriteSlotUris.forEachIndexed { index, uri ->
+            editor.putString("$KEY_FAVORITE_SLOT_PREFIX$index", uri)
+        }
+        editor.apply()
+    }
+
+    private fun restoreFavoriteSlots() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        favoriteSlotUris.indices.forEach { index ->
+            favoriteSlotUris[index] = prefs.getString("$KEY_FAVORITE_SLOT_PREFIX$index", null)
+        }
+    }
+
     private fun renderState(state: SoundboardStateMachine.State) {
-        statusText.text = when (state) {
-            SoundboardStateMachine.State.Loading -> getString(R.string.soundboard_state_loading)
-            is SoundboardStateMachine.State.Ready -> getString(R.string.soundboard_state_ready, state.playableFiles.size)
-            is SoundboardStateMachine.State.Playing -> getString(R.string.soundboard_state_playing, state.fileName)
-            is SoundboardStateMachine.State.Error -> getString(R.string.soundboard_state_error, state.message)
+        when (state) {
+            is SoundboardStateMachine.State.Loading -> {
+                loadingProgressBar.visibility = View.VISIBLE
+                loadingProgressBar.max = state.totalFiles.coerceAtLeast(1)
+                loadingProgressBar.progress = state.processedFiles.coerceAtMost(loadingProgressBar.max)
+
+                statusText.text = getString(R.string.soundboard_state_loading)
+                loadingDetailText.visibility = View.VISIBLE
+                loadingDetailText.text = getString(
+                    R.string.soundboard_state_loading_progress,
+                    state.processedFiles,
+                    state.totalFiles,
+                    state.playableFiles
+                )
+            }
+
+            is SoundboardStateMachine.State.Ready -> {
+                loadingProgressBar.visibility = View.GONE
+                loadingDetailText.visibility = View.GONE
+                statusText.text = getString(R.string.soundboard_state_ready, state.playableFiles.size)
+            }
+
+            is SoundboardStateMachine.State.Playing -> {
+                loadingProgressBar.visibility = View.GONE
+                loadingDetailText.visibility = View.GONE
+                statusText.text = getString(R.string.soundboard_state_playing, state.fileName)
+            }
+
+            is SoundboardStateMachine.State.Error -> {
+                loadingProgressBar.visibility = View.GONE
+                loadingDetailText.visibility = View.GONE
+                statusText.text = getString(R.string.soundboard_state_error, state.message)
+            }
         }
     }
 
@@ -331,10 +602,17 @@ class Screen3Activity : ComponentActivity() {
         val folderName: String
     )
 
+    private data class CandidateAudioFile(
+        val folderName: String,
+        val file: DocumentFile
+    )
+
     private companion object {
         private const val TAG = "Screen3Soundboard"
         private const val PREFS_NAME = "screen3_soundboard"
         private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
+        private const val KEY_FAVORITE_SLOT_PREFIX = "favorite_slot_"
         private const val MAX_SOUND_DURATION_MS = 6_000L
+        private const val FAVORITE_SLOT_COUNT = 9
     }
 }
