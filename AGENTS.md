@@ -171,7 +171,9 @@ Use this section to keep incremental delivery transparent and reproducible.
 
 
 ### Phase 5 (in progress): Playback hardening + quick favorite remove UX
-- Sound playback now uses URI descriptor loading with SoundPool load-complete callbacks for safer SAF URI handling.
-- Clip play requests are queued until sound samples report loaded, reducing race-related no-audio taps.
+- Sound playback now uses MediaPlayer async prepare from SAF URIs for more reliable button-driven playback.
+- Clip play requests start through a single reliable async path that avoids prior URI load/play race failures.
 - Favorite slots support direct long-press clear for faster remove workflows.
 - Favorites and browser hints are explicit in UI copy to clarify tap vs long-press actions.
+- Loading now surfaces two explicit sub-stages in UI: discovery (folders/files found) and validation (processed/playable progress).
+- Clip browser renders one dynamic button per discovered playable `.wav` in the active folder.

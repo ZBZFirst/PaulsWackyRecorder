@@ -62,4 +62,5 @@ For graph-first navigation of how pages intersect, start with `MINDMAP.md`.
 - Phase 2 separates folder clip browsing from favorite-slot assignments; favorite slots are explicit and persisted.
 - Phase 3 groups Screen 3 into framed, collapsible favorites/browser panels with vertical scrolling.
 - Phase 4 adds dynamic folder clip action buttons (tap to play, long-press to assign) plus per-folder wav/mp3 counts.
-- Phase 5 hardens playback (descriptor-based URI loading with queued play) and adds quick long-press favorite removal.
+- Phase 5 hardens playback (MediaPlayer async SAF URI path) and adds quick long-press favorite removal.
+- Phase 5 refinement adds explicit discovery+validation progress and renders one browser button per playable `.wav` in the active folder.

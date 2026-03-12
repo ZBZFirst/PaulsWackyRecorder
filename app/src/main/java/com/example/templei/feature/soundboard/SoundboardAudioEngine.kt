@@ -2,38 +2,13 @@ package com.example.templei
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.SoundPool
+import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 
 class SoundboardAudioEngine private constructor(context: Context) {
 
-    private val soundPool: SoundPool
-    private val soundIdsByUri = mutableMapOf<String, Int>()
-    private val loadedSoundIds = mutableSetOf<Int>()
-    private val pendingPlayBySoundId = mutableMapOf<Int, () -> Unit>()
-
-    init {
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(10)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .build()
-
-        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0) {
-                loadedSoundIds.add(sampleId)
-                pendingPlayBySoundId.remove(sampleId)?.invoke()
-            } else {
-                pendingPlayBySoundId.remove(sampleId)
-                Log.w(TAG, "SoundPool failed loading sampleId=$sampleId, status=$status")
-            }
-        }
-    }
+    private val activePlayers = mutableSetOf<MediaPlayer>()
 
     companion object {
         @Volatile
@@ -49,50 +24,55 @@ class SoundboardAudioEngine private constructor(context: Context) {
     }
 
     /**
-     * Loads and plays a clip URI. If already loaded, play starts immediately.
-     * If newly loaded, play starts on SoundPool load completion callback.
+     * Reliable SAF URI playback path using MediaPlayer and async prepare.
      */
     fun playClipUri(context: Context, clipUri: Uri): Boolean {
-        val key = clipUri.toString()
-        val existingSoundId = soundIdsByUri[key]
-        if (existingSoundId != null) {
-            if (existingSoundId in loadedSoundIds) {
-                return playClip(existingSoundId)
+        val player = MediaPlayer()
+
+        return runCatching {
+            player.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            player.setDataSource(context, clipUri)
+            player.setOnPreparedListener { prepared ->
+                prepared.start()
             }
-
-            pendingPlayBySoundId[existingSoundId] = {
-                playClip(existingSoundId)
+            player.setOnCompletionListener { completed ->
+                completed.reset()
+                completed.release()
+                activePlayers.remove(completed)
             }
-            return true
-        }
-
-        val afd = context.contentResolver.openAssetFileDescriptor(clipUri, "r")
-            ?: return false
-
-        val soundId = afd.use { descriptor ->
-            soundPool.load(descriptor, 1)
-        }
-
-        if (soundId == 0) {
-            return false
-        }
-
-        soundIdsByUri[key] = soundId
-        pendingPlayBySoundId[soundId] = {
-            playClip(soundId)
-        }
-        return true
-    }
-
-    private fun playClip(clipId: Int): Boolean {
-        val streamId = soundPool.play(clipId, 1f, 1f, 0, 0, 1f)
-        return streamId != 0
+            player.setOnErrorListener { failed, what, extra ->
+                Log.w(TAG, "MediaPlayer error what=$what extra=$extra uri=$clipUri")
+                failed.reset()
+                failed.release()
+                activePlayers.remove(failed)
+                true
+            }
+            activePlayers.add(player)
+            player.prepareAsync()
+            true
+        }.onFailure { error ->
+            Log.e(TAG, "Failed to start playback for uri=$clipUri", error)
+            runCatching {
+                player.reset()
+                player.release()
+            }
+            activePlayers.remove(player)
+        }.getOrDefault(false)
     }
 
     fun release() {
-        soundPool.release()
-        soundIdsByUri.clear()
-        loadedSoundIds.clear()
-        pendingPlayBySoundId.clear()
+        activePlayers.toList().forEach { player ->
+            runCatching {
+                player.stop()
+                player.reset()
+                player.release()
+            }
+        }
+        activePlayers.clear()
     }
 }

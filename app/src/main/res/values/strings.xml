@@ -47,7 +47,8 @@
     <string name="soundboard_folder_current">Current Folder</string>
     <string name="soundboard_state_loading">Loading Soundboard...</string>
     <string name="soundboard_state_loading_progress_initial">Scanning clips: 0 / 0 (playable: 0)</string>
-    <string name="soundboard_state_loading_progress">Scanning clips: %1$d / %2$d (playable: %3$d)</string>
+    <string name="soundboard_state_loading_progress">Validating clips: %1$d / %2$d (playable: %3$d)</string>
+    <string name="soundboard_state_loading_discovery">Discovering folders/files: %1$d folders, %2$d files found</string>
     <string name="soundboard_state_ready">Soundboard Ready (%1$d clips)</string>
     <string name="soundboard_state_playing">Playing Clip: %1$s</string>
     <string name="soundboard_state_error">Error: %1$s</string>

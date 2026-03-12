@@ -26,4 +26,5 @@ Screen 3 is now a bounded soundboard surface:
 - phase-2 favorites decoupled from folder scans: explicit assign/remove flow with persisted slot mappings
 - phase-3 layout refactor: framed favorites/browser groups with vertical scrolling and collapse/expand controls
 - phase-4 folder clip action list: dynamic buttons support tap-to-play and long-press-to-assign, with per-folder wav/mp3 counts
-- phase-5 playback hardening: SAF URI descriptor loading + load-complete queued play, with long-press clear on favorite slots
+- phase-5 playback hardening: MediaPlayer SAF URI async playback path, with long-press clear on favorite slots
+- phase-5 discovery visibility refinement: separate discovery/validation progress and one-button-per-playable-wav browser rendering
