@@ -71,6 +71,22 @@ class Screen3Activity : ComponentActivity() {
     private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
 
+    private var folderEntries: List<FolderEntry> = emptyList()
+    private var currentFolderIndex: Int = 0
+    private var activeFolderClips: List<ClipMetadata> = emptyList()
+
+    private val clipById = linkedMapOf<String, ClipMetadata>()
+    private val favoriteSlotClipIds = mutableMapOf<Int, String>()
+    private var selectedAssignmentSlotIndex: Int = 0
+
+    private val clipCache = linkedMapOf<String, CacheEntry>()
+    private val pendingLoadCallbacks = mutableMapOf<Int, MutableList<(Boolean) -> Unit>>()
+    private val soundIdToClipId = mutableMapOf<Int, String>()
+    private val activeStreamIds = mutableSetOf<Int>()
+    private val lastPlayByClipIdMs = mutableMapOf<String, Long>()
+    private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
+    private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
+
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             Log.i(TAG, "Folder picked: $uri")
@@ -122,31 +138,6 @@ class Screen3Activity : ComponentActivity() {
             }
             previousFolderButton.setOnClickListener { moveFolderSelection(-1) }
             nextFolderButton.setOnClickListener { moveFolderSelection(1) }
-
-            toggleFavoritesSectionButton.setOnClickListener {
-                favoritesSectionExpanded = !favoritesSectionExpanded
-                renderSectionVisibility()
-            }
-            toggleBrowserSectionButton.setOnClickListener {
-                browserSectionExpanded = !browserSectionExpanded
-                renderSectionVisibility()
-            }
-
-            clearSelectedSlotButton.setOnClickListener {
-                favoriteSlotUris[selectedFavoriteSlotIndex] = null
-                saveFavoriteSlots()
-                renderFavoriteSlots()
-                Toast.makeText(
-                    this,
-                    getString(R.string.soundboard_assignment_cleared, selectedFavoriteSlotIndex + 1),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-
-            soundboardAudioEngine = SoundboardAudioEngine.getInstance(this)
-            restoreFavoriteSlots()
-            renderFavoriteSlots()
-            renderSectionVisibility()
 
             selectFolderButton.setOnClickListener { pickFolderLauncher.launch(savedRootFolderUri()) }
             settingsButton.setOnClickListener { showSettingsDialog() }
@@ -457,37 +448,6 @@ class Screen3Activity : ComponentActivity() {
             }
             clipBrowserContainer.addView(clipButton)
         }
-    }
-
-    private fun assignClipToSelectedFavoriteSlot(clip: AudioClip) {
-        favoriteSlotUris[selectedFavoriteSlotIndex] = clip.uri.toString()
-        saveFavoriteSlots()
-        renderFavoriteSlots()
-        Toast.makeText(
-            this,
-            getString(R.string.soundboard_assignment_saved, selectedFavoriteSlotIndex + 1, clip.displayName),
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
-    private fun playFavoriteSlot(slotIndex: Int) {
-        val assignedUri = favoriteSlotUris[slotIndex]
-        if (assignedUri == null) {
-            Toast.makeText(
-                this,
-                getString(R.string.soundboard_reject_not_assigned, slotIndex + 1),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-
-        val clip = availableClipByUri[assignedUri]
-        if (clip == null) {
-            Toast.makeText(this, getString(R.string.soundboard_reject_missing), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        playClip(clip, currentFolderClips.map { it.displayName })
     }
 
     private fun renderAssignmentTarget() {
@@ -844,21 +804,6 @@ class Screen3Activity : ComponentActivity() {
         )
     }
 
-    private fun saveFavoriteSlots() {
-        val editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-        favoriteSlotUris.forEachIndexed { index, uri ->
-            editor.putString("$KEY_FAVORITE_SLOT_PREFIX$index", uri)
-        }
-        editor.apply()
-    }
-
-    private fun restoreFavoriteSlots() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        favoriteSlotUris.indices.forEach { index ->
-            favoriteSlotUris[index] = prefs.getString("$KEY_FAVORITE_SLOT_PREFIX$index", null)
-        }
-    }
-
     private fun renderState(state: SoundboardStateMachine.State) {
         statusText.text = when (state) {
             SoundboardStateMachine.State.Loading -> getString(R.string.soundboard_state_loading)
@@ -1005,6 +950,24 @@ class Screen3Activity : ComponentActivity() {
         val unloadOnFolderChange: Boolean = DEFAULT_UNLOAD_ON_FOLDER_CHANGE,
         val cachePolicy: CachePolicy = DEFAULT_CACHE_POLICY
     )
+    private data class CacheEntry(
+        val soundId: Int?,
+        var state: SoundboardStateMachine.ClipLoadState,
+        var lastUsedMs: Long,
+        var pinned: Boolean
+    )
+
+    private data class SoundboardConfig(
+        val maxStreams: Int = DEFAULT_MAX_STREAMS,
+        val cooldownMs: Long = DEFAULT_COOLDOWN_MS,
+        val maxCacheSize: Int = DEFAULT_MAX_CACHE_SIZE,
+        val unloadOnFolderChange: Boolean = DEFAULT_UNLOAD_ON_FOLDER_CHANGE,
+        val cachePolicy: CachePolicy = DEFAULT_CACHE_POLICY
+    )
+
+    private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
+
+    private enum class TrimReason { FOLDER_SWITCH, MEMORY_PRESSURE, SETTINGS_APPLY }
 
     private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
 
