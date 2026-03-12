@@ -1,26 +1,80 @@
 package com.example.templei
 
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import com.example.templei.device.DeviceCapabilityProbe
+import com.example.templei.device.DeviceCapabilityRegistry
+import com.example.templei.device.DeviceCapabilitySnapshot
+import com.example.templei.device.PermissionState
+import com.example.templei.device.StorageModel
 import com.example.templei.ui.navigation.TopNavigation
 
 /**
- * Entry screen shell that routes to Screens 1-4.
+ * Entry screen shell that routes to Screens 1-4 and observes host-device readiness.
  *
- * NOTE: This currently only does basic navigation wiring while each destination is under development.
+ * MainActivity remains a router/status console; each screen still owns its own behavior.
  */
 class MainActivity : ComponentActivity() {
+    private lateinit var deviceStatusText: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // Shared top navigation wiring for every XML shell screen.
+        deviceStatusText = findViewById(R.id.deviceStatusText)
+
         TopNavigation.bind(activity = this)
-        // Keep existing main menu grid buttons functional via shared nav binder as well.
         TopNavigation.bindMainMenuGrid(activity = this)
+
+        refreshDeviceStatus()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshDeviceStatus()
+    }
+
+    private fun refreshDeviceStatus() {
+        val snapshot = DeviceCapabilityProbe.snapshot(this)
+        DeviceCapabilityRegistry.update(snapshot)
+        deviceStatusText.text = formatSnapshot(snapshot)
+    }
+
+    private fun formatSnapshot(snapshot: DeviceCapabilitySnapshot): String {
+        return buildString {
+            appendLine(getString(R.string.device_status_header, snapshot.sdkInt))
+            appendLine(getString(R.string.device_status_camera, yesNo(snapshot.hasCamera), permission(snapshot.cameraPermission)))
+            appendLine(getString(R.string.device_status_microphone, yesNo(snapshot.hasMicrophone), permission(snapshot.microphonePermission)))
+            appendLine(getString(R.string.device_status_gps, yesNo(snapshot.hasGps), permission(snapshot.fineLocationPermission), permission(snapshot.coarseLocationPermission)))
+            appendLine(getString(R.string.device_status_sensor_accel, yesNo(snapshot.hasAccelerometer)))
+            appendLine(getString(
+                R.string.device_status_files,
+                storageModel(snapshot.storageModel),
+                permission(snapshot.readExternalStoragePermission),
+                permission(snapshot.mediaAudioPermission)
+            ))
+            appendLine(getString(R.string.device_status_gate_recorder, yesNo(snapshot.recorderUsable)))
+            appendLine(getString(R.string.device_status_gate_logger, yesNo(snapshot.gpsLoggerUsable)))
+        }
+    }
+
+    private fun yesNo(value: Boolean): String = if (value) {
+        getString(R.string.status_yes)
+    } else {
+        getString(R.string.status_no)
+    }
+
+    private fun permission(state: PermissionState): String = when (state) {
+        PermissionState.GRANTED -> getString(R.string.permission_granted)
+        PermissionState.DENIED -> getString(R.string.permission_denied)
+        PermissionState.NOT_APPLICABLE -> getString(R.string.permission_not_applicable)
+    }
+
+    private fun storageModel(model: StorageModel): String = when (model) {
+        StorageModel.LEGACY_EXTERNAL_STORAGE -> getString(R.string.storage_model_legacy)
+        StorageModel.SCOPED_STORAGE -> getString(R.string.storage_model_scoped)
     }
 }
