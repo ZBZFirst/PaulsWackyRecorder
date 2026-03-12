@@ -796,9 +796,10 @@ class Screen3Activity : ComponentActivity() {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
     }
 
-    private fun savedRootFolderUri(): Uri? {
-        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_ROOT_FOLDER_URI, null)
-        return raw?.let(Uri::parse)
+    private fun loadSelectedAssignmentSlotIndex(): Int {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getInt(KEY_SELECTED_ASSIGNMENT_SLOT, 0)
+            .coerceIn(0, FAVORITE_SLOT_COUNT - 1)
     }
 
     private fun saveFavoriteAssignments() {
