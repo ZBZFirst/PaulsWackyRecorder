@@ -151,34 +151,6 @@ class Screen3Activity : ComponentActivity() {
                 ).show()
             }
 
-            previousFolderButton.setOnClickListener {
-                moveFolderSelection(-1)
-            }
-            nextFolderButton.setOnClickListener {
-                moveFolderSelection(1)
-            }
-
-            toggleFavoritesSectionButton.setOnClickListener {
-                favoritesSectionExpanded = !favoritesSectionExpanded
-                renderSectionVisibility()
-            }
-
-            toggleBrowserSectionButton.setOnClickListener {
-                browserSectionExpanded = !browserSectionExpanded
-                renderSectionVisibility()
-            }
-
-            clearSelectedSlotButton.setOnClickListener {
-                favoriteSlotUris[selectedFavoriteSlotIndex] = null
-                saveFavoriteSlots()
-                renderFavoriteSlots()
-                Toast.makeText(
-                    this,
-                    getString(R.string.soundboard_assignment_cleared, selectedFavoriteSlotIndex + 1),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-
             soundboardAudioEngine = SoundboardAudioEngine.getInstance(this)
             restoreFavoriteSlots()
             renderFavoriteSlots()
@@ -326,27 +298,23 @@ class Screen3Activity : ComponentActivity() {
         nextFolderButton.isEnabled = folderNames.size > 1
 
         val wavClips = clips.filter { it.displayName.endsWith(".wav", ignoreCase = true) }
-        val wavCount = wavClips.size
-        val mp3Count = clips.count { it.displayName.endsWith(".mp3", ignoreCase = true) }
+        val counts = browserCountsFor(clips)
         browserCountText.text = getString(
             R.string.soundboard_browser_count_value,
-            clips.size,
-            wavCount,
-            mp3Count
-        )
-
-        val wavCount = clips.count { it.displayName.endsWith(".wav", ignoreCase = true) }
-        val mp3Count = clips.count { it.displayName.endsWith(".mp3", ignoreCase = true) }
-        browserCountText.text = getString(
-            R.string.soundboard_browser_count_value,
-            clips.size,
-            wavCount,
-            mp3Count
+            counts.total,
+            counts.wav,
+            counts.mp3
         )
 
         stateMachine.onCatalogLoaded(clips.map { it.displayName })
         renderState(stateMachine.currentState())
         renderClipBrowser(wavClips)
+    }
+
+    private fun browserCountsFor(clips: List<AudioClip>): BrowserCounts {
+        val wavCount = clips.count { it.displayName.endsWith(".wav", ignoreCase = true) }
+        val mp3Count = clips.count { it.displayName.endsWith(".mp3", ignoreCase = true) }
+        return BrowserCounts(total = clips.size, wav = wavCount, mp3 = mp3Count)
     }
 
     private fun renderFavoriteSlots() {
@@ -450,16 +418,16 @@ class Screen3Activity : ComponentActivity() {
         playClip(clip, currentFolderClips.map { it.displayName })
     }
 
-    private fun playClip(clip: AudioClip, playableFiles: List<String>) {
+    private fun playClip(audioClip: AudioClip, playableFiles: List<String>) {
         runCatching {
-            val queued = soundboardAudioEngine.playClipUri(this, clip.uri)
+            val queued = soundboardAudioEngine.playClipUri(this, audioClip.uri)
             if (!queued) error("Clip queue/play failed")
 
-            stateMachine.onPlayPressed(clip.displayName)
+            stateMachine.onPlayPressed(audioClip.displayName)
             renderState(stateMachine.currentState())
         }.onFailure { error ->
-            Log.e(TAG, "Playback failed for ${clip.displayName}", error)
-            stateMachine.onError(getString(R.string.soundboard_state_error_playback, clip.displayName))
+            Log.e(TAG, "Playback failed for ${audioClip.displayName}", error)
+            stateMachine.onError(getString(R.string.soundboard_state_error_playback, audioClip.displayName))
             renderState(stateMachine.currentState())
             stateMachine.onPlaybackCompleted(playableFiles)
         }
@@ -681,6 +649,12 @@ class Screen3Activity : ComponentActivity() {
     private data class CandidateAudioFile(
         val folderName: String,
         val file: DocumentFile
+    )
+
+    private data class BrowserCounts(
+        val total: Int,
+        val wav: Int,
+        val mp3: Int
     )
 
     private data class LoadingSnapshot(
