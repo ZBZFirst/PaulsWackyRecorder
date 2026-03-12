@@ -600,7 +600,17 @@ class Screen3Activity : ComponentActivity() {
             else -> Unit
         }
 
-        val soundId = soundPool.load(this, clip.uri, 1)
+        val soundId = runCatching {
+            contentResolver.openAssetFileDescriptor(clip.uri, "r")?.use { afd ->
+                soundPool.load(afd, 1)
+            }
+        }.getOrNull() ?: 0
+
+        if (soundId == 0) {
+            onResult(false)
+            return
+        }
+
         clipCache[clip.id] = CacheEntry(
             soundId = soundId,
             state = SoundboardStateMachine.ClipLoadState.LOADING,
@@ -742,21 +752,31 @@ class Screen3Activity : ComponentActivity() {
     private fun renderState(state: SoundboardStateMachine.State) {
         statusText.text = when (state) {
             SoundboardStateMachine.State.Loading -> getString(R.string.soundboard_state_loading)
-            is SoundboardStateMachine.State.Ready -> getString(
-                R.string.soundboard_state_ready,
-                state.playableCount,
-                state.activeStreams,
-                state.cachedCount,
-                state.favorites.count { it.clipId != null }
-            ) + " cfg(streams=${state.constraintSnapshot.maxStreams}, cd=${state.constraintSnapshot.cooldownMs}, cache=${state.constraintSnapshot.maxCacheSize}, policy=${state.constraintSnapshot.cachePolicy})"
-                + " load(u=${state.clipLoadSnapshot.unloaded},l=${state.clipLoadSnapshot.loading},ok=${state.clipLoadSnapshot.loaded},f=${state.clipLoadSnapshot.failed})"
-                + (state.lastRejection?.let { " lastReject=${it.reason}" } ?: "")
+            is SoundboardStateMachine.State.Ready -> buildString {
+                append(
+                    getString(
+                        R.string.soundboard_state_ready,
+                        state.playableCount,
+                        state.activeStreams,
+                        state.cachedCount,
+                        state.favorites.count { it.clipId != null }
+                    )
+                )
+                append(" cfg(streams=${state.constraintSnapshot.maxStreams}, cd=${state.constraintSnapshot.cooldownMs}, cache=${state.constraintSnapshot.maxCacheSize}, policy=${state.constraintSnapshot.cachePolicy})")
+                append(" load(u=${state.clipLoadSnapshot.unloaded},l=${state.clipLoadSnapshot.loading},ok=${state.clipLoadSnapshot.loaded},f=${state.clipLoadSnapshot.failed})")
+                state.lastRejection?.let { append(" lastReject=${it.reason}") }
+            }
 
-            is SoundboardStateMachine.State.Playing -> getString(
-                R.string.soundboard_state_playing,
-                state.fileName,
-                state.activeStreams
-            ) + " load(ok=${state.clipLoadSnapshot.loaded},l=${state.clipLoadSnapshot.loading})"
+            is SoundboardStateMachine.State.Playing -> buildString {
+                append(
+                    getString(
+                        R.string.soundboard_state_playing,
+                        state.fileName,
+                        state.activeStreams
+                    )
+                )
+                append(" load(ok=${state.clipLoadSnapshot.loaded},l=${state.clipLoadSnapshot.loading})")
+            }
 
             is SoundboardStateMachine.State.Error -> getString(
                 R.string.soundboard_state_error,
@@ -776,9 +796,10 @@ class Screen3Activity : ComponentActivity() {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
     }
 
-    private fun savedRootFolderUri(): Uri? {
-        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_ROOT_FOLDER_URI, null)
-        return raw?.let(Uri::parse)
+    private fun loadSelectedAssignmentSlotIndex(): Int {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getInt(KEY_SELECTED_ASSIGNMENT_SLOT, 0)
+            .coerceIn(0, FAVORITE_SLOT_COUNT - 1)
     }
 
     private fun saveFavoriteAssignments() {
