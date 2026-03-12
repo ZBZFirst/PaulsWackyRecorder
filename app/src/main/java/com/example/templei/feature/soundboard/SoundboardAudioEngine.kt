@@ -2,27 +2,14 @@ package com.example.templei
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.SoundPool
+import android.media.MediaPlayer
+import android.net.Uri
 import android.util.Log
 
 class SoundboardAudioEngine private constructor(context: Context) {
 
-    private var soundPool: SoundPool
-    private val soundIds = mutableMapOf<String, Int>()
+    private val activePlayers = mutableSetOf<MediaPlayer>()
 
-    init {
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(10)  // Max number of sounds that can be played simultaneously
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .build()
-    }
-
-    // Singleton pattern: Ensure only one instance of this class exists
     companion object {
         @Volatile
         private var INSTANCE: SoundboardAudioEngine? = null
@@ -32,20 +19,60 @@ class SoundboardAudioEngine private constructor(context: Context) {
                 INSTANCE ?: SoundboardAudioEngine(context).also { INSTANCE = it }
             }
         }
+
+        private const val TAG = "SoundboardAudioEngine"
     }
 
-    // Load an audio clip into SoundPool
-    fun loadClip(context: Context, clipUri: String): Int {
-        return soundPool.load(clipUri, 1)  // Load sound clip and return its ID
+    /**
+     * Reliable SAF URI playback path using MediaPlayer and async prepare.
+     */
+    fun playClipUri(context: Context, clipUri: Uri): Boolean {
+        val player = MediaPlayer()
+
+        return runCatching {
+            player.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            player.setDataSource(context, clipUri)
+            player.setOnPreparedListener { prepared ->
+                prepared.start()
+            }
+            player.setOnCompletionListener { completed ->
+                completed.reset()
+                completed.release()
+                activePlayers.remove(completed)
+            }
+            player.setOnErrorListener { failed, what, extra ->
+                Log.w(TAG, "MediaPlayer error what=$what extra=$extra uri=$clipUri")
+                failed.reset()
+                failed.release()
+                activePlayers.remove(failed)
+                true
+            }
+            activePlayers.add(player)
+            player.prepareAsync()
+            true
+        }.onFailure { error ->
+            Log.e(TAG, "Failed to start playback for uri=$clipUri", error)
+            runCatching {
+                player.reset()
+                player.release()
+            }
+            activePlayers.remove(player)
+        }.getOrDefault(false)
     }
 
-    // Play an audio clip
-    fun playClip(clipId: Int) {
-        soundPool.play(clipId, 1f, 1f, 0, 0, 1f)  // Play the clip at full volume, no loop, normal speed
-    }
-
-    // Release all resources
     fun release() {
-        soundPool.release()
+        activePlayers.toList().forEach { player ->
+            runCatching {
+                player.stop()
+                player.reset()
+                player.release()
+            }
+        }
+        activePlayers.clear()
     }
 }
