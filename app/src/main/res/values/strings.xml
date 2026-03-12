@@ -10,7 +10,7 @@
     <!-- Buttons Texts -->
     <string name="button1text">Go to Screen 1</string>
     <string name="button2text">Go to Screen 2</string>
-    <string name="button3text">Action Pad / Soundboard</string>
+    <string name="button3text">Soundboard / Favorites Pad</string>
     <string name="button4text">Go to Screen 4</string>
 
     <!-- Soundboard Assignment -->
@@ -49,7 +49,7 @@
     <string name="permission_read_media_audio">Read Media Audio</string>
 
     <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
-    <string name="screen3_soundboard_help">Choose a folder level using system file explorer, then browse only that level's sibling folders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="screen3_soundboard_help">Choose a folder level using system file explorer, then browse only that levels sibling folders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
     <string name="soundboard_button_empty">(empty)</string>
     <string name="soundboard_select_folder">Choose Sample Folder</string>
     <string name="soundboard_folder_prev">&lt; Folder</string>
@@ -85,7 +85,6 @@
     <string name="soundboard_favorite_slot_label_empty">Slot %1$d&#10;(unassigned)</string>
     <string name="soundboard_favorite_slot_label_assigned">Slot %1$d&#10;%2$s</string>
     <string name="soundboard_favorite_slot_label_saved">Slot %1$d&#10;(saved assignment)</string>
-    <string name="soundboard_assignment_target_default">Assignment target: Slot 1 (long-press pad slot to change)</string>
     <string name="soundboard_assignment_target">Assignment target: Slot %1$d</string>
     <string name="soundboard_assignment_clear_slot">Clear Slot</string>
     <string name="soundboard_assignment_cleared">Cleared assignment for slot %1$d</string>
