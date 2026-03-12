@@ -136,3 +136,44 @@ Use these markdown notes to create richer graph intersections across pages and s
 - [[app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp]]
 - [[app/src/test/java/com/example/templei/ExampleUnitTest.kt]]
 - [[app/src/androidTest/java/com/example/templei/ExampleInstrumentedTest.kt]]
+
+## Screen 3 phased implementation log
+Use this section to keep incremental delivery transparent and reproducible.
+
+### Phase 1 (in progress): Load diagnostics + progress visibility
+- Add explicit loading progress reporting while scanning candidate files from the selected root folder.
+- Report these counters during loading: processed files, total discovered files, playable files accepted.
+- Keep state vocabulary explicit and unchanged at the top level (`Loading`, `Ready`, `Playing`, `Error`) while allowing richer `Loading` details.
+- Surface load progress in `activity_screen3.xml` using a dedicated progress row (`TextView` + horizontal `ProgressBar`).
+- Keep this phase focused on observability only; favorites management and layout collapse/scroll refactors belong to later phases.
+
+
+### Phase 2 (in progress): Favorites decoupling + explicit assignment flow
+- Favorites are no longer auto-filled from folder scans; slots are explicit user assignments.
+- Clip browser selection assigns to the active favorite slot, and clear-slot removes the assignment.
+- Favorite slot mappings persist in `SharedPreferences` so assignments survive activity recreation.
+- Folder browser and favorite pad responsibilities are now separated: folder clips are browsable items; favorite slots are play targets.
+
+
+### Phase 3 (in progress): Frame grouping + vertical scroll + collapse controls
+- Screen 3 layout is grouped into framed sections for Favorites and Clip Browser to make movement/reformatting easier.
+- Main content is vertically scrollable for long clip/favorite workflows in constrained device heights.
+- Favorites section and Clip Browser section each expose explicit collapse/expand controls.
+- Clip browser content is displayed in a vertically scrollable button stack to support many clips.
+
+
+### Phase 4 (in progress): Folder clip action list (play + assign)
+- Folder clip browser now exposes dynamic per-file buttons for all playable files in the active folder.
+- Single-tap on a folder clip plays it immediately (including `.wav` clips) without requiring favorite assignment first.
+- Long-press on a folder clip assigns it to the active favorite slot.
+- Browser header now shows folder clip counts (total / wav / mp3) for explicit load visibility after folder binding.
+
+
+### Phase 5 (in progress): Playback hardening + quick favorite remove UX
+- Sound playback now uses MediaPlayer async prepare from SAF URIs for more reliable button-driven playback.
+- Clip play requests start through a single reliable async path that avoids prior URI load/play race failures.
+- Favorite slots support direct long-press clear for faster remove workflows.
+- Favorites and browser hints are explicit in UI copy to clarify tap vs long-press actions.
+- Loading now surfaces two explicit sub-stages in UI: discovery (folders/files found) and validation (processed/playable progress).
+- Clip browser renders one dynamic button per discovered playable `.wav` in the active folder.
+- Folder catalog results are persisted per selected root URI and hydrated on reopen to avoid multi-minute rescans for large libraries.

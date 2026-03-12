@@ -95,7 +95,19 @@ class SoundboardStateMachine {
         ) : State
     }
 
-    private var state: State = State.Loading
+    enum class LoadingStage {
+        Discovering,
+        Validating
+    }
+
+    private var state: State = State.Loading(
+        stage = LoadingStage.Discovering,
+        processedFiles = 0,
+        totalFiles = 0,
+        playableFiles = 0,
+        discoveredFolders = 0,
+        discoveredFiles = 0
+    )
 
     fun currentState(): State = state
 

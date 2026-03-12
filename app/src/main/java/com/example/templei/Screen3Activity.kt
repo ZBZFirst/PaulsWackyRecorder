@@ -30,10 +30,13 @@ import kotlin.math.max
  * Screen 3: bounded soundboard optimized for short clip triggering.
  */
 class Screen3Activity : ComponentActivity() {
+
     private val stateMachine = SoundboardStateMachine()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private lateinit var statusText: TextView
+    private lateinit var loadingDetailText: TextView
+    private lateinit var loadingProgressBar: ProgressBar
     private lateinit var folderNameText: TextView
     private lateinit var previousFolderButton: Button
     private lateinit var nextFolderButton: Button
@@ -79,7 +82,6 @@ class Screen3Activity : ComponentActivity() {
             saveRootFolderUri(uri)
             runCatching { bindFolderBrowser() }.onFailure(::failToMainMenu)
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,9 +89,10 @@ class Screen3Activity : ComponentActivity() {
 
         runCatching {
             setContentView(R.layout.activity_screen3)
-            TopNavigation.bind(activity = this, currentDestination = Screen3Activity::class.java)
 
             statusText = findViewById(R.id.soundboardStatusText)
+            loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
+            loadingProgressBar = findViewById(R.id.soundboardLoadingProgressBar)
             folderNameText = findViewById(R.id.soundboardFolderNameText)
             previousFolderButton = findViewById(R.id.soundboardFolderPrevButton)
             nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
@@ -117,6 +120,8 @@ class Screen3Activity : ComponentActivity() {
                     bindCurrentFolder()
                 }
             }
+            previousFolderButton.setOnClickListener { moveFolderSelection(-1) }
+            nextFolderButton.setOnClickListener { moveFolderSelection(1) }
 
             selectFolderButton.setOnClickListener { pickFolderLauncher.launch(savedRootFolderUri()) }
             settingsButton.setOnClickListener { showSettingsDialog() }
@@ -129,7 +134,8 @@ class Screen3Activity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        runCatching { bindFolderBrowser() }.onFailure(::failToMainMenu)
+        runCatching { bindFolderBrowser() }
+            .onFailure(::failToMainMenu)
     }
 
     override fun onDestroy() {
@@ -330,6 +336,7 @@ class Screen3Activity : ComponentActivity() {
             renderState(stateMachine.currentState())
             return
         }
+    }
 
         stateMachine.onLoading()
         renderState(stateMachine.currentState())
@@ -372,6 +379,7 @@ class Screen3Activity : ComponentActivity() {
         folderEntries = emptyList()
         activeFolderClips = emptyList()
         currentFolderIndex = 0
+
         folderNameText.text = getString(R.string.soundboard_folder_none)
         previousFolderButton.isEnabled = false
         nextFolderButton.isEnabled = false
@@ -422,6 +430,7 @@ class Screen3Activity : ComponentActivity() {
                 }
                 else -> getString(R.string.soundboard_favorite_slot_label_saved, index + 1)
             }
+            clipBrowserContainer.addView(clipButton)
         }
     }
 
@@ -925,6 +934,28 @@ class Screen3Activity : ComponentActivity() {
         val unloadOnFolderChange: Boolean = DEFAULT_UNLOAD_ON_FOLDER_CHANGE,
         val cachePolicy: CachePolicy = DEFAULT_CACHE_POLICY
     )
+    private data class CacheEntry(
+        val soundId: Int?,
+        var state: SoundboardStateMachine.ClipLoadState,
+        var lastUsedMs: Long,
+        var pinned: Boolean
+    )
+
+    private data class SoundboardConfig(
+        val maxStreams: Int = DEFAULT_MAX_STREAMS,
+        val cooldownMs: Long = DEFAULT_COOLDOWN_MS,
+        val maxCacheSize: Int = DEFAULT_MAX_CACHE_SIZE,
+        val unloadOnFolderChange: Boolean = DEFAULT_UNLOAD_ON_FOLDER_CHANGE,
+        val cachePolicy: CachePolicy = DEFAULT_CACHE_POLICY
+    )
+
+    private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
+
+    private enum class TrimReason { FOLDER_SWITCH, MEMORY_PRESSURE, SETTINGS_APPLY }
+
+    private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
+
+    private enum class TrimReason { FOLDER_SWITCH, MEMORY_PRESSURE, SETTINGS_APPLY }
 
     private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
 
@@ -932,7 +963,6 @@ class Screen3Activity : ComponentActivity() {
 
     private companion object {
         private const val TAG = "Screen3Soundboard"
-        private const val MAX_SOUND_DURATION_MS = 6_000L
         private const val PREFS_NAME = "screen3_soundboard"
         private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
         private const val KEY_MAX_STREAMS = "max_streams"
