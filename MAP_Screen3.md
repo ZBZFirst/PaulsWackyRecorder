@@ -22,3 +22,8 @@ Screen 3 is now a bounded soundboard surface:
 - cache retention policy modes: Aggressive / Balanced / Sticky
 - favorite-slot assignment target + clear-slot controls, with persisted slot mappings
 - deterministic diagnostics: clip-load snapshot + last-rejection telemetry in state/status
+- phase-1 loading diagnostics: processed/total/playable counters with visible progress bar during catalog scan
+- phase-2 favorites decoupled from folder scans: explicit assign/remove flow with persisted slot mappings
+- phase-3 layout refactor: framed favorites/browser groups with vertical scrolling and collapse/expand controls
+- phase-4 folder clip action list: dynamic buttons support tap-to-play and long-press-to-assign, with per-folder wav/mp3 counts
+- phase-5 playback hardening: SAF URI descriptor loading + load-complete queued play, with long-press clear on favorite slots

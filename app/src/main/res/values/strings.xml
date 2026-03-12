@@ -46,8 +46,10 @@
     <string name="soundboard_folder_unknown">Unknown</string>
     <string name="soundboard_folder_current">Current Folder</string>
     <string name="soundboard_state_loading">Loading Soundboard...</string>
-    <string name="soundboard_state_ready">Soundboard Ready</string>
-    <string name="soundboard_state_playing">Playing Clip</string>
+    <string name="soundboard_state_loading_progress_initial">Scanning clips: 0 / 0 (playable: 0)</string>
+    <string name="soundboard_state_loading_progress">Scanning clips: %1$d / %2$d (playable: %3$d)</string>
+    <string name="soundboard_state_ready">Soundboard Ready (%1$d clips)</string>
+    <string name="soundboard_state_playing">Playing Clip: %1$s</string>
     <string name="soundboard_state_error">Error: %1$s</string>
     <string name="soundboard_state_error_playback">Playback failed</string>
     <string name="soundboard_state_error_permission_required">Permission required</string>
@@ -66,9 +68,17 @@
 
     <!-- Favorites Section -->
     <string name="soundboard_favorites_title">Favorite Pad (3x3)</string>
+    <string name="soundboard_favorites_hint">Tap slot to play selected favorite. Long-press slot to clear it.</string>
     <string name="soundboard_browser_title">Browse Clips</string>
     <string name="soundboard_browser_empty">No clips in this folder</string>
+    <string name="soundboard_browser_hint">Tap to play clip. Long-press to assign to active favorite slot.</string>
+    <string name="soundboard_browser_count">Folder clips</string>
+    <string name="soundboard_browser_count_value">Folder clips: %1$d total (%2$d wav, %3$d mp3)</string>
+    <string name="soundboard_section_expand">Expand</string>
+    <string name="soundboard_section_collapse">Collapse</string>
     <string name="soundboard_favorite_slot_empty">Unassigned</string>
+    <string name="soundboard_favorite_slot_missing">Missing clip</string>
+    <string name="soundboard_assignment_saved">Saved to slot %1$d: %2$s</string>
     <string name="soundboard_favorite_slot_label_empty">Slot %1$d (unassigned)</string>
     <string name="soundboard_favorite_slot_label_assigned">Slot %1$d (%2$s)</string>
     <string name="soundboard_favorite_slot_label_saved">Slot %1$d (saved)</string>
