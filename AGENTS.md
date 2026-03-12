@@ -32,7 +32,7 @@ Maintain this baseline unless a task explicitly requests changes:
 
 ## Screen 3 soundboard scaffold contract
 - Screen 3 now represents the **Action Pad / Soundboard** boolean axis.
-- Sound files are discovered from a user-selected root folder via system file picker; subfolders under that root are browsable.
+- Sound files are discovered from a user-selected folder via system file picker; browsing is lateral across sibling folders at that selected level.
 - Supported formats: `.wav` and `.mp3`.
 - Soundboard clips must be `<= 6 seconds`; longer clips are treated as non-playable.
 - Playback is button-press driven only (no autoplay state transitions).

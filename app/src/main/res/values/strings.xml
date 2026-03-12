@@ -49,13 +49,14 @@
 
 
     <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
-    <string name="screen3_soundboard_help">Choose a root folder using the system file explorer, then browse its subfolders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="screen3_soundboard_help">Choose a folder level using system file explorer, then browse only that level's sibling folders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
     <string name="soundboard_button_empty">(empty)</string>
     <string name="soundboard_select_folder">Choose Sample Folder</string>
     <string name="soundboard_folder_prev">&lt; Folder</string>
     <string name="soundboard_folder_next">Folder &gt;</string>
     <string name="soundboard_folder_none">No playable folder</string>
     <string name="soundboard_folder_unknown">unknown</string>
+    <string name="soundboard_folder_current">current-folder</string>
     <string name="soundboard_state_loading">Soundboard state: loading catalog…</string>
     <string name="soundboard_state_ready">Soundboard state: ready (%1$d playable files)</string>
     <string name="soundboard_state_playing">Soundboard state: playing %1$s</string>

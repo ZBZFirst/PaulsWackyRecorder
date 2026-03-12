@@ -5,6 +5,7 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -16,11 +17,11 @@ import com.example.templei.feature.soundboard.SoundboardStateMachine
 import com.example.templei.ui.navigation.TopNavigation
 
 /**
- * Screen 3: button-driven soundboard with user-selected root folder.
+ * Screen 3: button-driven soundboard with user-selected folder scope.
  *
  * Behavior contract:
- * - User selects a folder (via system file picker) that contains sample subfolders.
- * - Folder browser selects one discovered subfolder at a time.
+ * - User selects a root folder (via system file picker).
+ * - Browser navigates laterally only across immediate child folders at one level.
  * - Only `.wav` and `.mp3` files with duration <= 6 seconds are playable.
  * - Audio starts only when a button is explicitly pressed.
  */
@@ -54,14 +55,20 @@ class Screen3Activity : ComponentActivity() {
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
+            Log.i(TAG, "Folder picked: $uri")
             runCatching {
                 contentResolver.takePersistableUriPermission(
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
+            }.onFailure {
+                Log.w(TAG, "Persistable URI permission failed for $uri", it)
             }
             saveRootFolderUri(uri)
-            bindFolderBrowser()
+            runCatching { bindFolderBrowser() }
+                .onFailure { failToMainMenu(it) }
+        } else {
+            Log.d(TAG, "Folder picker canceled by user")
         }
     }
 
@@ -80,20 +87,17 @@ class Screen3Activity : ComponentActivity() {
             selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
 
             selectFolderButton.setOnClickListener {
+                Log.d(TAG, "Launching folder picker")
                 pickFolderLauncher.launch(savedRootFolderUri())
             }
 
             bindFolderBrowser()
-        }.onFailure { error ->
-            failToMainMenu(error)
-        }
+        }.onFailure(::failToMainMenu)
     }
 
     override fun onResume() {
         super.onResume()
-        runCatching { bindFolderBrowser() }.onFailure { error ->
-            failToMainMenu(error)
-        }
+        runCatching { bindFolderBrowser() }.onFailure(::failToMainMenu)
     }
 
     override fun onDestroy() {
@@ -105,19 +109,23 @@ class Screen3Activity : ComponentActivity() {
     private fun bindFolderBrowser() {
         val rootUri = savedRootFolderUri()
         if (rootUri == null) {
+            Log.d(TAG, "No root folder selected")
             renderFolderSelectionRequired()
             return
         }
 
         val root = DocumentFile.fromTreeUri(this, rootUri)
         if (root == null || !root.canRead()) {
+            Log.w(TAG, "Root folder cannot be read: $rootUri")
             renderFolderSelectionRequired()
             return
         }
 
-        clipsByFolder = loadClipsByFolder(root)
+        clipsByFolder = loadClipsByFolderAtSingleLevel(root)
         folderNames = clipsByFolder.keys.sorted()
         currentFolderIndex = currentFolderIndex.coerceAtMost((folderNames.size - 1).coerceAtLeast(0))
+
+        Log.i(TAG, "Loaded ${folderNames.size} sibling folders at selected level")
 
         previousFolderButton.setOnClickListener {
             if (folderNames.isNotEmpty()) {
@@ -165,6 +173,8 @@ class Screen3Activity : ComponentActivity() {
         previousFolderButton.isEnabled = folderNames.size > 1
         nextFolderButton.isEnabled = folderNames.size > 1
 
+        Log.d(TAG, "Binding folder '$folderName' with ${clips.size} clips")
+
         stateMachine.onCatalogLoaded(clips.map { it.displayName })
         renderState(stateMachine.currentState())
         bindButtons(clips)
@@ -188,44 +198,44 @@ class Screen3Activity : ComponentActivity() {
         }
     }
 
-    private fun loadClipsByFolder(rootFolder: DocumentFile): Map<String, List<AudioClip>> {
-        val clips = mutableListOf<AudioClip>()
+    /**
+     * Load only one folder level: direct child folders of selected root.
+     */
+    private fun loadClipsByFolderAtSingleLevel(rootFolder: DocumentFile): Map<String, List<AudioClip>> {
+        val byFolder = linkedMapOf<String, MutableList<AudioClip>>()
 
-        fun scan(folder: DocumentFile, relativePath: String) {
-            folder.listFiles().forEach { entry ->
-                if (entry.isDirectory) {
-                    val nextPath = if (relativePath.isBlank()) {
-                        entry.name ?: getString(R.string.soundboard_folder_unknown)
-                    } else {
-                        "$relativePath/${entry.name ?: getString(R.string.soundboard_folder_unknown)}"
-                    }
-                    scan(entry, nextPath)
-                } else if (entry.isFile) {
-                    val name = entry.name ?: return@forEach
-                    if (!isSupportedExtension(name)) {
-                        return@forEach
-                    }
-                    if (!isSupportedDuration(entry.uri)) {
-                        return@forEach
+        rootFolder.listFiles()
+            .filter { it.isDirectory }
+            .forEach { childFolder ->
+                val folderName = childFolder.name ?: getString(R.string.soundboard_folder_unknown)
+                val clips = childFolder.listFiles()
+                    .filter { it.isFile }
+                    .mapNotNull { file ->
+                        val fileName = file.name ?: return@mapNotNull null
+                        if (!isSupportedExtension(fileName)) return@mapNotNull null
+                        if (!isSupportedDuration(file.uri)) return@mapNotNull null
+                        AudioClip(displayName = fileName, uri = file.uri, folderName = folderName)
                     }
 
-                    val folderName = if (relativePath.isBlank()) {
-                        getString(R.string.soundboard_folder_unknown)
-                    } else {
-                        relativePath
-                    }
-
-                    clips += AudioClip(
-                        displayName = name,
-                        uri = entry.uri,
-                        folderName = folderName
-                    )
+                if (clips.isNotEmpty()) {
+                    byFolder.getOrPut(folderName) { mutableListOf() }.addAll(clips)
                 }
             }
+
+        // If root itself directly contains audio, expose it as one addressable bucket.
+        val rootFiles = rootFolder.listFiles()
+            .filter { it.isFile }
+            .mapNotNull { file ->
+                val fileName = file.name ?: return@mapNotNull null
+                if (!isSupportedExtension(fileName)) return@mapNotNull null
+                if (!isSupportedDuration(file.uri)) return@mapNotNull null
+                AudioClip(displayName = fileName, uri = file.uri, folderName = getString(R.string.soundboard_folder_current))
+            }
+        if (rootFiles.isNotEmpty()) {
+            byFolder.getOrPut(getString(R.string.soundboard_folder_current)) { mutableListOf() }.addAll(rootFiles)
         }
 
-        scan(rootFolder, relativePath = "")
-        return clips.groupBy { it.folderName }
+        return byFolder.mapValues { it.value.sortedBy { clip -> clip.displayName } }
     }
 
     private fun isSupportedDuration(uri: Uri): Boolean {
@@ -236,6 +246,8 @@ class Screen3Activity : ComponentActivity() {
                 ?.toLongOrNull() ?: Long.MAX_VALUE
             retriever.release()
             durationMs in 1..MAX_SOUND_DURATION_MS
+        }.onFailure {
+            Log.w(TAG, "Failed duration check for $uri", it)
         }.getOrDefault(false)
     }
 
@@ -244,6 +256,7 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun playClip(clip: AudioClip, playableFiles: List<String>) {
+        Log.d(TAG, "Play pressed: ${clip.displayName} (${clip.folderName})")
         mediaPlayer?.release()
         mediaPlayer = MediaPlayer().apply {
             try {
@@ -256,7 +269,8 @@ class Screen3Activity : ComponentActivity() {
                 prepareAsync()
                 stateMachine.onPlayPressed(clip.displayName)
                 renderState(stateMachine.currentState())
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                Log.e(TAG, "Playback failed for ${clip.displayName}", error)
                 stateMachine.onError(getString(R.string.soundboard_state_error_playback, clip.displayName))
                 renderState(stateMachine.currentState())
                 release()
@@ -287,8 +301,8 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun failToMainMenu(error: Throwable) {
+        Log.e(TAG, "Screen3 startup failure", error)
         Toast.makeText(this, getString(R.string.screen3_startup_failed), Toast.LENGTH_LONG).show()
-        stateMachine.onError(getString(R.string.soundboard_state_error, error.message ?: "unknown"))
         startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
@@ -300,8 +314,9 @@ class Screen3Activity : ComponentActivity() {
     )
 
     private companion object {
-        const val MAX_SOUND_DURATION_MS = 6_000L
-        const val PREFS_NAME = "screen3_soundboard"
-        const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
+        private const val TAG = "Screen3Soundboard"
+        private const val MAX_SOUND_DURATION_MS = 6_000L
+        private const val PREFS_NAME = "screen3_soundboard"
+        private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
     }
 }
