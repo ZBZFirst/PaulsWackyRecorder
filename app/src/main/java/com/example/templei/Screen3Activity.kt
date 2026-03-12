@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import com.example.templei.feature.soundboard.SoundboardStateMachine
 import com.example.templei.ui.navigation.TopNavigation
+import kotlin.math.max
 
 /**
  * Screen 3: button-driven soundboard with user-selected folder scope.

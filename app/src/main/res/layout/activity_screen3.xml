@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-
-    <!-- Shell layout for Screen 3.
-         TODO: Replace static placeholder controls with feature-backed UI behavior. -->
     <TextView
         android:id="@+id/screenTitle"
         android:layout_width="match_parent"
@@ -16,35 +12,33 @@
         android:layout_marginTop="24dp"
         android:gravity="center"
         android:text="@string/screen3TitleText"
-        android:textSize="32sp" />
+        android:textSize="28sp" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp">
+
         <include
             android:id="@+id/topNavInclude"
             layout="@layout/view_top_navigation"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="24dp"
-            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="12dp"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ScrollView
-            android:id="@+id/buttonGridScrollView"
+        <TextView
+            android:id="@+id/soundboardStatusText"
             android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="24dp"
-            android:layout_marginEnd="24dp"
-            android:layout_marginBottom="24dp"
-            android:fillViewport="true"
-            android:background="@color/debug_warning"
-            app:layout_constraintTop_toBottomOf="@id/topNavInclude"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/soundboard_state_loading"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
@@ -172,229 +166,150 @@
                         android:layout_columnWeight="1"
                         android:text="B06" />
 
-                    <!-- Row 3 -->
-                    <Button
-                        android:id="@+id/gridButton07"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B07" />
+        <Button
+            android:id="@+id/soundboardSelectFolderButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/soundboard_select_folder"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardStatusText" />
 
-                    <Button
-                        android:id="@+id/gridButton08"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B08" />
+        <Button
+            android:id="@+id/soundboardSettingsButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/soundboard_settings_button"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardSelectFolderButton" />
 
-                    <Button
-                        android:id="@+id/gridButton09"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B09" />
+        <LinearLayout
+            android:id="@+id/soundboardFolderNavRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardSettingsButton">
 
-                    <!-- Row 4 -->
-                    <Button
-                        android:id="@+id/gridButton10"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B10" />
+            <Button
+                android:id="@+id/soundboardFolderPrevButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/soundboard_folder_prev" />
 
-                    <Button
-                        android:id="@+id/gridButton11"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B11" />
+            <TextView
+                android:id="@+id/soundboardFolderNameText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:gravity="center"
+                android:text="@string/soundboard_folder_none"
+                android:textStyle="bold" />
 
-                    <Button
-                        android:id="@+id/gridButton12"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B12" />
+            <Button
+                android:id="@+id/soundboardFolderNextButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/soundboard_folder_next" />
+        </LinearLayout>
 
-                    <!-- Row 5 -->
-                    <Button
-                        android:id="@+id/gridButton13"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B13" />
+        <TextView
+            android:id="@+id/soundboardPadTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/soundboard_favorites_title"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardFolderNavRow" />
 
-                    <Button
-                        android:id="@+id/gridButton14"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B14" />
+        <GridLayout
+            android:id="@+id/soundboardFavoritesPad"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:alignmentMode="alignMargins"
+            android:columnCount="3"
+            android:rowCount="3"
+            android:useDefaultMargins="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardPadTitle">
 
-                    <Button
-                        android:id="@+id/gridButton15"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B15" />
+            <Button android:id="@+id/favoritePadButton1" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton2" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton3" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton4" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton5" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton6" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton7" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton8" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+            <Button android:id="@+id/favoritePadButton9" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
+        </GridLayout>
 
-                    <!-- Row 6 -->
-                    <Button
-                        android:id="@+id/gridButton16"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B16" />
+        <LinearLayout
+            android:id="@+id/soundboardAssignmentRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardFavoritesPad">
 
-                    <Button
-                        android:id="@+id/gridButton17"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B17" />
+            <TextView
+                android:id="@+id/soundboardAssignmentTargetText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/soundboard_assignment_target_default" />
 
-                    <Button
-                        android:id="@+id/gridButton18"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B18" />
+            <Button
+                android:id="@+id/soundboardClearSelectedSlotButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/soundboard_assignment_clear_slot" />
+        </LinearLayout>
 
-                    <!-- Row 7 -->
-                    <Button
-                        android:id="@+id/gridButton19"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B19" />
+        <TextView
+            android:id="@+id/soundboardBrowserTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/soundboard_browser_title"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardAssignmentRow" />
 
-                    <Button
-                        android:id="@+id/gridButton20"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B20" />
+        <HorizontalScrollView
+            android:id="@+id/soundboardClipBrowserScroll"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:fillViewport="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardBrowserTitle">
 
-                    <Button
-                        android:id="@+id/gridButton21"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B21" />
-
-                    <!-- Row 8 -->
-                    <Button
-                        android:id="@+id/gridButton22"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B22" />
-
-                    <Button
-                        android:id="@+id/gridButton23"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B23" />
-
-                    <Button
-                        android:id="@+id/gridButton24"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B24" />
-
-                    <!-- Row 9 -->
-                    <Button
-                        android:id="@+id/gridButton25"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B25" />
-
-                    <Button
-                        android:id="@+id/gridButton26"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B26" />
-
-                    <Button
-                        android:id="@+id/gridButton27"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B27" />
-
-                    <!-- Row 10 -->
-                    <Button
-                        android:id="@+id/gridButton28"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B28" />
-
-                    <Button
-                        android:id="@+id/gridButton29"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B29" />
-
-                    <Button
-                        android:id="@+id/gridButton30"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B30" />
-
-                    <!-- Row 11 -->
-                    <Button
-                        android:id="@+id/gridButton31"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B31" />
-
-                    <Button
-                        android:id="@+id/gridButton32"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B32" />
-
-                    <Button
-                        android:id="@+id/gridButton33"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B33" />
-
-                    <!-- Row 12 -->
-                    <Button
-                        android:id="@+id/gridButton34"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B34" />
-
-                    <Button
-                        android:id="@+id/gridButton35"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B35" />
-
-                    <Button
-                        android:id="@+id/gridButton36"
-                        android:layout_width="0dp"
-                        android:layout_height="88dp"
-                        android:layout_columnWeight="1"
-                        android:text="B36" />
-
-                </GridLayout>
-            </LinearLayout>
-        </ScrollView>
+            <LinearLayout
+                android:id="@+id/soundboardClipBrowserContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </HorizontalScrollView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
