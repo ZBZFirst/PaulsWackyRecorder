@@ -53,7 +53,7 @@
                     android:id="@+id/buttonGridTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/screen3_soundboard_grid_title"
+                    android:text="@string/screen3_soundboard_title_text"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
