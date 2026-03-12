@@ -49,7 +49,7 @@
 
 
     <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
-    <string name="screen3_soundboard_help">Load Dirt-Samples or other packs into app/src/main/assets/soundboard. Use folder back/forward to browse subfolders; only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="screen3_soundboard_help">Screen 3 scans device shared Music storage. Use folder back/forward to browse subfolders (for example Dirt-Samples/808); only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
     <string name="soundboard_button_empty">(empty)</string>
     <string name="soundboard_folder_prev">&lt; Folder</string>
     <string name="soundboard_folder_next">Folder &gt;</string>
@@ -60,5 +60,6 @@
     <string name="soundboard_state_error">Soundboard state: error (%1$s)</string>
     <string name="soundboard_state_error_missing">Missing or unsupported asset: %1$s</string>
     <string name="soundboard_state_error_playback">Playback failed for: %1$s</string>
+    <string name="soundboard_state_error_permission_required">Grant audio/storage permission from Main Screen to read Music folder clips.</string>
 
 </resources>

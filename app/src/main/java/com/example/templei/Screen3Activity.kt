@@ -1,21 +1,24 @@
 package com.example.templei
 
-import android.content.res.AssetFileDescriptor
-import android.media.MediaMetadataRetriever
+import android.Manifest
+import android.content.ContentUris
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.ContextCompat
 import com.example.templei.feature.soundboard.SoundboardStateMachine
 import com.example.templei.ui.navigation.TopNavigation
 
 /**
- * Screen 3: button-driven soundboard.
+ * Screen 3: button-driven soundboard backed by device Music storage.
  *
  * Behavior contract:
- * - Files are discovered from `assets/soundboard`.
+ * - Clips are discovered from shared media storage (Music directory / media index).
  * - A folder browser selects one sample folder at a time.
  * - Only `.wav` and `.mp3` files with duration <= 6 seconds are playable.
  * - Audio starts only when a button is explicitly pressed.
@@ -28,8 +31,9 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var previousFolderButton: Button
     private lateinit var nextFolderButton: Button
 
-    private var sampleFolders: List<String> = emptyList()
+    private var folderNames: List<String> = emptyList()
     private var currentFolderIndex: Int = 0
+    private var clipsByFolder: Map<String, List<AudioClip>> = emptyMap()
 
     private val buttonIds = listOf(
         R.id.gridButton01, R.id.gridButton02, R.id.gridButton03,
@@ -60,6 +64,11 @@ class Screen3Activity : ComponentActivity() {
         bindFolderBrowser()
     }
 
+    override fun onResume() {
+        super.onResume()
+        bindFolderBrowser()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         mediaPlayer?.release()
@@ -67,19 +76,33 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun bindFolderBrowser() {
-        sampleFolders = discoverPlayableFolders(SOUNDBOARD_ASSET_DIR)
-        currentFolderIndex = 0
+        if (!canReadMusic()) {
+            folderNames = emptyList()
+            clipsByFolder = emptyMap()
+            currentFolderIndex = 0
+            folderNameText.text = getString(R.string.soundboard_folder_none)
+            previousFolderButton.isEnabled = false
+            nextFolderButton.isEnabled = false
+            bindButtons(emptyList())
+            stateMachine.onError(getString(R.string.soundboard_state_error_permission_required))
+            renderState(stateMachine.currentState())
+            return
+        }
+
+        clipsByFolder = loadClipsByFolder()
+        folderNames = clipsByFolder.keys.sorted()
+        currentFolderIndex = currentFolderIndex.coerceAtMost((folderNames.size - 1).coerceAtLeast(0))
 
         previousFolderButton.setOnClickListener {
-            if (sampleFolders.isNotEmpty()) {
-                currentFolderIndex = (currentFolderIndex - 1 + sampleFolders.size) % sampleFolders.size
+            if (folderNames.isNotEmpty()) {
+                currentFolderIndex = (currentFolderIndex - 1 + folderNames.size) % folderNames.size
                 bindCurrentFolder()
             }
         }
 
         nextFolderButton.setOnClickListener {
-            if (sampleFolders.isNotEmpty()) {
-                currentFolderIndex = (currentFolderIndex + 1) % sampleFolders.size
+            if (folderNames.isNotEmpty()) {
+                currentFolderIndex = (currentFolderIndex + 1) % folderNames.size
                 bindCurrentFolder()
             }
         }
@@ -88,133 +111,151 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun bindCurrentFolder() {
-        val folderPath = sampleFolders.getOrNull(currentFolderIndex)
-        if (folderPath == null) {
+        val folderName = folderNames.getOrNull(currentFolderIndex)
+        if (folderName == null) {
             folderNameText.text = getString(R.string.soundboard_folder_none)
             previousFolderButton.isEnabled = false
             nextFolderButton.isEnabled = false
-            bindButtons(playableFiles = emptyList(), folderPath = null)
+            bindButtons(emptyList())
             stateMachine.onCatalogLoaded(emptyList())
             renderState(stateMachine.currentState())
             return
         }
 
-        folderNameText.text = folderPath.removePrefix("$SOUNDBOARD_ASSET_DIR/")
-        previousFolderButton.isEnabled = sampleFolders.size > 1
-        nextFolderButton.isEnabled = sampleFolders.size > 1
+        val clips = clipsByFolder[folderName].orEmpty().sortedBy { it.displayName }
+        folderNameText.text = folderName
+        previousFolderButton.isEnabled = folderNames.size > 1
+        nextFolderButton.isEnabled = folderNames.size > 1
 
-        val playableFiles = loadPlayableFiles(folderPath)
-        stateMachine.onCatalogLoaded(playableFiles)
+        stateMachine.onCatalogLoaded(clips.map { it.displayName })
         renderState(stateMachine.currentState())
-        bindButtons(playableFiles = playableFiles, folderPath = folderPath)
+        bindButtons(clips)
     }
 
-    private fun bindButtons(playableFiles: List<String>, folderPath: String?) {
+    private fun bindButtons(clips: List<AudioClip>) {
         val buttons = buttonIds.mapNotNull { id -> findViewById<Button?>(id) }
         buttons.forEachIndexed { index, button ->
-            val fileName = playableFiles.getOrNull(index)
-            if (fileName == null || folderPath == null) {
+            val clip = clips.getOrNull(index)
+            if (clip == null) {
                 button.isEnabled = false
                 button.text = getString(R.string.soundboard_button_empty)
                 button.setOnClickListener(null)
             } else {
                 button.isEnabled = true
-                button.text = fileName
+                button.text = clip.displayName
                 button.setOnClickListener {
-                    playAsset(
-                        folderPath = folderPath,
-                        fileName = fileName,
-                        playableFiles = playableFiles
-                    )
+                    playClip(clip, clips.map { it.displayName })
                 }
             }
         }
     }
 
-    private fun discoverPlayableFolders(basePath: String): List<String> {
-        val result = mutableListOf<String>()
+    private fun loadClipsByFolder(): Map<String, List<AudioClip>> {
+        val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.RELATIVE_PATH,
+            MediaStore.Audio.Media.DATA
+        )
 
-        fun scan(path: String) {
-            val entries = assets.list(path)?.toList().orEmpty()
-            if (entries.isEmpty()) {
-                return
-            }
+        val clips = mutableListOf<AudioClip>()
+        contentResolver.query(collection, projection, null, null, null)?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val relativePathColumn = cursor.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH)
+            val dataColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
 
-            val files = entries.filter { entry ->
-                entry.endsWith(".wav", ignoreCase = true) || entry.endsWith(".mp3", ignoreCase = true)
-            }
-            val subdirs = entries.filter { entry ->
-                assets.list("$path/$entry")?.isNotEmpty() == true
-            }
-
-            if (files.isNotEmpty()) {
-                val playableCount = files.count { fileName -> isSupportedDuration(path, fileName) }
-                if (playableCount > 0) {
-                    result += path
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val displayName = cursor.getString(nameColumn) ?: continue
+                val durationMs = cursor.getLong(durationColumn)
+                if (durationMs <= 0 || durationMs > MAX_SOUND_DURATION_MS) {
+                    continue
                 }
-            }
+                if (!isSupportedExtension(displayName)) {
+                    continue
+                }
 
-            subdirs.forEach { subdir ->
-                scan("$path/$subdir")
+                val relativePath = if (relativePathColumn >= 0) cursor.getString(relativePathColumn) else null
+                val dataPath = if (dataColumn >= 0) cursor.getString(dataColumn) else null
+                val folderName = deriveFolderName(relativePath, dataPath)
+                if (folderName == null) {
+                    continue
+                }
+
+                clips += AudioClip(
+                    displayName = displayName,
+                    uri = ContentUris.withAppendedId(collection, id),
+                    folderName = folderName
+                )
             }
         }
 
-        scan(basePath)
-        return result.distinct().sorted()
+        return clips.groupBy { it.folderName }
     }
 
-    private fun loadPlayableFiles(folderPath: String): List<String> {
-        val candidates = assets.list(folderPath)?.toList().orEmpty()
-        return candidates
-            .filter { it.endsWith(".wav", ignoreCase = true) || it.endsWith(".mp3", ignoreCase = true) }
-            .filter { isSupportedDuration(folderPath, it) }
-            .sorted()
-    }
-
-    private fun isSupportedDuration(folderPath: String, fileName: String): Boolean {
-        return runCatching {
-            assets.openFd("$folderPath/$fileName").use { fd ->
-                val retriever = MediaMetadataRetriever()
-                retriever.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
-                val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                    ?.toLongOrNull() ?: Long.MAX_VALUE
-                retriever.release()
-                durationMs <= MAX_SOUND_DURATION_MS
+    private fun deriveFolderName(relativePath: String?, dataPath: String?): String? {
+        relativePath?.let {
+            val normalized = it.trim('/').replace('\\', '/')
+            if (normalized.equals("Music", ignoreCase = true)) {
+                return "Music"
             }
-        }.getOrDefault(false)
-    }
-
-    private fun playAsset(folderPath: String, fileName: String, playableFiles: List<String>) {
-        val path = "$folderPath/$fileName"
-        val afd: AssetFileDescriptor = try {
-            assets.openFd(path)
-        } catch (_: Exception) {
-            stateMachine.onError(getString(R.string.soundboard_state_error_missing, fileName))
-            renderState(stateMachine.currentState())
-            return
+            if (normalized.startsWith("Music/", ignoreCase = true)) {
+                return normalized.removePrefix("Music/")
+            }
         }
 
+        dataPath?.let {
+            val normalized = it.replace('\\', '/')
+            val marker = "/Music/"
+            val idx = normalized.indexOf(marker, ignoreCase = true)
+            if (idx >= 0) {
+                val remainder = normalized.substring(idx + marker.length)
+                val slash = remainder.lastIndexOf('/')
+                return if (slash > 0) remainder.substring(0, slash) else "Music"
+            }
+        }
+
+        return null
+    }
+
+    private fun isSupportedExtension(displayName: String): Boolean {
+        return displayName.endsWith(".wav", ignoreCase = true) || displayName.endsWith(".mp3", ignoreCase = true)
+    }
+
+    private fun playClip(clip: AudioClip, playableFiles: List<String>) {
         mediaPlayer?.release()
         mediaPlayer = MediaPlayer().apply {
             try {
-                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                setDataSource(this@Screen3Activity, clip.uri)
                 setOnPreparedListener { it.start() }
                 setOnCompletionListener {
                     stateMachine.onPlaybackCompleted(playableFiles)
                     renderState(stateMachine.currentState())
                 }
                 prepareAsync()
-                stateMachine.onPlayPressed(fileName)
+                stateMachine.onPlayPressed(clip.displayName)
                 renderState(stateMachine.currentState())
             } catch (_: Exception) {
-                stateMachine.onError(getString(R.string.soundboard_state_error_playback, fileName))
+                stateMachine.onError(getString(R.string.soundboard_state_error_playback, clip.displayName))
                 renderState(stateMachine.currentState())
                 release()
                 mediaPlayer = null
-            } finally {
-                afd.close()
             }
         }
+    }
+
+    private fun canReadMusic(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        return ContextCompat.checkSelfPermission(this, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
     private fun renderState(state: SoundboardStateMachine.State) {
@@ -226,8 +267,13 @@ class Screen3Activity : ComponentActivity() {
         }
     }
 
+    private data class AudioClip(
+        val displayName: String,
+        val uri: android.net.Uri,
+        val folderName: String
+    )
+
     private companion object {
-        const val SOUNDBOARD_ASSET_DIR = "soundboard"
         const val MAX_SOUND_DURATION_MS = 6_000L
     }
 }
