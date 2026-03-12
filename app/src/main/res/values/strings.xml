@@ -13,9 +13,9 @@
     <string name="mainScreenText">Main Screen</string>
     <string name="screen1TitleText">Screen 1</string>
     <string name="screen2TitleText">Screen 2</string>
-    <string name="screen3TitleText">Screen 3 — Action Pad Soundboard</string>
+    <string name="screen3TitleText">Screen 3 - Action Pad Soundboard</string>
     <string name="screen4TitleText">Screen 4</string>
-    <string name="device_status_placeholder">Loading host device status…</string>
+    <string name="device_status_placeholder">Loading host device status...</string>
     <string name="device_status_header">Host device status (SDK %1$d)</string>
     <string name="device_status_camera">Camera module: hardware=%1$s, permission=%2$s</string>
     <string name="device_status_microphone">Microphone module: hardware=%1$s, permission=%2$s</string>
@@ -57,7 +57,7 @@
     <string name="soundboard_folder_none">No playable folder</string>
     <string name="soundboard_folder_unknown">unknown</string>
     <string name="soundboard_folder_current">current-folder</string>
-    <string name="soundboard_state_loading">Soundboard state: loading catalog…</string>
+    <string name="soundboard_state_loading">Soundboard state: loading catalog...</string>
     <string name="soundboard_state_ready">Soundboard state: ready (%1$d playable files)</string>
     <string name="soundboard_state_playing">Soundboard state: playing %1$s</string>
     <string name="soundboard_state_error">Soundboard state: error (%1$s)</string>
