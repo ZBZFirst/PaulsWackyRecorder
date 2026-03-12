@@ -151,6 +151,34 @@ class Screen3Activity : ComponentActivity() {
                 ).show()
             }
 
+            previousFolderButton.setOnClickListener {
+                moveFolderSelection(-1)
+            }
+            nextFolderButton.setOnClickListener {
+                moveFolderSelection(1)
+            }
+
+            toggleFavoritesSectionButton.setOnClickListener {
+                favoritesSectionExpanded = !favoritesSectionExpanded
+                renderSectionVisibility()
+            }
+
+            toggleBrowserSectionButton.setOnClickListener {
+                browserSectionExpanded = !browserSectionExpanded
+                renderSectionVisibility()
+            }
+
+            clearSelectedSlotButton.setOnClickListener {
+                favoriteSlotUris[selectedFavoriteSlotIndex] = null
+                saveFavoriteSlots()
+                renderFavoriteSlots()
+                Toast.makeText(
+                    this,
+                    getString(R.string.soundboard_assignment_cleared, selectedFavoriteSlotIndex + 1),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
             soundboardAudioEngine = SoundboardAudioEngine.getInstance(this)
             restoreFavoriteSlots()
             renderFavoriteSlots()
@@ -307,6 +335,15 @@ class Screen3Activity : ComponentActivity() {
             mp3Count
         )
 
+        val wavCount = clips.count { it.displayName.endsWith(".wav", ignoreCase = true) }
+        val mp3Count = clips.count { it.displayName.endsWith(".mp3", ignoreCase = true) }
+        browserCountText.text = getString(
+            R.string.soundboard_browser_count_value,
+            clips.size,
+            wavCount,
+            mp3Count
+        )
+
         stateMachine.onCatalogLoaded(clips.map { it.displayName })
         renderState(stateMachine.currentState())
         renderClipBrowser(wavClips)
@@ -378,6 +415,8 @@ class Screen3Activity : ComponentActivity() {
             }
             clipBrowserContainer.addView(clipButton)
         }
+
+        playClip(clip, currentFolderClips.map { it.displayName })
     }
 
     private fun assignClipToSelectedFavoriteSlot(clip: AudioClip) {
