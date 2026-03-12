@@ -59,10 +59,65 @@
                     android:id="@+id/buttonGridTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Button Screen"
+                    android:text="@string/screen3_soundboard_grid_title"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/soundboardHelpText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/screen3_soundboard_help" />
+
+                <TextView
+                    android:id="@+id/soundboardStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/soundboard_state_loading"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/soundboardSelectFolderButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/soundboard_select_folder" />
+
+                <!-- Folder browser for sample packs (e.g., Dirt-Samples/808, 808bd...). -->
+                <LinearLayout
+                    android:id="@+id/soundboardFolderNavRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/soundboardFolderPrevButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/soundboard_folder_prev" />
+
+                    <TextView
+                        android:id="@+id/soundboardFolderNameText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_weight="2"
+                        android:gravity="center"
+                        android:text="@string/soundboard_folder_none"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/soundboardFolderNextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/soundboard_folder_next" />
+                </LinearLayout>
 
                 <GridLayout
                     android:id="@+id/buttonGrid"
