@@ -383,8 +383,6 @@ class Screen3Activity : ComponentActivity() {
             }
             clipBrowserContainer.addView(clipButton)
         }
-
-        playClip(clip, currentFolderClips.map { it.displayName })
     }
 
     private fun assignClipToSelectedFavoriteSlot(clip: AudioClip) {
@@ -573,6 +571,10 @@ class Screen3Activity : ComponentActivity() {
             editor.putString("$KEY_FAVORITE_SLOT_PREFIX$index", uri)
         }
         editor.apply()
+    }
+
+    private fun findFavoriteSlotByUri(uri: Uri): Int {
+        return favoriteSlotUris.indexOf(uri.toString())
     }
 
     private fun restoreFavoriteSlots() {
