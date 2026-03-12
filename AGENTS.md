@@ -38,9 +38,8 @@ Maintain this baseline unless a task explicitly requests changes:
 - If introducing new activities, declare them in `AndroidManifest.xml`.
 - Preserve package namespace: `com.example.templei`.
 
-
 ## Screen 3 soundboard scaffold contract
-- Screen 3 now represents the **Action Pad / Soundboard** boolean axis.
+- Screen 3 represents the **Action Pad / Soundboard** boolean axis.
 - Sound files are discovered from a user-selected folder via system file picker; browsing is lateral across sibling folders at that selected level.
 - Supported formats: `.wav` and `.mp3`.
 - Soundboard clips must be `<= 6 seconds`; longer clips are treated as non-playable.

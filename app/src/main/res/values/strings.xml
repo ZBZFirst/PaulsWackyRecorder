@@ -35,71 +35,6 @@
     <string name="permission_not_applicable">N/A</string>
     <string name="storage_model_legacy">Legacy External Storage</string>
     <string name="storage_model_scoped">Scoped Storage</string>
-
-    <!-- Soundboard -->
-    <string name="screen3_soundboard_title_text">Soundboard Buttons</string>
-    <string name="soundboard_button_empty">Empty</string>
-    <string name="soundboard_select_folder">Choose Sample Folder</string>
-    <string name="soundboard_folder_prev">Previous Folder</string>
-    <string name="soundboard_folder_next">Next Folder</string>
-    <string name="soundboard_folder_none">No playable folder found</string>
-    <string name="soundboard_folder_unknown">Unknown</string>
-    <string name="soundboard_folder_current">Current Folder</string>
-    <string name="soundboard_state_loading">Loading Soundboard...</string>
-    <string name="soundboard_state_loading_progress_initial">Scanning clips: 0 / 0 (playable: 0)</string>
-    <string name="soundboard_state_loading_progress">Validating clips: %1$d / %2$d (playable: %3$d)</string>
-    <string name="soundboard_state_loading_discovery">Discovering folders/files: %1$d folders, %2$d files found</string>
-    <string name="soundboard_state_ready">Soundboard Ready (%1$d clips)</string>
-    <string name="soundboard_state_playing">Playing Clip: %1$s</string>
-    <string name="soundboard_state_error">Error: %1$s</string>
-    <string name="soundboard_state_error_playback">Playback failed: %1$s</string>
-    <string name="soundboard_state_error_permission_required">Permission required</string>
-    <string name="soundboard_state_error_select_folder">Select a root folder to begin</string>
-
-    <!-- Soundboard Settings -->
-    <string name="soundboard_settings_button">Soundboard Settings</string>
-    <string name="soundboard_settings_title">Adjust Soundboard Settings</string>
-    <string name="soundboard_settings_max_streams">Max Streams</string>
-    <string name="soundboard_settings_cooldown_ms">Cooldown (ms)</string>
-    <string name="soundboard_settings_cache_size">Cache Size</string>
-    <string name="soundboard_settings_unload_on_folder_change">Unload non-favorites on folder switch</string>
-    <string name="soundboard_settings_cache_policy">Cache Retention Policy</string>
-    <string name="soundboard_settings_apply">Apply</string>
-    <string name="soundboard_settings_reset">Reset Defaults</string>
-
-    <!-- Favorites Section -->
-    <string name="soundboard_favorites_title">Favorite Pad (3x3)</string>
-    <string name="soundboard_favorites_hint">Tap slot to play selected favorite. Long-press slot to clear it.</string>
-    <string name="soundboard_browser_title">Browse Clips</string>
-    <string name="soundboard_browser_empty">No clips in this folder</string>
-    <string name="soundboard_browser_hint">Tap to play clip. Long-press to assign to active favorite slot.</string>
-    <string name="soundboard_browser_count">Folder clips</string>
-    <string name="soundboard_browser_count_value">Folder clips: %1$d total (%2$d wav, %3$d mp3)</string>
-    <string name="soundboard_section_expand">Expand</string>
-    <string name="soundboard_section_collapse">Collapse</string>
-    <string name="soundboard_favorite_slot_empty">Unassigned</string>
-    <string name="soundboard_favorite_slot_missing">Missing clip</string>
-    <string name="soundboard_assignment_saved">Saved to slot %1$d: %2$s</string>
-    <string name="soundboard_favorite_slot_label_empty">Slot %1$d (unassigned)</string>
-    <string name="soundboard_favorite_slot_label_assigned">Slot %1$d (%2$s)</string>
-    <string name="soundboard_favorite_slot_label_saved">Slot %1$d (saved)</string>
-    <string name="soundboard_assignment_target">Assignment Target: Slot %1$d</string>
-    <string name="soundboard_assignment_clear_slot">Clear Slot</string>
-    <string name="soundboard_assignment_cleared">Slot %1$d cleared</string>
-    <string name="soundboard_assign_dialog_title">Assign Clip to Favorite Slot</string>
-    <string name="soundboard_assign_slot_empty">Slot %1$d (empty)</string>
-    <string name="soundboard_assign_slot_filled">Slot %1$d (%2$s)</string>
-    <string name="soundboard_reject_not_assigned">Favorite Slot %1$d is empty</string>
-    <string name="soundboard_reject_missing">Assigned clip is unavailable</string>
-    <string name="soundboard_reject_cooldown">Cooldown active</string>
-    <string name="soundboard_reject_max_streams">Max simultaneous streams reached</string>
-    <string name="soundboard_reject_load_failed">Unable to load clip: %1$s</string>
-    <string name="soundboard_reject_engine">Audio engine rejected playback request</string>
-
-    <!-- Error Messages -->
-    <string name="screen3_startup_failed">Failed to load Screen 3</string>
-
-    <!-- Missing Strings (for MainActivity) -->
     <string name="request_permissions_button">Request Missing Permissions</string>
     <string name="permission_request_none_needed">No permissions missing</string>
     <string name="permission_request_none_missing_label">None</string>
@@ -112,5 +47,56 @@
     <string name="permission_location_coarse">Location (Coarse)</string>
     <string name="permission_read_external_storage">Read External Storage</string>
     <string name="permission_read_media_audio">Read Media Audio</string>
-    <string name="coordinate_unavailable">Unavailable</string>
+
+    <string name="screen3_soundboard_grid_title">Soundboard Buttons</string>
+    <string name="screen3_soundboard_help">Choose a folder level using system file explorer, then browse only that level's sibling folders with back/forward. Only .wav/.mp3 clips up to 6 seconds are mapped to buttons.</string>
+    <string name="soundboard_button_empty">(empty)</string>
+    <string name="soundboard_select_folder">Choose Sample Folder</string>
+    <string name="soundboard_folder_prev">&lt; Folder</string>
+    <string name="soundboard_folder_next">Folder &gt;</string>
+    <string name="soundboard_folder_none">No playable folder</string>
+    <string name="soundboard_folder_unknown">unknown</string>
+    <string name="soundboard_folder_current">current-folder</string>
+    <string name="soundboard_state_loading">Soundboard state: loading catalog...</string>
+    <string name="soundboard_state_ready">Soundboard ready: %1$d clips, %2$d streams active, %3$d cached, %4$d favorites pinned.</string>
+    <string name="soundboard_state_playing">Soundboard playing: %1$s (%2$d streams active).</string>
+    <string name="soundboard_state_error">Soundboard state: error (%1$s) [cooldown:%2$d streams:%3$d load:%4$d]</string>
+    <string name="soundboard_state_error_missing">Missing or unsupported asset: %1$s</string>
+    <string name="soundboard_state_error_playback">Playback failed for: %1$s</string>
+    <string name="soundboard_state_error_permission_required">Grant audio/storage permission from Main Screen to read Music folder clips.</string>
+    <string name="soundboard_state_error_select_folder">Choose a root sample folder to begin.</string>
+    <string name="soundboard_settings_button">Soundboard Settings</string>
+    <string name="soundboard_settings_title">Adjust Soundboard Constraints</string>
+    <string name="soundboard_settings_max_streams">Max streams: %1$d</string>
+    <string name="soundboard_settings_cooldown_ms">Cooldown (ms): %1$d</string>
+    <string name="soundboard_settings_cache_size">Cache size: %1$d</string>
+    <string name="soundboard_settings_unload_on_folder_change">Unload non-favorites on folder switch</string>
+    <string name="soundboard_settings_cache_policy">Cache retention policy</string>
+    <string name="soundboard_settings_cache_policy_aggressive">Aggressive (eager unload)</string>
+    <string name="soundboard_settings_cache_policy_balanced">Balanced (default)</string>
+    <string name="soundboard_settings_cache_policy_sticky">Sticky (keep warm until pressure)</string>
+    <string name="soundboard_settings_apply">Apply</string>
+    <string name="soundboard_settings_reset">Reset defaults</string>
+    <string name="soundboard_favorites_title">Favorite Pad (3x3)</string>
+    <string name="soundboard_browser_title">Folder Clips (tap play, long-press assign)</string>
+    <string name="soundboard_browser_empty">No playable clips in this folder.</string>
+    <string name="soundboard_unplayable_suffix">too long</string>
+    <string name="soundboard_favorite_slot_empty">(unassigned)</string>
+    <string name="soundboard_favorite_slot_label_empty">Slot %1$d&#10;(unassigned)</string>
+    <string name="soundboard_favorite_slot_label_assigned">Slot %1$d&#10;%2$s</string>
+    <string name="soundboard_favorite_slot_label_saved">Slot %1$d&#10;(saved assignment)</string>
+    <string name="soundboard_assignment_target_default">Assignment target: Slot 1 (long-press pad slot to change)</string>
+    <string name="soundboard_assignment_target">Assignment target: Slot %1$d</string>
+    <string name="soundboard_assignment_clear_slot">Clear Slot</string>
+    <string name="soundboard_assignment_cleared">Cleared assignment for slot %1$d</string>
+    <string name="soundboard_assign_dialog_title">Assign "%1$s" to favorite slot</string>
+    <string name="soundboard_assign_slot_empty">Slot %1$d (empty)</string>
+    <string name="soundboard_assign_slot_filled">Slot %1$d (%2$s)</string>
+    <string name="soundboard_reject_not_assigned">Favorite slot %1$d has no assigned clip.</string>
+    <string name="soundboard_reject_missing">Assigned clip is no longer available.</string>
+    <string name="soundboard_reject_cooldown">Clip cooldown active (%1$dms).</string>
+    <string name="soundboard_reject_max_streams">Max simultaneous streams reached (%1$d).</string>
+    <string name="soundboard_reject_load_failed">Unable to load clip: %1$s</string>
+    <string name="soundboard_reject_engine">Audio engine rejected playback request.</string>
+    <string name="screen3_startup_failed">Screen 3 failed to load. Returning to Main Screen.</string>
 </resources>
