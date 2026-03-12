@@ -52,7 +52,7 @@
     <string name="soundboard_state_ready">Soundboard Ready (%1$d clips)</string>
     <string name="soundboard_state_playing">Playing Clip: %1$s</string>
     <string name="soundboard_state_error">Error: %1$s</string>
-    <string name="soundboard_state_error_playback">Playback failed</string>
+    <string name="soundboard_state_error_playback">Playback failed: %1$s</string>
     <string name="soundboard_state_error_permission_required">Permission required</string>
     <string name="soundboard_state_error_select_folder">Select a root folder to begin</string>
 
