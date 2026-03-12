@@ -55,3 +55,13 @@ For graph-first navigation of how pages intersect, start with `MINDMAP.md`.
 2. Open [[MINDMAP]] as the graph hub.
 3. Follow page nodes (`[[MAP_MainMenu]]`, `[[MAP_Screen1]]`, etc.) to see intersections.
 4. Use the clickable file links inside each map note to open the underlying `.kt` and `.xml` files directly.
+
+## Screen 3 scaffold progression
+
+- Phase 1 added loading diagnostics for folder scanning (processed/total/playable counters).
+- Phase 2 separates folder clip browsing from favorite-slot assignments; favorite slots are explicit and persisted.
+- Phase 3 groups Screen 3 into framed, collapsible favorites/browser panels with vertical scrolling.
+- Phase 4 adds dynamic folder clip action buttons (tap to play, long-press to assign) plus per-folder wav/mp3 counts.
+- Phase 5 hardens playback (MediaPlayer async SAF URI path) and adds quick long-press favorite removal.
+- Phase 5 refinement adds explicit discovery+validation progress and renders one browser button per playable `.wav` in the active folder.
+- Phase 5 also persists folder catalog metadata by root URI so large libraries can reopen without a full initial rescan.
