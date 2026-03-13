@@ -1,4 +1,4 @@
-package com.example.templei
+package com.example.templei.feature.soundboard
 
 import android.content.Context
 import android.media.AudioAttributes
