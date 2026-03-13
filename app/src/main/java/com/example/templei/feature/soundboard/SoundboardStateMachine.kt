@@ -146,6 +146,10 @@ class SoundboardStateMachine {
         state = State.NoRootSelected
     }
 
+    fun setNoRootSelectedState() {
+        state = State.NoRootSelected
+    }
+
     fun onReady(
         folderName: String?,
         playableCount: Int,

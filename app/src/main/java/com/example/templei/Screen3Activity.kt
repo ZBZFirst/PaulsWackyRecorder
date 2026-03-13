@@ -27,6 +27,7 @@ import com.example.templei.feature.soundboard.SoundboardAudioEngine
 import com.example.templei.feature.soundboard.SoundboardConfig
 import com.example.templei.feature.soundboard.ClipIndexRepository
 import com.example.templei.feature.soundboard.SoundboardStateMachine
+import com.example.templei.feature.soundboard.Screen3UiRenderer
 import com.example.templei.ui.navigation.TopNavigation
 import kotlin.math.max
 
@@ -83,6 +84,7 @@ class Screen3Activity : ComponentActivity() {
     private var isBrowserCollapsed: Boolean = false
     private var isFavoritesCollapsed: Boolean = false
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
+    private lateinit var uiRenderer: Screen3UiRenderer
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -122,6 +124,22 @@ class Screen3Activity : ComponentActivity() {
             favoritesPad = findViewById(R.id.soundboardFavoritesPad)
             browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
             favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
+
+            uiRenderer = Screen3UiRenderer(
+                context = this,
+                statusText = statusText,
+                loadingDetailText = loadingDetailText,
+                loadingProgressBar = loadingProgressBar,
+                folderNameText = folderNameText,
+                previousFolderButton = previousFolderButton,
+                nextFolderButton = nextFolderButton,
+                assignmentTargetText = assignmentTargetText,
+                assignmentRow = assignmentRow,
+                clipBrowserScroll = clipBrowserScroll,
+                favoritesPad = favoritesPad,
+                browserToggleButton = browserToggleButton,
+                favoritesToggleButton = favoritesToggleButton
+            )
 
             config = loadConfig()
             selectedAssignmentSlotIndex = loadSelectedAssignmentSlotIndex()
@@ -374,9 +392,7 @@ class Screen3Activity : ComponentActivity() {
             return
         }
 
-        folderNameText.text = folder.name
-        previousFolderButton.isEnabled = folderEntries.size > 1
-        nextFolderButton.isEnabled = folderEntries.size > 1
+        uiRenderer.renderFolderHeader(folderName = folder.name, hasMultipleFolders = folderEntries.size > 1)
 
         val clips: List<ClipMetadata> = buildList {
             clipIndexRepository.getIndexedClipsForFolder(folder.name).forEach { indexed ->
@@ -405,42 +421,21 @@ class Screen3Activity : ComponentActivity() {
         folderEntries = emptyList()
         activeFolderClips = emptyList()
         currentFolderIndex = 0
-        folderNameText.text = getString(R.string.soundboard_folder_none)
-        previousFolderButton.isEnabled = false
-        nextFolderButton.isEnabled = false
         renderClipBrowser(emptyList())
         stateMachine.setNoRootSelectedState()
         renderState(stateMachine.currentState())
-        loadingProgressBar.isIndeterminate = false
-        loadingProgressBar.max = 100
-        loadingProgressBar.progress = 0
-        loadingDetailText.text = getString(R.string.soundboard_loading_detail_idle)
+        uiRenderer.renderNoRootSelectedVisuals()
     }
 
     private fun renderIndexedEmptyState() {
         activeFolderClips = emptyList()
-        folderNameText.text = getString(R.string.soundboard_folder_none)
-        previousFolderButton.isEnabled = false
-        nextFolderButton.isEnabled = false
         renderClipBrowser(emptyList())
         refreshReadyState()
-        loadingProgressBar.isIndeterminate = false
-        loadingProgressBar.max = 100
-        loadingProgressBar.progress = 100
-        loadingDetailText.text = getString(R.string.soundboard_loading_detail_index_empty)
+        uiRenderer.renderIndexedEmptyVisuals()
     }
 
     private fun updateSectionVisibility() {
-        clipBrowserScroll.visibility = if (isBrowserCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-        favoritesPad.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-        assignmentRow.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-
-        browserToggleButton.text = getString(
-            if (isBrowserCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
-        )
-        favoritesToggleButton.text = getString(
-            if (isFavoritesCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
-        )
+        uiRenderer.renderSectionVisibility(isBrowserCollapsed = isBrowserCollapsed, isFavoritesCollapsed = isFavoritesCollapsed)
     }
 
     private fun bindFavoritePadButtons() {
@@ -474,20 +469,21 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderFavoritePadButtons() {
-        favoritePadButtonIds.forEachIndexed { index, id ->
-            val button = findViewById<Button>(id)
+        val buttons = favoritePadButtonIds.map { findViewById<Button>(it) }
+        val labels = favoritePadButtonIds.indices.map { index ->
             val clipId = favoriteSlotClipIds[index]
             val clip = clipId?.let { clipById[it] }
-            button.text = when {
+            when {
                 clip == null && clipId == null -> getString(R.string.soundboard_favorite_slot_label_empty, index + 1)
                 clip != null -> getString(R.string.soundboard_favorite_slot_label_assigned, index + 1, clip.displayName)
                 else -> getString(R.string.soundboard_favorite_slot_label_saved, index + 1)
             }
         }
+        uiRenderer.renderFavoritePadLabels(buttons, labels)
     }
 
     private fun renderAssignmentTarget() {
-        assignmentTargetText.text = getString(R.string.soundboard_assignment_target, selectedAssignmentSlotIndex + 1)
+        uiRenderer.renderAssignmentTarget(selectedAssignmentSlotIndex)
     }
 
     private fun renderClipBrowser(clips: List<ClipMetadata>) {
@@ -842,62 +838,7 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderState(state: SoundboardStateMachine.State) {
-        statusText.text = when (state) {
-            SoundboardStateMachine.State.NoRootSelected -> {
-                loadingDetailText.text = getString(R.string.soundboard_loading_detail_idle)
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 0
-                getString(R.string.soundboard_state_no_root_selected)
-            }
-            SoundboardStateMachine.State.Loading -> {
-                getString(R.string.soundboard_state_loading)
-            }
-            is SoundboardStateMachine.State.Ready -> buildString {
-                loadingDetailText.text = getString(
-                    R.string.soundboard_loading_detail_ready,
-                    state.playableCount,
-                    state.cachedCount
-                )
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 100
-                append(
-                    getString(
-                        R.string.soundboard_state_ready,
-                        state.playableCount,
-                        state.activeStreams,
-                        state.cachedCount,
-                        state.favorites.count { it.clipId != null }
-                    )
-                )
-            }
-
-            is SoundboardStateMachine.State.Playing -> buildString {
-                loadingDetailText.text = getString(R.string.soundboard_loading_detail_playing, state.fileName)
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 100
-                append(
-                    getString(
-                        R.string.soundboard_state_playing,
-                        state.fileName,
-                        state.activeStreams
-                    )
-                )
-            }
-
-            is SoundboardStateMachine.State.Error -> {
-                loadingDetailText.text = getString(R.string.soundboard_loading_detail_error)
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 0
-                getString(
-                    R.string.soundboard_state_error,
-                    state.message
-                )
-            }
-        }
+        uiRenderer.renderState(state)
     }
 
     private fun isSupportedExtension(displayName: String): Boolean {
