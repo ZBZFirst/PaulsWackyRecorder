@@ -378,14 +378,14 @@ class Screen3Activity : ComponentActivity() {
         previousFolderButton.isEnabled = folderEntries.size > 1
         nextFolderButton.isEnabled = folderEntries.size > 1
 
-        val clips = clipIndexRepository.getIndexedClipsForFolder(folder.name).map {
+        val clips: List<ClipMetadata> = clipIndexRepository.getIndexedClipsForFolder(folder.name).map { indexed ->
             ClipMetadata(
-                id = it.clipId,
-                displayName = it.fileName,
-                uri = Uri.parse(it.clipUri),
-                folderName = it.folderName,
-                durationMs = it.durationMs,
-                isPlayable = it.playable
+                id = indexed.clipId,
+                displayName = indexed.fileName,
+                uri = Uri.parse(indexed.clipUri),
+                folderName = indexed.folderName,
+                durationMs = indexed.durationMs,
+                isPlayable = indexed.playable
             )
             renderState(stateMachine.currentState())
         }
