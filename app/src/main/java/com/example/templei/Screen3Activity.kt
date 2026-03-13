@@ -19,21 +19,28 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
-import com.example.templei.feature.soundboard.SoundboardStateMachine
+import com.example.templei.feature.soundboard.CachePolicy
+import com.example.templei.feature.soundboard.SoundboardAudioEngine
 import com.example.templei.feature.soundboard.SoundboardConfig
+import com.example.templei.feature.soundboard.SoundboardStateMachine
+import com.example.templei.ui.navigation.TopNavigation
 import kotlin.math.max
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Screen 3: bounded soundboard optimized for short clip triggering.
  */
 class Screen3Activity : ComponentActivity() {
-
     private val stateMachine = SoundboardStateMachine()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val folderScanExecutor = Executors.newSingleThreadExecutor()
+    private val folderScanToken = AtomicInteger(0)
 
     private lateinit var statusText: TextView
     private lateinit var loadingDetailText: TextView
@@ -45,7 +52,12 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var settingsButton: Button
     private lateinit var clearSelectedSlotButton: Button
     private lateinit var assignmentTargetText: TextView
+    private lateinit var assignmentRow: LinearLayout
     private lateinit var clipBrowserContainer: LinearLayout
+    private lateinit var clipBrowserScroll: ScrollView
+    private lateinit var favoritesPad: android.widget.GridLayout
+    private lateinit var browserToggleButton: Button
+    private lateinit var favoritesToggleButton: Button
 
     private lateinit var soundPool: SoundPool
     private var config = SoundboardConfig()
@@ -71,6 +83,9 @@ class Screen3Activity : ComponentActivity() {
     private val lastPlayByClipIdMs = mutableMapOf<String, Long>()
     private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
+    private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
+    private var isBrowserCollapsed: Boolean = false
+    private var isFavoritesCollapsed: Boolean = false
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -89,56 +104,75 @@ class Screen3Activity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        setContentView(R.layout.activity_screen3)
+        runCatching {
+            setContentView(R.layout.activity_screen3)
+            TopNavigation.bind(activity = this, currentDestination = Screen3Activity::class.java)
 
-        statusText = findViewById(R.id.soundboardStatusText)
-        loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
-        loadingProgressBar = findViewById(R.id.soundboardLoadingProgressBar)
-        folderNameText = findViewById(R.id.soundboardFolderNameText)
-        previousFolderButton = findViewById(R.id.soundboardFolderPrevButton)
-        nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
-        selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
-        settingsButton = findViewById(R.id.soundboardSettingsButton)
-        clearSelectedSlotButton = findViewById(R.id.soundboardClearSelectedSlotButton)
-        assignmentTargetText = findViewById(R.id.soundboardAssignmentTargetText)
-        clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
+            statusText = findViewById(R.id.soundboardStatusText)
+            loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
+            loadingProgressBar = findViewById(R.id.soundboardLoadingProgressBar)
+            folderNameText = findViewById(R.id.soundboardFolderNameText)
+            previousFolderButton = findViewById(R.id.soundboardFolderPrevButton)
+            nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
+            selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
+            settingsButton = findViewById(R.id.soundboardSettingsButton)
+            clearSelectedSlotButton = findViewById(R.id.soundboardClearSelectedSlotButton)
+            assignmentTargetText = findViewById(R.id.soundboardAssignmentTargetText)
+            assignmentRow = findViewById(R.id.soundboardAssignmentRow)
+            clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
+            clipBrowserScroll = findViewById(R.id.soundboardClipBrowserScroll)
+            favoritesPad = findViewById(R.id.soundboardFavoritesPad)
+            browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
+            favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
 
-        config = loadConfig()
-        selectedAssignmentSlotIndex = loadSelectedAssignmentSlotIndex()
-        favoriteSlotClipIds.putAll(loadFavoriteAssignments())
-        buildSoundPool(config.maxStreams)
+            config = loadConfig()
+            selectedAssignmentSlotIndex = loadSelectedAssignmentSlotIndex()
+            favoriteSlotClipIds.putAll(loadFavoriteAssignments())
+            buildSoundPool(config.maxStreams)
 
-        previousFolderButton.setOnClickListener {
-            if (folderEntries.isNotEmpty()) {
-                currentFolderIndex = (currentFolderIndex - 1 + folderEntries.size) % folderEntries.size
-                bindCurrentFolder()
+            previousFolderButton.setOnClickListener {
+                if (folderEntries.isNotEmpty()) {
+                    currentFolderIndex = (currentFolderIndex - 1 + folderEntries.size) % folderEntries.size
+                    bindCurrentFolder()
+                }
             }
-        }
 
-        nextFolderButton.setOnClickListener {
-            if (folderEntries.isNotEmpty()) {
-                currentFolderIndex = (currentFolderIndex + 1) % folderEntries.size
-                bindCurrentFolder()
+            nextFolderButton.setOnClickListener {
+                if (folderEntries.isNotEmpty()) {
+                    currentFolderIndex = (currentFolderIndex + 1) % folderEntries.size
+                    bindCurrentFolder()
+                }
             }
-        }
 
-        selectFolderButton.setOnClickListener { pickFolderLauncher.launch(savedRootFolderUri()) }
-        settingsButton.setOnClickListener { showSettingsDialog() }
-        clearSelectedSlotButton.setOnClickListener { clearSelectedAssignmentSlot() }
+            selectFolderButton.setOnClickListener { pickFolderLauncher.launch(savedRootFolderUri()) }
+            settingsButton.setOnClickListener { showSettingsDialog() }
+            clearSelectedSlotButton.setOnClickListener { clearSelectedAssignmentSlot() }
+            browserToggleButton.setOnClickListener {
+                isBrowserCollapsed = !isBrowserCollapsed
+                updateSectionVisibility()
+            }
+            favoritesToggleButton.setOnClickListener {
+                isFavoritesCollapsed = !isFavoritesCollapsed
+                updateSectionVisibility()
+            }
 
-        bindFavoritePadButtons()
-        bindFolderBrowser()
+            bindFavoritePadButtons()
+            updateSectionVisibility()
+            renderFolderSelectionRequired()
+        }.onFailure(::failToMainMenu)
     }
 
     override fun onResume() {
         super.onResume()
-        runCatching { bindFolderBrowser() }
-            .onFailure(::failToMainMenu)
+        updateSectionVisibility()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        folderScanToken.incrementAndGet()
+        folderScanExecutor.shutdownNow()
         clearCacheAndPending()
+        audioEngine.release()
         soundPool.release()
     }
 
@@ -154,6 +188,18 @@ class Screen3Activity : ComponentActivity() {
                 clipCache[clipId]?.state = SoundboardStateMachine.ClipLoadState.FAILED
             }
             pendingLoadCallbacks.remove(soundId).orEmpty().forEach { it(succeeded) }
+        }
+    }
+
+    private fun rebuildSoundPoolIfNeeded(newConfig: SoundboardConfig) {
+        val streamChanged = newConfig.maxStreams != config.maxStreams
+        config = newConfig
+        saveConfig(config)
+        if (streamChanged) {
+            clearCacheAndPending()
+            soundPool.release()
+            buildSoundPool(config.maxStreams)
+            refreshReadyState()
         }
     }
 
@@ -274,6 +320,733 @@ class Screen3Activity : ComponentActivity() {
         }
     }
 
+    private fun bindFolderBrowser() {
+        val rootUri = savedRootFolderUri()
+        if (rootUri == null) {
+            renderFolderSelectionRequired()
+            return
+        }
+
+        val root = DocumentFile.fromTreeUri(this, rootUri)
+        if (root == null || !root.canRead()) {
+            renderFolderSelectionRequired()
+            return
+        }
+
+        folderEntries = discoverFolderEntries(root)
+        currentFolderIndex = currentFolderIndex.coerceAtMost(max(0, folderEntries.size - 1))
+        bindCurrentFolder()
+    }
+
+    private fun discoverFolderEntries(rootFolder: DocumentFile): List<FolderEntry> {
+        val entries = mutableListOf<FolderEntry>()
+        rootFolder.listFiles()
+            .filter { it.isDirectory && it.canRead() }
+            .sortedBy { it.name ?: "" }
+            .forEach { directory ->
+                entries += FolderEntry(
+                    name = directory.name ?: getString(R.string.soundboard_folder_unknown),
+                    folderUri = directory.uri
+                )
+            }
+
+        if (rootFolder.listFiles().any { it.isFile }) {
+            entries.add(0, FolderEntry(getString(R.string.soundboard_folder_current), rootFolder.uri))
+        }
+        return entries
+    }
+
+    private fun bindCurrentFolder() {
+        val folder = folderEntries.getOrNull(currentFolderIndex)
+        if (folder == null) {
+            folderNameText.text = getString(R.string.soundboard_folder_none)
+            previousFolderButton.isEnabled = false
+            nextFolderButton.isEnabled = false
+            activeFolderClips = emptyList()
+            renderClipBrowser(emptyList())
+            stateMachine.onError(getString(R.string.soundboard_state_error_select_folder), rejectionCounters(), lastRejectionEvent)
+            renderState(stateMachine.currentState())
+            return
+        }
+
+        stateMachine.onLoading()
+        renderState(stateMachine.currentState())
+        renderLoadingDiscoveryProgress(foundFiles = 0)
+
+        folderNameText.text = folder.name
+        previousFolderButton.isEnabled = folderEntries.size > 1
+        nextFolderButton.isEnabled = folderEntries.size > 1
+
+        val folderDocument = DocumentFile.fromTreeUri(this, folder.folderUri)
+        if (folderDocument == null) {
+            renderFolderSelectionRequired()
+            return
+        }
+
+        val scanToken = folderScanToken.incrementAndGet()
+        folderScanExecutor.execute {
+            runCatching {
+                scanFolderClips(
+                    folder = folderDocument,
+                    folderName = folder.name,
+                    scanToken = scanToken
+                )
+            }.onSuccess { clips ->
+                mainHandler.post {
+                    if (scanToken != folderScanToken.get()) return@post
+                    activeFolderClips = clips
+                    activeFolderClips.forEach { clipById[it.id] = it }
+                    renderClipBrowser(activeFolderClips)
+                    trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.FOLDER_SWITCH)
+                    refreshReadyState()
+                    renderFavoritePadButtons()
+                }
+            }.onFailure { error ->
+                Log.e(TAG, "Folder scan failed for ${folder.name}", error)
+                mainHandler.post {
+                    if (scanToken != folderScanToken.get()) return@post
+                    stateMachine.onError(
+                        getString(R.string.soundboard_state_error_playback, folder.name),
+                        rejectionCounters(),
+                        lastRejectionEvent
+                    )
+                    renderState(stateMachine.currentState())
+                }
+            }
+        }
+    }
+
+    private fun scanFolderClips(folder: DocumentFile, folderName: String, scanToken: Int): List<ClipMetadata> {
+        val supportedFiles = folder.listFiles().filter { file ->
+            file.isFile && isSupportedExtension(file.name ?: "")
+        }
+
+        renderLoadingDiscoveryProgress(foundFiles = supportedFiles.size, scanToken = scanToken)
+
+        val total = supportedFiles.size
+        if (total == 0) {
+            renderLoadingValidationProgress(processed = 0, total = 0, playable = 0, scanToken = scanToken)
+            return emptyList()
+        }
+
+        val clips = mutableListOf<ClipMetadata>()
+        var playableCount = 0
+        supportedFiles.forEachIndexed { index, file ->
+            if (scanToken != folderScanToken.get()) return emptyList()
+            val fileName = file.name ?: return@forEachIndexed
+            val durationMs = readDurationMs(file.uri) ?: 0L
+            val playable = durationMs in 1..MAX_SOUND_DURATION_MS
+            if (playable) playableCount += 1
+            clips += ClipMetadata(file.uri.toString(), fileName, file.uri, folderName, durationMs, playable)
+
+            val processed = index + 1
+            if (processed == 1 || processed == total || processed % 8 == 0) {
+                renderLoadingValidationProgress(
+                    processed = processed,
+                    total = total,
+                    playable = playableCount,
+                    scanToken = scanToken
+                )
+            }
+        }
+
+        return clips.sortedBy { it.displayName }
+    }
+
+    private fun renderLoadingDiscoveryProgress(foundFiles: Int, scanToken: Int = folderScanToken.get()) {
+        mainHandler.post {
+            if (scanToken != folderScanToken.get()) return@post
+            loadingProgressBar.isIndeterminate = true
+            loadingProgressBar.progress = 0
+            loadingDetailText.text = getString(R.string.soundboard_loading_progress_discovery, foundFiles)
+        }
+    }
+
+    private fun renderLoadingValidationProgress(processed: Int, total: Int, playable: Int, scanToken: Int) {
+        mainHandler.post {
+            if (scanToken != folderScanToken.get()) return@post
+            if (total <= 0) {
+                loadingProgressBar.isIndeterminate = true
+                loadingProgressBar.progress = 0
+            } else {
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = ((processed * 100) / total).coerceIn(0, 100)
+            }
+            loadingDetailText.text = getString(
+                R.string.soundboard_loading_progress_validation,
+                processed,
+                total,
+                playable
+            )
+        }
+    }
+
+    private fun readDurationMs(uri: Uri): Long? {
+        return runCatching {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(this, uri)
+            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            retriever.release()
+            duration
+        }.getOrNull()
+    }
+
+    private fun renderFolderSelectionRequired() {
+        folderScanToken.incrementAndGet()
+        folderEntries = emptyList()
+        activeFolderClips = emptyList()
+        currentFolderIndex = 0
+        folderNameText.text = getString(R.string.soundboard_folder_none)
+        previousFolderButton.isEnabled = false
+        nextFolderButton.isEnabled = false
+        renderClipBrowser(emptyList())
+        stateMachine.onError(getString(R.string.soundboard_state_error_select_folder), rejectionCounters(), lastRejectionEvent)
+        renderState(stateMachine.currentState())
+    }
+
+    private fun updateSectionVisibility() {
+        clipBrowserScroll.visibility = if (isBrowserCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        favoritesPad.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        assignmentRow.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+
+        browserToggleButton.text = getString(
+            if (isBrowserCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
+        favoritesToggleButton.text = getString(
+            if (isFavoritesCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
+    }
+
+    private fun bindFavoritePadButtons() {
+        favoritePadButtonIds.forEachIndexed { index, id ->
+            val button = findViewById<Button>(id)
+            button.setOnClickListener {
+                val clipId = favoriteSlotClipIds[index]
+                if (clipId == null) return@setOnClickListener reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_ASSIGNED,
+                    getString(R.string.soundboard_reject_not_assigned, index + 1)
+                )
+
+                val clip = clipById[clipId]
+                if (clip == null) return@setOnClickListener reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE,
+                    getString(R.string.soundboard_reject_missing)
+                )
+
+                attemptPlayback(clip)
+            }
+
+            button.setOnLongClickListener {
+                selectedAssignmentSlotIndex = index
+                saveSelectedAssignmentSlotIndex(index)
+                renderAssignmentTarget()
+                true
+            }
+        }
+        renderFavoritePadButtons()
+        renderAssignmentTarget()
+    }
+
+    private fun renderFavoritePadButtons() {
+        favoritePadButtonIds.forEachIndexed { index, id ->
+            val button = findViewById<Button>(id)
+            val clipId = favoriteSlotClipIds[index]
+            val clip = clipId?.let { clipById[it] }
+            button.text = when {
+                clip == null && clipId == null -> getString(R.string.soundboard_favorite_slot_label_empty, index + 1)
+                clip != null -> {
+                getString(R.string.soundboard_favorite_slot_label_assigned, index + 1, clip.displayName)
+                }
+                else -> getString(R.string.soundboard_favorite_slot_label_saved, index + 1)
+            }
+        }
+    }
+
+    private fun renderAssignmentTarget() {
+        assignmentTargetText.text = getString(R.string.soundboard_assignment_target, selectedAssignmentSlotIndex + 1)
+    }
+
+    private fun renderClipBrowser(clips: List<ClipMetadata>) {
+        clipBrowserContainer.removeAllViews()
+        if (clips.isEmpty()) {
+            clipBrowserContainer.addView(TextView(this).apply { text = getString(R.string.soundboard_browser_empty) })
+            return
+        }
+
+        clips.chunked(3).forEach { rowClips ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = 8 }
+            }
+
+            repeat(3) { index ->
+                val clip = rowClips.getOrNull(index)
+                val button = Button(this).apply {
+                    isAllCaps = false
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also {
+                        it.marginEnd = if (index < 2) 8 else 0
+                    }
+                }
+
+                if (clip == null) {
+                    button.isEnabled = false
+                    button.text = ""
+                    button.visibility = Button.INVISIBLE
+                } else {
+                    button.text = if (clip.isPlayable) {
+                        clip.displayName
+                    } else {
+                        "${clip.displayName} (${getString(R.string.soundboard_unplayable_suffix)})"
+                    }
+                    button.setOnClickListener { attemptPlayback(clip) }
+                    button.setOnLongClickListener {
+                        showAssignClipDialog(clip)
+                        true
+                    }
+                }
+                row.addView(button)
+            }
+            clipBrowserContainer.addView(row)
+        }
+    }
+
+    private fun showAssignClipDialog(clip: ClipMetadata) {
+        val labels = (1..FAVORITE_SLOT_COUNT).map { slotNumber ->
+            val slotIndex = slotNumber - 1
+            val existing = favoriteSlotClipIds[slotIndex]?.let { clipById[it]?.displayName }
+            val base = if (existing == null) {
+                getString(R.string.soundboard_assign_slot_empty, slotNumber)
+            } else {
+                getString(R.string.soundboard_assign_slot_filled, slotNumber, existing)
+            }
+            if (slotIndex == selectedAssignmentSlotIndex) "$base ✓" else base
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.soundboard_assign_dialog_title, clip.displayName))
+            .setItems(labels) { _, which -> assignFavoriteClip(which, clip) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun assignFavoriteClip(slotIndex: Int, clip: ClipMetadata) {
+        favoriteSlotClipIds[slotIndex] = clip.id
+        selectedAssignmentSlotIndex = slotIndex
+        pinClip(clip.id)
+        saveFavoriteAssignments()
+        saveSelectedAssignmentSlotIndex(slotIndex)
+        trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.SETTINGS_APPLY)
+        renderFavoritePadButtons()
+        renderAssignmentTarget()
+        refreshReadyState()
+    }
+
+    private fun clearSelectedAssignmentSlot() {
+        favoriteSlotClipIds.remove(selectedAssignmentSlotIndex)
+        saveFavoriteAssignments()
+        Toast.makeText(
+            this,
+            getString(R.string.soundboard_assignment_cleared, selectedAssignmentSlotIndex + 1),
+            Toast.LENGTH_SHORT
+        ).show()
+        renderFavoritePadButtons()
+        refreshReadyState()
+    }
+
+    private fun attemptPlayback(clip: ClipMetadata) {
+        if (!clip.isPlayable) {
+            reject(
+                SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE,
+                getString(R.string.soundboard_state_error_missing, clip.displayName)
+            )
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val lastPlayed = lastPlayByClipIdMs[clip.id] ?: 0L
+        if (now - lastPlayed < config.cooldownMs) {
+            reject(
+                SoundboardStateMachine.PlaybackRejectionReason.COOLDOWN_ACTIVE,
+                getString(R.string.soundboard_reject_cooldown, config.cooldownMs.toInt())
+            )
+            return
+        }
+
+        if (activeStreamIds.size >= config.maxStreams) {
+            reject(
+                SoundboardStateMachine.PlaybackRejectionReason.MAX_STREAMS_REACHED,
+                getString(R.string.soundboard_reject_max_streams, config.maxStreams)
+            )
+            return
+        }
+
+        ensureClipLoaded(clip) { loaded ->
+            if (!loaded) {
+                reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_LOAD_FAILED,
+                    getString(R.string.soundboard_reject_load_failed, clip.displayName)
+                )
+                return@ensureClipLoaded
+            }
+
+            val soundId = clipCache[clip.id]?.soundId
+            if (soundId == null) {
+                reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_LOAD_FAILED,
+                    getString(R.string.soundboard_reject_load_failed, clip.displayName)
+                )
+                return@ensureClipLoaded
+            }
+
+            val played = audioEngine.playClipUri(this, clip.uri)
+            if (!played) {
+                reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.ENGINE_ERROR,
+                    getString(R.string.soundboard_reject_engine)
+                )
+                return@ensureClipLoaded
+            }
+
+            val pseudoStreamId = System.currentTimeMillis().toInt()
+            activeStreamIds += pseudoStreamId
+            lastPlayByClipIdMs[clip.id] = System.currentTimeMillis()
+            clipCache[clip.id]?.lastUsedMs = System.currentTimeMillis()
+            stateMachine.onPlayAccepted(
+                fileName = clip.displayName,
+                activeStreams = activeStreamIds.size,
+                cacheState = cacheState(),
+                constraintSnapshot = constraintSnapshot(),
+                clipLoadSnapshot = clipLoadSnapshot(),
+                lastRejection = lastRejectionEvent
+            )
+            renderState(stateMachine.currentState())
+
+            mainHandler.postDelayed({
+                activeStreamIds.remove(pseudoStreamId)
+                refreshReadyState()
+            }, clip.durationMs + STREAM_RELEASE_PADDING_MS)
+        }
+    }
+
+    private fun reject(reason: SoundboardStateMachine.PlaybackRejectionReason, message: String) {
+        rejectionCounts[reason] = (rejectionCounts[reason] ?: 0) + 1
+        lastRejectionEvent = SoundboardStateMachine.LastRejection(
+            reason = reason.name,
+            detail = message,
+            atEpochMs = System.currentTimeMillis()
+        )
+        stateMachine.onRejected(reason, message, rejectionCounters(), lastRejectionEvent)
+        renderState(stateMachine.currentState())
+    }
+
+    private fun ensureClipLoaded(clip: ClipMetadata, onResult: (Boolean) -> Unit) {
+        val existing = clipCache[clip.id]
+        when (existing?.state) {
+            SoundboardStateMachine.ClipLoadState.LOADED -> {
+                existing.lastUsedMs = System.currentTimeMillis()
+                onResult(true)
+                return
+            }
+
+            SoundboardStateMachine.ClipLoadState.LOADING -> {
+                val soundId = existing.soundId ?: run {
+                    onResult(false)
+                    return
+                }
+                pendingLoadCallbacks.getOrPut(soundId) { mutableListOf() }.add(onResult)
+                return
+            }
+
+            SoundboardStateMachine.ClipLoadState.FAILED -> {
+                onResult(false)
+                return
+            }
+
+            else -> Unit
+        }
+
+        val soundId = runCatching {
+            contentResolver.openAssetFileDescriptor(clip.uri, "r")?.use { afd ->
+                soundPool.load(afd, 1)
+            }
+        }.getOrNull() ?: 0
+
+        if (soundId == 0) {
+            onResult(false)
+            return
+        }
+
+        clipCache[clip.id] = CacheEntry(
+            soundId = soundId,
+            state = SoundboardStateMachine.ClipLoadState.LOADING,
+            lastUsedMs = System.currentTimeMillis(),
+            pinned = isClipPinned(clip.id)
+        )
+        soundIdToClipId[soundId] = clip.id
+        pendingLoadCallbacks.getOrPut(soundId) { mutableListOf() }.add(onResult)
+        trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.MEMORY_PRESSURE)
+    }
+
+    private fun trimClipCache(activeFolderClipIds: Set<String>, reason: TrimReason) {
+        val pinned = pinnedClipIds()
+        clipCache.keys.toList().forEach { clipId -> clipCache[clipId]?.pinned = clipId in pinned }
+
+        val nonPinnedLoaded = clipCache
+            .filter { (_, entry) -> !entry.pinned && entry.state != SoundboardStateMachine.ClipLoadState.LOADING }
+            .toList()
+            .sortedBy { (_, entry) -> entry.lastUsedMs }
+
+        val toRemove = linkedMapOf<String, CacheEntry>()
+
+        if (reason == TrimReason.FOLDER_SWITCH && config.unloadOnFolderChange) {
+            when (config.cachePolicy) {
+                CachePolicy.AGGRESSIVE,
+                CachePolicy.BALANCED -> {
+                    nonPinnedLoaded
+                        .filter { (clipId, _) -> clipId !in activeFolderClipIds }
+                        .forEach { (clipId, entry) -> toRemove[clipId] = entry }
+                }
+
+                CachePolicy.STICKY -> Unit
+            }
+        }
+
+        if (config.cachePolicy == CachePolicy.AGGRESSIVE && reason == TrimReason.MEMORY_PRESSURE) {
+            nonPinnedLoaded
+                .filter { (clipId, _) -> clipId !in activeFolderClipIds }
+                .forEach { (clipId, entry) -> toRemove[clipId] = entry }
+        }
+
+        val projectedSize = clipCache.size - toRemove.size
+        val overflow = (projectedSize - config.maxCacheSize).coerceAtLeast(0)
+        if (overflow > 0) {
+            nonPinnedLoaded
+                .filter { (clipId, _) -> clipId !in toRemove }
+                .take(overflow)
+                .forEach { (clipId, entry) -> toRemove[clipId] = entry }
+        }
+
+        toRemove.forEach { (clipId, entry) ->
+            entry.soundId?.let { soundPool.unload(it) }
+            clipCache.remove(clipId)
+        }
+    }
+
+    private fun clearCacheAndPending() {
+        activeStreamIds.clear()
+        pendingLoadCallbacks.clear()
+        clipCache.values.forEach { it.soundId?.let(soundPool::unload) }
+        clipCache.clear()
+        soundIdToClipId.clear()
+    }
+
+    private fun pinClip(clipId: String) {
+        clipCache[clipId]?.pinned = true
+    }
+
+    private fun isClipPinned(clipId: String): Boolean = clipId in pinnedClipIds()
+
+    private fun pinnedClipIds(): Set<String> = favoriteSlotClipIds.values.toSet()
+
+    private fun refreshReadyState() {
+        val currentFolderName = folderEntries.getOrNull(currentFolderIndex)?.name
+        val favorites = (0 until FAVORITE_SLOT_COUNT).map { slotIndex ->
+            val clipId = favoriteSlotClipIds[slotIndex]
+            val label = clipId?.let { clipById[it]?.displayName } ?: getString(R.string.soundboard_favorite_slot_empty)
+            SoundboardStateMachine.FavoriteSlotAssignment(slotIndex = slotIndex, clipId = clipId, label = label)
+        }
+
+        stateMachine.onReady(
+            folderName = currentFolderName,
+            playableCount = activeFolderClips.count { it.isPlayable },
+            activeStreams = activeStreamIds.size,
+            cachedCount = clipCache.count { it.value.state == SoundboardStateMachine.ClipLoadState.LOADED },
+            favorites = favorites,
+            cacheState = cacheState(),
+            constraintSnapshot = constraintSnapshot(),
+            rejectionCounters = rejectionCounters(),
+            clipLoadSnapshot = clipLoadSnapshot(),
+            lastRejection = lastRejectionEvent
+        )
+        renderState(stateMachine.currentState())
+    }
+
+    private fun clipLoadSnapshot(): SoundboardStateMachine.ClipLoadSnapshot {
+        val loading = clipCache.count { it.value.state == SoundboardStateMachine.ClipLoadState.LOADING }
+        val loaded = clipCache.count { it.value.state == SoundboardStateMachine.ClipLoadState.LOADED }
+        val failed = clipCache.count { it.value.state == SoundboardStateMachine.ClipLoadState.FAILED }
+        val activeKnown = activeFolderClips.count { it.id in clipCache }
+        val unloaded = (activeFolderClips.size - activeKnown).coerceAtLeast(0)
+        return SoundboardStateMachine.ClipLoadSnapshot(
+            unloaded = unloaded,
+            loading = loading,
+            loaded = loaded,
+            failed = failed
+        )
+    }
+
+    private fun cacheState(): SoundboardStateMachine.FolderCacheState {
+        return SoundboardStateMachine.FolderCacheState(
+            activeFolder = folderEntries.getOrNull(currentFolderIndex)?.name,
+            cachedClipIds = clipCache.keys,
+            pinnedClipIds = pinnedClipIds()
+        )
+    }
+
+    private fun constraintSnapshot(): SoundboardStateMachine.ConstraintSnapshot {
+        return SoundboardStateMachine.ConstraintSnapshot(
+            maxStreams = config.maxStreams,
+            cooldownMs = config.cooldownMs,
+            maxCacheSize = config.maxCacheSize,
+            cachePolicy = config.cachePolicy.name
+        )
+    }
+
+    private fun rejectionCounters(): SoundboardStateMachine.RejectionCounters {
+        fun count(reason: SoundboardStateMachine.PlaybackRejectionReason) = rejectionCounts[reason] ?: 0
+        return SoundboardStateMachine.RejectionCounters(
+            cooldownActive = count(SoundboardStateMachine.PlaybackRejectionReason.COOLDOWN_ACTIVE),
+            maxStreamsReached = count(SoundboardStateMachine.PlaybackRejectionReason.MAX_STREAMS_REACHED),
+            clipLoadFailed = count(SoundboardStateMachine.PlaybackRejectionReason.CLIP_LOAD_FAILED),
+            clipNotAssigned = count(SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_ASSIGNED),
+            clipNotPlayable = count(SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE),
+            engineError = count(SoundboardStateMachine.PlaybackRejectionReason.ENGINE_ERROR)
+        )
+    }
+
+    private fun renderState(state: SoundboardStateMachine.State) {
+        statusText.text = when (state) {
+            SoundboardStateMachine.State.Loading -> {
+                getString(R.string.soundboard_state_loading)
+            }
+            is SoundboardStateMachine.State.Ready -> buildString {
+                loadingDetailText.text = getString(
+                    R.string.soundboard_loading_detail_ready,
+                    state.playableCount,
+                    state.cachedCount
+                )
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 100
+                append(
+                    getString(
+                        R.string.soundboard_state_ready,
+                        state.playableCount,
+                        state.activeStreams,
+                        state.cachedCount,
+                        state.favorites.count { it.clipId != null }
+                    )
+                )
+            }
+
+            is SoundboardStateMachine.State.Playing -> buildString {
+                loadingDetailText.text = getString(R.string.soundboard_loading_detail_playing, state.fileName)
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 100
+                append(
+                    getString(
+                        R.string.soundboard_state_playing,
+                        state.fileName,
+                        state.activeStreams
+                    )
+                )
+            }
+
+            is SoundboardStateMachine.State.Error -> {
+                loadingDetailText.text = getString(R.string.soundboard_loading_detail_error)
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 0
+                getString(
+                    R.string.soundboard_state_error,
+                    state.message
+                )
+            }
+        }
+    }
+
+    private fun isSupportedExtension(displayName: String): Boolean {
+        return displayName.endsWith(".wav", ignoreCase = true) || displayName.endsWith(".mp3", ignoreCase = true)
+    }
+
+    private fun saveRootFolderUri(uri: Uri) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
+    }
+
+    private fun savedRootFolderUri(): Uri? {
+        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_ROOT_FOLDER_URI, null)
+        return raw?.let(Uri::parse)
+    }
+
+    private fun saveFavoriteAssignments() {
+        val packed = favoriteSlotClipIds.entries
+            .sortedBy { it.key }
+            .joinToString(separator = "||") { "${it.key}::${it.value}" }
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putString(KEY_FAVORITE_ASSIGNMENTS, packed)
+            .apply()
+    }
+
+    private fun loadFavoriteAssignments(): Map<Int, String> {
+        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getString(KEY_FAVORITE_ASSIGNMENTS, null)
+            .orEmpty()
+        if (raw.isBlank()) return emptyMap()
+
+        return raw.split("||")
+            .mapNotNull { chunk ->
+                val parts = chunk.split("::", limit = 2)
+                val index = parts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+                val clipId = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                if (index !in 0 until FAVORITE_SLOT_COUNT) return@mapNotNull null
+                index to clipId
+            }
+            .toMap()
+    }
+
+    private fun saveSelectedAssignmentSlotIndex(index: Int) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_SELECTED_ASSIGNMENT_SLOT, index.coerceIn(0, FAVORITE_SLOT_COUNT - 1))
+            .apply()
+    }
+
+    private fun loadSelectedAssignmentSlotIndex(): Int {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getInt(KEY_SELECTED_ASSIGNMENT_SLOT, 0)
+            .coerceIn(0, FAVORITE_SLOT_COUNT - 1)
+    }
+
+    private fun loadConfig(): SoundboardConfig {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val policyName = prefs.getString(KEY_CACHE_POLICY, DEFAULT_CACHE_POLICY.name) ?: DEFAULT_CACHE_POLICY.name
+        val cachePolicy = runCatching { CachePolicy.valueOf(policyName) }.getOrDefault(DEFAULT_CACHE_POLICY)
+        return SoundboardConfig(
+            maxStreams = prefs.getInt(KEY_MAX_STREAMS, DEFAULT_MAX_STREAMS).coerceIn(1, 8),
+            cooldownMs = prefs.getLong(KEY_COOLDOWN_MS, DEFAULT_COOLDOWN_MS).coerceIn(0L, 500L),
+            maxCacheSize = prefs.getInt(KEY_MAX_CACHE_SIZE, DEFAULT_MAX_CACHE_SIZE).coerceIn(8, 36),
+            unloadOnFolderChange = prefs.getBoolean(KEY_UNLOAD_ON_FOLDER_CHANGE, DEFAULT_UNLOAD_ON_FOLDER_CHANGE),
+            cachePolicy = cachePolicy
+        )
+    }
+
+    private fun saveConfig(config: SoundboardConfig) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_MAX_STREAMS, config.maxStreams)
+            .putLong(KEY_COOLDOWN_MS, config.cooldownMs)
+            .putInt(KEY_MAX_CACHE_SIZE, config.maxCacheSize)
+            .putBoolean(KEY_UNLOAD_ON_FOLDER_CHANGE, config.unloadOnFolderChange)
+            .putString(KEY_CACHE_POLICY, config.cachePolicy.name)
+            .apply()
+    }
+
     private fun failToMainMenu(error: Throwable) {
         Log.e(TAG, "Screen3 startup failure", error)
         Toast.makeText(this, getString(R.string.screen3_startup_failed), Toast.LENGTH_LONG).show()
@@ -291,18 +1064,17 @@ class Screen3Activity : ComponentActivity() {
         val isPlayable: Boolean
     )
     private data class CacheEntry(
-        val soundId: Int? = null,
+        val soundId: Int?,
         var state: SoundboardStateMachine.ClipLoadState,
         var lastUsedMs: Long,
         var pinned: Boolean
     )
 
-    private enum class CachePolicy { AGGRESSIVE, BALANCED, STICKY }
-
     private enum class TrimReason { FOLDER_SWITCH, MEMORY_PRESSURE, SETTINGS_APPLY }
 
     private companion object {
         private const val TAG = "Screen3Soundboard"
+        private const val MAX_SOUND_DURATION_MS = 6_000L
         private const val PREFS_NAME = "screen3_soundboard"
         private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
         private const val KEY_MAX_STREAMS = "max_streams"
