@@ -65,7 +65,9 @@ class SoundboardStateMachine {
     )
 
     sealed interface State {
-        data object Loading : State // No parameters needed
+        object NoRootSelected : State
+        object Loading : State
+
         data class Ready(
             val folderName: String?,
             val playableCount: Int,
@@ -95,18 +97,16 @@ class SoundboardStateMachine {
         ) : State
     }
 
-    enum class LoadingStage {
-        Discovering,
-        Validating
-    }
-
-    // Corrected the initialization to match the object, no parameters needed
     private var state: State = State.Loading
 
     fun currentState(): State = state
 
     fun onLoading() {
         state = State.Loading
+    }
+
+    fun setNoRootSelectedState() {
+        state = State.NoRootSelected
     }
 
     fun onReady(
