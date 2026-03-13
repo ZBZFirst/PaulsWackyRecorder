@@ -29,6 +29,8 @@ import com.example.templei.feature.soundboard.SoundboardConfig
 import com.example.templei.feature.soundboard.SoundboardStateMachine
 import com.example.templei.ui.navigation.TopNavigation
 import kotlin.math.max
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Screen 3: bounded soundboard optimized for short clip triggering.
@@ -36,6 +38,8 @@ import kotlin.math.max
 class Screen3Activity : ComponentActivity() {
     private val stateMachine = SoundboardStateMachine()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val folderScanExecutor = Executors.newSingleThreadExecutor()
+    private val folderScanToken = AtomicInteger(0)
 
     private lateinit var statusText: TextView
     private lateinit var loadingDetailText: TextView
@@ -143,6 +147,8 @@ class Screen3Activity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        folderScanToken.incrementAndGet()
+        folderScanExecutor.shutdownNow()
         clearCacheAndPending()
         audioEngine.release()
         soundPool.release()
@@ -343,29 +349,115 @@ class Screen3Activity : ComponentActivity() {
 
         stateMachine.onLoading()
         renderState(stateMachine.currentState())
+        renderLoadingDiscoveryProgress(foundFiles = 0)
 
         folderNameText.text = folder.name
         previousFolderButton.isEnabled = folderEntries.size > 1
         nextFolderButton.isEnabled = folderEntries.size > 1
 
         val folderDocument = DocumentFile.fromTreeUri(this, folder.folderUri)
-        activeFolderClips = folderDocument?.let { scanFolderClips(it, folder.name) }.orEmpty()
-        activeFolderClips.forEach { clipById[it.id] = it }
+        if (folderDocument == null) {
+            renderFolderSelectionRequired()
+            return
+        }
 
-        renderClipBrowser(activeFolderClips)
-        trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.FOLDER_SWITCH)
-        refreshReadyState()
-        renderFavoritePadButtons()
+        val scanToken = folderScanToken.incrementAndGet()
+        folderScanExecutor.execute {
+            runCatching {
+                scanFolderClips(
+                    folder = folderDocument,
+                    folderName = folder.name,
+                    scanToken = scanToken
+                )
+            }.onSuccess { clips ->
+                mainHandler.post {
+                    if (scanToken != folderScanToken.get()) return@post
+                    activeFolderClips = clips
+                    activeFolderClips.forEach { clipById[it.id] = it }
+                    renderClipBrowser(activeFolderClips)
+                    trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.FOLDER_SWITCH)
+                    refreshReadyState()
+                    renderFavoritePadButtons()
+                }
+            }.onFailure { error ->
+                Log.e(TAG, "Folder scan failed for ${folder.name}", error)
+                mainHandler.post {
+                    if (scanToken != folderScanToken.get()) return@post
+                    stateMachine.onError(
+                        getString(R.string.soundboard_state_error_playback, folder.name),
+                        rejectionCounters(),
+                        lastRejectionEvent
+                    )
+                    renderState(stateMachine.currentState())
+                }
+            }
+        }
     }
 
-    private fun scanFolderClips(folder: DocumentFile, folderName: String): List<ClipMetadata> {
-        return folder.listFiles().filter { it.isFile }.mapNotNull { file ->
-            val fileName = file.name ?: return@mapNotNull null
-            if (!isSupportedExtension(fileName)) return@mapNotNull null
+    private fun scanFolderClips(folder: DocumentFile, folderName: String, scanToken: Int): List<ClipMetadata> {
+        val supportedFiles = folder.listFiles().filter { file ->
+            file.isFile && isSupportedExtension(file.name ?: "")
+        }
+
+        renderLoadingDiscoveryProgress(foundFiles = supportedFiles.size, scanToken = scanToken)
+
+        val total = supportedFiles.size
+        if (total == 0) {
+            renderLoadingValidationProgress(processed = 0, total = 0, playable = 0, scanToken = scanToken)
+            return emptyList()
+        }
+
+        val clips = mutableListOf<ClipMetadata>()
+        var playableCount = 0
+        supportedFiles.forEachIndexed { index, file ->
+            if (scanToken != folderScanToken.get()) return emptyList()
+            val fileName = file.name ?: return@forEachIndexed
             val durationMs = readDurationMs(file.uri) ?: 0L
             val playable = durationMs in 1..MAX_SOUND_DURATION_MS
-            ClipMetadata(file.uri.toString(), fileName, file.uri, folderName, durationMs, playable)
-        }.sortedBy { it.displayName }
+            if (playable) playableCount += 1
+            clips += ClipMetadata(file.uri.toString(), fileName, file.uri, folderName, durationMs, playable)
+
+            val processed = index + 1
+            if (processed == 1 || processed == total || processed % 8 == 0) {
+                renderLoadingValidationProgress(
+                    processed = processed,
+                    total = total,
+                    playable = playableCount,
+                    scanToken = scanToken
+                )
+            }
+        }
+
+        return clips.sortedBy { it.displayName }
+    }
+
+    private fun renderLoadingDiscoveryProgress(foundFiles: Int, scanToken: Int = folderScanToken.get()) {
+        mainHandler.post {
+            if (scanToken != folderScanToken.get()) return@post
+            loadingProgressBar.isIndeterminate = true
+            loadingProgressBar.progress = 0
+            loadingDetailText.text = getString(R.string.soundboard_loading_progress_discovery, foundFiles)
+        }
+    }
+
+    private fun renderLoadingValidationProgress(processed: Int, total: Int, playable: Int, scanToken: Int) {
+        mainHandler.post {
+            if (scanToken != folderScanToken.get()) return@post
+            if (total <= 0) {
+                loadingProgressBar.isIndeterminate = true
+                loadingProgressBar.progress = 0
+            } else {
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = ((processed * 100) / total).coerceIn(0, 100)
+            }
+            loadingDetailText.text = getString(
+                R.string.soundboard_loading_progress_validation,
+                processed,
+                total,
+                playable
+            )
+        }
     }
 
     private fun readDurationMs(uri: Uri): Long? {
@@ -791,12 +883,8 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderState(state: SoundboardStateMachine.State) {
-        loadingDetailText.text = getString(R.string.soundboard_loading_detail_idle)
-        loadingProgressBar.isIndeterminate = true
-        loadingProgressBar.progress = 0
         statusText.text = when (state) {
             SoundboardStateMachine.State.Loading -> {
-                loadingDetailText.text = getString(R.string.soundboard_loading_detail_loading)
                 getString(R.string.soundboard_state_loading)
             }
             is SoundboardStateMachine.State.Ready -> buildString {
@@ -805,6 +893,9 @@ class Screen3Activity : ComponentActivity() {
                     state.playableCount,
                     state.cachedCount
                 )
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 100
                 append(
                     getString(
                         R.string.soundboard_state_ready,
@@ -821,6 +912,9 @@ class Screen3Activity : ComponentActivity() {
 
             is SoundboardStateMachine.State.Playing -> buildString {
                 loadingDetailText.text = getString(R.string.soundboard_loading_detail_playing, state.fileName)
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 100
                 append(
                     getString(
                         R.string.soundboard_state_playing,
@@ -833,6 +927,9 @@ class Screen3Activity : ComponentActivity() {
 
             is SoundboardStateMachine.State.Error -> {
                 loadingDetailText.text = getString(R.string.soundboard_loading_detail_error)
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 0
                 getString(
                     R.string.soundboard_state_error,
                     state.message,
