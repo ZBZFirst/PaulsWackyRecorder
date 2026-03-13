@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.ScrollView
 import android.app.AlertDialog
 import androidx.activity.ComponentActivity
@@ -41,6 +42,7 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var loadingDetailText: TextView
     private lateinit var loadingProgressBar: ProgressBar
     private lateinit var folderNameText: TextView
+    private lateinit var folderSeekBar: SeekBar
     private lateinit var previousFolderButton: Button
     private lateinit var nextFolderButton: Button
     private lateinit var selectFolderButton: Button
@@ -115,6 +117,7 @@ class Screen3Activity : ComponentActivity() {
             loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
             loadingProgressBar = findViewById(R.id.soundboardLoadingProgressBar)
             folderNameText = findViewById(R.id.soundboardFolderNameText)
+            folderSeekBar = findViewById(R.id.soundboardFolderSeekBar)
             previousFolderButton = findViewById(R.id.soundboardFolderPrevButton)
             nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
             selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
@@ -136,6 +139,7 @@ class Screen3Activity : ComponentActivity() {
                 loadingDetailText = loadingDetailText,
                 loadingProgressBar = loadingProgressBar,
                 folderNameText = folderNameText,
+                folderSeekBar = folderSeekBar,
                 previousFolderButton = previousFolderButton,
                 nextFolderButton = nextFolderButton,
                 assignmentTargetText = assignmentTargetText,
@@ -176,6 +180,18 @@ class Screen3Activity : ComponentActivity() {
                 }
             }
 
+            folderSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (!fromUser || folderEntries.isEmpty()) return
+                    currentFolderIndex = progress.coerceIn(0, folderEntries.size - 1)
+                    bindCurrentFolderFromIndex()
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+
             selectFolderButton.setOnClickListener { pickFolderLauncher.launch(clipIndexRepository.getPersistedRootUri()) }
             settingsButton.setOnClickListener { showSettingsDialog() }
             rescanLibraryButton.setOnClickListener {
@@ -186,7 +202,7 @@ class Screen3Activity : ComponentActivity() {
                     runCatching { rebuildIndexAndBind(rootUri) }.onFailure(::failToMainMenu)
                 }
             }
-            clearSelectedSlotButton.setOnClickListener { clearSelectedAssignmentSlot() }
+            clearSelectedSlotButton.setOnClickListener { showClearSlotDialog() }
             browserToggleButton.setOnClickListener {
                 isBrowserCollapsed = !isBrowserCollapsed
                 updateSectionVisibility()
@@ -307,7 +323,12 @@ class Screen3Activity : ComponentActivity() {
             return
         }
 
-        uiRenderer.renderFolderHeader(folderName = folder.name, hasMultipleFolders = folderEntries.size > 1)
+        uiRenderer.renderFolderHeader(
+            folderName = folder.name,
+            hasMultipleFolders = folderEntries.size > 1,
+            currentFolderIndex = currentFolderIndex,
+            folderCount = folderEntries.size
+        )
 
         val clips: List<ClipMetadata> = buildList {
             clipIndexRepository.getIndexedClipsForFolder(folder.name).forEach { indexed ->
@@ -458,6 +479,29 @@ class Screen3Activity : ComponentActivity() {
         ).show()
         renderFavoritePadButtons()
         refreshReadyState()
+    }
+
+    private fun showClearSlotDialog() {
+        val labels = (1..FAVORITE_SLOT_COUNT).map { slotNumber ->
+            val slotIndex = slotNumber - 1
+            val existing = favoriteSlotClipIds[slotIndex]?.let { clipById[it]?.displayName }
+            if (existing == null) {
+                getString(R.string.soundboard_assign_slot_empty, slotNumber)
+            } else {
+                getString(R.string.soundboard_assign_slot_filled, slotNumber, existing)
+            }
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.soundboard_clear_dialog_title)
+            .setItems(labels) { _, which ->
+                selectedAssignmentSlotIndex = which
+                settingsStore.saveSelectedAssignmentSlotIndex(which, FAVORITE_SLOT_COUNT)
+                renderAssignmentTarget()
+                clearSelectedAssignmentSlot()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun attemptPlayback(clip: ClipMetadata) {

@@ -14,4 +14,13 @@
     <color name="debug_warning">#FFD800</color>
     <color name="debug_missing_file">#FF00FF</color>
 
+    <!-- Screen 3 visual refresh palette -->
+    <color name="sb_bg_start">#0C1024</color>
+    <color name="sb_bg_end">#1B2D5B</color>
+    <color name="sb_surface">#1E2D4E</color>
+    <color name="sb_surface_alt">#2A3A5F</color>
+    <color name="sb_accent">#5AD8FF</color>
+    <color name="sb_accent_dark">#2EA4CE</color>
+    <color name="sb_text_primary">#F2F7FF</color>
+    <color name="sb_text_secondary">#C0D4F4</color>
 </resources>
