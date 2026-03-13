@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
