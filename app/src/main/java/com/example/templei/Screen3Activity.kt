@@ -83,9 +83,9 @@ class Screen3Activity : ComponentActivity() {
     private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
-    private var isBrowserCollapsed: Boolean = false
-    private var isFavoritesCollapsed: Boolean = false
-    private var isControlsCollapsed: Boolean = false
+    private var isBrowserCollapsed: Boolean = true
+    private var isFavoritesCollapsed: Boolean = true
+    private var isControlsCollapsed: Boolean = true
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
     private lateinit var uiRenderer: Screen3UiRenderer
     private val settingsStore by lazy { Screen3SettingsStore(this) }
