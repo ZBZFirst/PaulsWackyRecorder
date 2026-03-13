@@ -2,7 +2,6 @@ package com.example.templei
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.media.MediaMetadataRetriever
 import android.media.SoundPool
 import android.net.Uri
 import android.os.Bundle
@@ -23,15 +22,14 @@ import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.documentfile.provider.DocumentFile
 import com.example.templei.feature.soundboard.CachePolicy
 import com.example.templei.feature.soundboard.SoundboardAudioEngine
 import com.example.templei.feature.soundboard.SoundboardConfig
+import com.example.templei.feature.soundboard.ClipIndexRepository
 import com.example.templei.feature.soundboard.SoundboardStateMachine
+import com.example.templei.feature.soundboard.Screen3UiRenderer
 import com.example.templei.ui.navigation.TopNavigation
 import kotlin.math.max
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Screen 3: bounded soundboard optimized for short clip triggering.
@@ -39,8 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger
 class Screen3Activity : ComponentActivity() {
     private val stateMachine = SoundboardStateMachine()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val folderScanExecutor = Executors.newSingleThreadExecutor()
-    private val folderScanToken = AtomicInteger(0)
 
     private lateinit var statusText: TextView
     private lateinit var loadingDetailText: TextView
@@ -50,6 +46,7 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var nextFolderButton: Button
     private lateinit var selectFolderButton: Button
     private lateinit var settingsButton: Button
+    private lateinit var rescanLibraryButton: Button
     private lateinit var clearSelectedSlotButton: Button
     private lateinit var assignmentTargetText: TextView
     private lateinit var assignmentRow: LinearLayout
@@ -86,6 +83,8 @@ class Screen3Activity : ComponentActivity() {
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
     private var isBrowserCollapsed: Boolean = false
     private var isFavoritesCollapsed: Boolean = false
+    private val clipIndexRepository by lazy { ClipIndexRepository(this) }
+    private lateinit var uiRenderer: Screen3UiRenderer
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -95,8 +94,8 @@ class Screen3Activity : ComponentActivity() {
             }.onFailure {
                 Log.w(TAG, "Persistable URI permission failed for $uri", it)
             }
-            saveRootFolderUri(uri)
-            runCatching { bindFolderBrowser() }.onFailure(::failToMainMenu)
+            clipIndexRepository.setPersistedRootUri(uri)
+            runCatching { rebuildIndexAndBind(uri) }.onFailure(::failToMainMenu)
         }
     }
 
@@ -116,6 +115,7 @@ class Screen3Activity : ComponentActivity() {
             nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
             selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
             settingsButton = findViewById(R.id.soundboardSettingsButton)
+            rescanLibraryButton = findViewById(R.id.soundboardRescanLibraryButton)
             clearSelectedSlotButton = findViewById(R.id.soundboardClearSelectedSlotButton)
             assignmentTargetText = findViewById(R.id.soundboardAssignmentTargetText)
             assignmentRow = findViewById(R.id.soundboardAssignmentRow)
@@ -125,6 +125,22 @@ class Screen3Activity : ComponentActivity() {
             browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
             favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
 
+            uiRenderer = Screen3UiRenderer(
+                context = this,
+                statusText = statusText,
+                loadingDetailText = loadingDetailText,
+                loadingProgressBar = loadingProgressBar,
+                folderNameText = folderNameText,
+                previousFolderButton = previousFolderButton,
+                nextFolderButton = nextFolderButton,
+                assignmentTargetText = assignmentTargetText,
+                assignmentRow = assignmentRow,
+                clipBrowserScroll = clipBrowserScroll,
+                favoritesPad = favoritesPad,
+                browserToggleButton = browserToggleButton,
+                favoritesToggleButton = favoritesToggleButton
+            )
+
             config = loadConfig()
             selectedAssignmentSlotIndex = loadSelectedAssignmentSlotIndex()
             favoriteSlotClipIds.putAll(loadFavoriteAssignments())
@@ -133,19 +149,27 @@ class Screen3Activity : ComponentActivity() {
             previousFolderButton.setOnClickListener {
                 if (folderEntries.isNotEmpty()) {
                     currentFolderIndex = (currentFolderIndex - 1 + folderEntries.size) % folderEntries.size
-                    bindCurrentFolder()
+                    bindCurrentFolderFromIndex()
                 }
             }
 
             nextFolderButton.setOnClickListener {
                 if (folderEntries.isNotEmpty()) {
                     currentFolderIndex = (currentFolderIndex + 1) % folderEntries.size
-                    bindCurrentFolder()
+                    bindCurrentFolderFromIndex()
                 }
             }
 
-            selectFolderButton.setOnClickListener { pickFolderLauncher.launch(savedRootFolderUri()) }
+            selectFolderButton.setOnClickListener { pickFolderLauncher.launch(clipIndexRepository.getPersistedRootUri()) }
             settingsButton.setOnClickListener { showSettingsDialog() }
+            rescanLibraryButton.setOnClickListener {
+                val rootUri = clipIndexRepository.getPersistedRootUri()
+                if (rootUri == null) {
+                    renderNoRootSelected()
+                } else {
+                    runCatching { rebuildIndexAndBind(rootUri) }.onFailure(::failToMainMenu)
+                }
+            }
             clearSelectedSlotButton.setOnClickListener { clearSelectedAssignmentSlot() }
             browserToggleButton.setOnClickListener {
                 isBrowserCollapsed = !isBrowserCollapsed
@@ -158,7 +182,7 @@ class Screen3Activity : ComponentActivity() {
 
             bindFavoritePadButtons()
             updateSectionVisibility()
-            renderFolderSelectionRequired()
+            initializeFromPersistedIndexOrNoRoot()
         }.onFailure(::failToMainMenu)
     }
 
@@ -169,8 +193,6 @@ class Screen3Activity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        folderScanToken.incrementAndGet()
-        folderScanExecutor.shutdownNow()
         clearCacheAndPending()
         audioEngine.release()
         soundPool.release()
@@ -320,200 +342,100 @@ class Screen3Activity : ComponentActivity() {
         }
     }
 
-    private fun bindFolderBrowser() {
-        val rootUri = savedRootFolderUri()
+    private fun initializeFromPersistedIndexOrNoRoot() {
+        val rootUri = clipIndexRepository.getPersistedRootUri()
         if (rootUri == null) {
-            renderFolderSelectionRequired()
+            renderNoRootSelected()
             return
         }
-
-        val root = DocumentFile.fromTreeUri(this, rootUri)
-        if (root == null || !root.canRead()) {
-            renderFolderSelectionRequired()
-            return
-        }
-
-        folderEntries = discoverFolderEntries(root)
-        currentFolderIndex = currentFolderIndex.coerceAtMost(max(0, folderEntries.size - 1))
-        bindCurrentFolder()
+        bindFolderBrowserFromIndex()
     }
 
-    private fun discoverFolderEntries(rootFolder: DocumentFile): List<FolderEntry> {
-        val entries = mutableListOf<FolderEntry>()
-        rootFolder.listFiles()
-            .filter { it.isDirectory && it.canRead() }
-            .sortedBy { it.name ?: "" }
-            .forEach { directory ->
-                entries += FolderEntry(
-                    name = directory.name ?: getString(R.string.soundboard_folder_unknown),
-                    folderUri = directory.uri
-                )
-            }
-
-        if (rootFolder.listFiles().any { it.isFile }) {
-            entries.add(0, FolderEntry(getString(R.string.soundboard_folder_current), rootFolder.uri))
-        }
-        return entries
-    }
-
-    private fun bindCurrentFolder() {
-        val folder = folderEntries.getOrNull(currentFolderIndex)
-        if (folder == null) {
-            renderFolderSelectionRequired()
-            return
-        }
-
+    private fun rebuildIndexAndBind(rootUri: Uri) {
         stateMachine.onLoading()
         renderState(stateMachine.currentState())
-        renderLoadingDiscoveryProgress(foundFiles = 0)
+        loadingProgressBar.isIndeterminate = true
+        loadingProgressBar.progress = 0
+        loadingDetailText.text = getString(R.string.soundboard_loading_detail_loading)
 
-        folderNameText.text = folder.name
-        previousFolderButton.isEnabled = folderEntries.size > 1
-        nextFolderButton.isEnabled = folderEntries.size > 1
+        Thread {
+            val summary = clipIndexRepository.rebuildIndex(rootUri)
+            mainHandler.post {
+                loadingProgressBar.isIndeterminate = false
+                loadingProgressBar.max = 100
+                loadingProgressBar.progress = 100
+                loadingDetailText.text = getString(
+                    R.string.soundboard_loading_detail_index_ready,
+                    summary.playableCount,
+                    summary.clipCount,
+                    summary.folderCount
+                )
+                bindFolderBrowserFromIndex()
+            }
+        }.start()
+    }
 
-        val folderDocument = DocumentFile.fromTreeUri(this, folder.folderUri)
-        if (folderDocument == null) {
-            renderFolderSelectionRequired()
+    private fun bindFolderBrowserFromIndex() {
+        folderEntries = clipIndexRepository.getIndexedFolders().map { FolderEntry(name = it) }
+        currentFolderIndex = currentFolderIndex.coerceAtMost(max(0, folderEntries.size - 1))
+        if (folderEntries.isEmpty()) {
+            renderIndexedEmptyState()
+            return
+        }
+        bindCurrentFolderFromIndex()
+    }
+
+    private fun bindCurrentFolderFromIndex() {
+        val folder = folderEntries.getOrNull(currentFolderIndex)
+        if (folder == null) {
+            renderIndexedEmptyState()
             return
         }
 
-        val scanToken = folderScanToken.incrementAndGet()
-        folderScanExecutor.execute {
-            runCatching {
-                scanFolderClips(
-                    folder = folderDocument,
-                    folderName = folder.name,
-                    scanToken = scanToken
-                )
-            }.onSuccess { clips ->
-                mainHandler.post {
-                    if (scanToken != folderScanToken.get()) return@post
-                    activeFolderClips = clips
-                    activeFolderClips.forEach { clipById[it.id] = it }
-                    renderClipBrowser(activeFolderClips)
-                    trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.FOLDER_SWITCH)
-                    refreshReadyState()
-                    renderFavoritePadButtons()
-                }
-            }.onFailure { error ->
-                Log.e(TAG, "Folder scan failed for ${folder.name}", error)
-                mainHandler.post {
-                    if (scanToken != folderScanToken.get()) return@post
-                    stateMachine.onError(
-                        getString(R.string.soundboard_state_error_playback, folder.name),
-                        rejectionCounters(),
-                        lastRejectionEvent
+        uiRenderer.renderFolderHeader(folderName = folder.name, hasMultipleFolders = folderEntries.size > 1)
+
+        val clips: List<ClipMetadata> = buildList {
+            clipIndexRepository.getIndexedClipsForFolder(folder.name).forEach { indexed ->
+                add(
+                    ClipMetadata(
+                        id = indexed.clipId,
+                        displayName = indexed.fileName,
+                        uri = Uri.parse(indexed.clipUri),
+                        folderName = indexed.folderName,
+                        durationMs = indexed.durationMs,
+                        isPlayable = indexed.playable
                     )
-                    renderState(stateMachine.currentState())
-                }
-            }
-        }
-    }
-
-    private fun scanFolderClips(folder: DocumentFile, folderName: String, scanToken: Int): List<ClipMetadata> {
-        val supportedFiles = folder.listFiles().filter { file ->
-            file.isFile && isSupportedExtension(file.name ?: "")
-        }
-
-        renderLoadingDiscoveryProgress(foundFiles = supportedFiles.size, scanToken = scanToken)
-
-        val total = supportedFiles.size
-        if (total == 0) {
-            renderLoadingValidationProgress(processed = 0, total = 0, playable = 0, scanToken = scanToken)
-            return emptyList()
-        }
-
-        val clips = mutableListOf<ClipMetadata>()
-        var playableCount = 0
-        supportedFiles.forEachIndexed { index, file ->
-            if (scanToken != folderScanToken.get()) return emptyList()
-            val fileName = file.name ?: return@forEachIndexed
-            val durationMs = readDurationMs(file.uri) ?: 0L
-            val playable = durationMs in 1..MAX_SOUND_DURATION_MS
-            if (playable) playableCount += 1
-            clips += ClipMetadata(file.uri.toString(), fileName, file.uri, folderName, durationMs, playable)
-
-            val processed = index + 1
-            if (processed == 1 || processed == total || processed % 8 == 0) {
-                renderLoadingValidationProgress(
-                    processed = processed,
-                    total = total,
-                    playable = playableCount,
-                    scanToken = scanToken
                 )
             }
         }
 
-        return clips.sortedBy { it.displayName }
+        activeFolderClips = clips
+        activeFolderClips.forEach { clipById[it.id] = it }
+        renderClipBrowser(activeFolderClips)
+        trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.FOLDER_SWITCH)
+        refreshReadyState()
+        renderFavoritePadButtons()
     }
 
-    private fun renderLoadingDiscoveryProgress(foundFiles: Int, scanToken: Int = folderScanToken.get()) {
-        mainHandler.post {
-            if (scanToken != folderScanToken.get()) return@post
-            loadingProgressBar.isIndeterminate = true
-            loadingProgressBar.progress = 0
-            loadingDetailText.text = getString(R.string.soundboard_loading_progress_discovery, foundFiles)
-        }
-    }
-
-    private fun renderLoadingValidationProgress(processed: Int, total: Int, playable: Int, scanToken: Int) {
-        mainHandler.post {
-            if (scanToken != folderScanToken.get()) return@post
-            if (total <= 0) {
-                loadingProgressBar.isIndeterminate = true
-                loadingProgressBar.progress = 0
-            } else {
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = ((processed * 100) / total).coerceIn(0, 100)
-            }
-            loadingDetailText.text = getString(
-                R.string.soundboard_loading_progress_validation,
-                processed,
-                total,
-                playable
-            )
-        }
-    }
-
-    private fun readDurationMs(uri: Uri): Long? {
-        return runCatching {
-            val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(this, uri)
-            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-            retriever.release()
-            duration
-        }.getOrNull()
-    }
-
-    private fun renderFolderSelectionRequired() {
-        folderScanToken.incrementAndGet()
+    private fun renderNoRootSelected() {
         folderEntries = emptyList()
         activeFolderClips = emptyList()
         currentFolderIndex = 0
-        folderNameText.text = getString(R.string.soundboard_folder_none)
-        previousFolderButton.isEnabled = false
-        nextFolderButton.isEnabled = false
         renderClipBrowser(emptyList())
-        stateMachine.onLoading()
+        stateMachine.setNoRootSelectedState()
         renderState(stateMachine.currentState())
-        statusText.text = getString(R.string.soundboard_state_select_folder_prompt)
-        loadingDetailText.text = getString(R.string.soundboard_loading_detail_idle)
-        loadingProgressBar.isIndeterminate = false
-        loadingProgressBar.progress = 0
+        uiRenderer.renderNoRootSelectedVisuals()
+    }
+
+    private fun renderIndexedEmptyState() {
+        activeFolderClips = emptyList()
+        renderClipBrowser(emptyList())
+        refreshReadyState()
+        uiRenderer.renderIndexedEmptyVisuals()
     }
 
     private fun updateSectionVisibility() {
-        clipBrowserScroll.visibility = if (isBrowserCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-        favoritesPad.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-        assignmentRow.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-
-        browserToggleButton.text = getString(
-            if (isBrowserCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
-        )
-        favoritesToggleButton.text = getString(
-            if (isFavoritesCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
-        )
+        uiRenderer.renderSectionVisibility(isBrowserCollapsed = isBrowserCollapsed, isFavoritesCollapsed = isFavoritesCollapsed)
     }
 
     private fun bindFavoritePadButtons() {
@@ -547,22 +469,21 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderFavoritePadButtons() {
-        favoritePadButtonIds.forEachIndexed { index, id ->
-            val button = findViewById<Button>(id)
+        val buttons = favoritePadButtonIds.map { findViewById<Button>(it) }
+        val labels = favoritePadButtonIds.indices.map { index ->
             val clipId = favoriteSlotClipIds[index]
             val clip = clipId?.let { clipById[it] }
-            button.text = when {
+            when {
                 clip == null && clipId == null -> getString(R.string.soundboard_favorite_slot_label_empty, index + 1)
-                clip != null -> {
-                getString(R.string.soundboard_favorite_slot_label_assigned, index + 1, clip.displayName)
-                }
+                clip != null -> getString(R.string.soundboard_favorite_slot_label_assigned, index + 1, clip.displayName)
                 else -> getString(R.string.soundboard_favorite_slot_label_saved, index + 1)
             }
         }
+        uiRenderer.renderFavoritePadLabels(buttons, labels)
     }
 
     private fun renderAssignmentTarget() {
-        assignmentTargetText.text = getString(R.string.soundboard_assignment_target, selectedAssignmentSlotIndex + 1)
+        uiRenderer.renderAssignmentTarget(selectedAssignmentSlotIndex)
     }
 
     private fun renderClipBrowser(clips: List<ClipMetadata>) {
@@ -917,68 +838,11 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderState(state: SoundboardStateMachine.State) {
-        statusText.text = when (state) {
-            SoundboardStateMachine.State.Loading -> {
-                getString(R.string.soundboard_state_loading)
-            }
-            is SoundboardStateMachine.State.Ready -> buildString {
-                loadingDetailText.text = getString(
-                    R.string.soundboard_loading_detail_ready,
-                    state.playableCount,
-                    state.cachedCount
-                )
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 100
-                append(
-                    getString(
-                        R.string.soundboard_state_ready,
-                        state.playableCount,
-                        state.activeStreams,
-                        state.cachedCount,
-                        state.favorites.count { it.clipId != null }
-                    )
-                )
-            }
-
-            is SoundboardStateMachine.State.Playing -> buildString {
-                loadingDetailText.text = getString(R.string.soundboard_loading_detail_playing, state.fileName)
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 100
-                append(
-                    getString(
-                        R.string.soundboard_state_playing,
-                        state.fileName,
-                        state.activeStreams
-                    )
-                )
-            }
-
-            is SoundboardStateMachine.State.Error -> {
-                loadingDetailText.text = getString(R.string.soundboard_loading_detail_error)
-                loadingProgressBar.isIndeterminate = false
-                loadingProgressBar.max = 100
-                loadingProgressBar.progress = 0
-                getString(
-                    R.string.soundboard_state_error,
-                    state.message
-                )
-            }
-        }
+        uiRenderer.renderState(state)
     }
 
     private fun isSupportedExtension(displayName: String): Boolean {
         return displayName.endsWith(".wav", ignoreCase = true) || displayName.endsWith(".mp3", ignoreCase = true)
-    }
-
-    private fun saveRootFolderUri(uri: Uri) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
-    }
-
-    private fun savedRootFolderUri(): Uri? {
-        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString(KEY_ROOT_FOLDER_URI, null)
-        return raw?.let(Uri::parse)
     }
 
     private fun saveFavoriteAssignments() {
@@ -1052,7 +916,7 @@ class Screen3Activity : ComponentActivity() {
         finish()
     }
 
-    private data class FolderEntry(val name: String, val folderUri: Uri)
+    private data class FolderEntry(val name: String)
     private data class ClipMetadata(
         val id: String,
         val displayName: String,
@@ -1074,7 +938,6 @@ class Screen3Activity : ComponentActivity() {
         private const val TAG = "Screen3Soundboard"
         private const val MAX_SOUND_DURATION_MS = 6_000L
         private const val PREFS_NAME = "screen3_soundboard"
-        private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
         private const val KEY_MAX_STREAMS = "max_streams"
         private const val KEY_COOLDOWN_MS = "cooldown_ms"
         private const val KEY_MAX_CACHE_SIZE = "max_cache_size"
