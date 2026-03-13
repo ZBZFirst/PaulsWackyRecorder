@@ -19,6 +19,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,7 +52,12 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var settingsButton: Button
     private lateinit var clearSelectedSlotButton: Button
     private lateinit var assignmentTargetText: TextView
+    private lateinit var assignmentRow: LinearLayout
     private lateinit var clipBrowserContainer: LinearLayout
+    private lateinit var clipBrowserScroll: ScrollView
+    private lateinit var favoritesPad: android.widget.GridLayout
+    private lateinit var browserToggleButton: Button
+    private lateinit var favoritesToggleButton: Button
 
     private lateinit var soundPool: SoundPool
     private var config = SoundboardConfig()
@@ -78,6 +84,8 @@ class Screen3Activity : ComponentActivity() {
     private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
+    private var isBrowserCollapsed: Boolean = false
+    private var isFavoritesCollapsed: Boolean = false
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -110,7 +118,12 @@ class Screen3Activity : ComponentActivity() {
             settingsButton = findViewById(R.id.soundboardSettingsButton)
             clearSelectedSlotButton = findViewById(R.id.soundboardClearSelectedSlotButton)
             assignmentTargetText = findViewById(R.id.soundboardAssignmentTargetText)
+            assignmentRow = findViewById(R.id.soundboardAssignmentRow)
             clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
+            clipBrowserScroll = findViewById(R.id.soundboardClipBrowserScroll)
+            favoritesPad = findViewById(R.id.soundboardFavoritesPad)
+            browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
+            favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
 
             config = loadConfig()
             selectedAssignmentSlotIndex = loadSelectedAssignmentSlotIndex()
@@ -134,15 +147,24 @@ class Screen3Activity : ComponentActivity() {
             selectFolderButton.setOnClickListener { pickFolderLauncher.launch(savedRootFolderUri()) }
             settingsButton.setOnClickListener { showSettingsDialog() }
             clearSelectedSlotButton.setOnClickListener { clearSelectedAssignmentSlot() }
+            browserToggleButton.setOnClickListener {
+                isBrowserCollapsed = !isBrowserCollapsed
+                updateSectionVisibility()
+            }
+            favoritesToggleButton.setOnClickListener {
+                isFavoritesCollapsed = !isFavoritesCollapsed
+                updateSectionVisibility()
+            }
 
             bindFavoritePadButtons()
-            bindFolderBrowser()
+            updateSectionVisibility()
+            renderFolderSelectionRequired()
         }.onFailure(::failToMainMenu)
     }
 
     override fun onResume() {
         super.onResume()
-        runCatching { bindFolderBrowser() }.onFailure(::failToMainMenu)
+        updateSectionVisibility()
     }
 
     override fun onDestroy() {
@@ -471,6 +493,7 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderFolderSelectionRequired() {
+        folderScanToken.incrementAndGet()
         folderEntries = emptyList()
         activeFolderClips = emptyList()
         currentFolderIndex = 0
@@ -480,6 +503,19 @@ class Screen3Activity : ComponentActivity() {
         renderClipBrowser(emptyList())
         stateMachine.onError(getString(R.string.soundboard_state_error_select_folder), rejectionCounters(), lastRejectionEvent)
         renderState(stateMachine.currentState())
+    }
+
+    private fun updateSectionVisibility() {
+        clipBrowserScroll.visibility = if (isBrowserCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        favoritesPad.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        assignmentRow.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+
+        browserToggleButton.text = getString(
+            if (isBrowserCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
+        favoritesToggleButton.text = getString(
+            if (isFavoritesCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
     }
 
     private fun bindFavoritePadButtons() {

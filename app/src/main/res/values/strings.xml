@@ -66,6 +66,8 @@
     <string name="soundboard_loading_detail_ready">Ready with %1$d playable clips and %2$d cached clips.</string>
     <string name="soundboard_loading_detail_playing">Playing %1$s.</string>
     <string name="soundboard_loading_detail_error">Loading stopped due to error.</string>
+    <string name="soundboard_section_expand">Expand</string>
+    <string name="soundboard_section_collapse">Collapse</string>
     <string name="soundboard_state_ready">Soundboard ready: %1$d clips, %2$d streams active, %3$d cached, %4$d favorites pinned.</string>
     <string name="soundboard_state_playing">Soundboard playing: %1$s (%2$d streams active).</string>
     <string name="soundboard_state_error">Soundboard state: error (%1$s) [cooldown:%2$d streams:%3$d load:%4$d]</string>
