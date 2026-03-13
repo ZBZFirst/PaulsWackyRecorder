@@ -56,6 +56,18 @@ For graph-first navigation of how pages intersect, start with `MINDMAP.md`.
 3. Follow page nodes (`[[MAP_MainMenu]]`, `[[MAP_Screen1]]`, etc.) to see intersections.
 4. Use the clickable file links inside each map note to open the underlying `.kt` and `.xml` files directly.
 
+
+## Screen 3 playback documentation (current)
+
+For detailed implementation notes, use `MAP_Screen3.md` as the canonical page-level reference.
+
+Key points for the current `.wav` path:
+- Folder scanning still validates candidate `.wav`/`.mp3` files and enforces the `<= 6s` playable gate.
+- Discovery + validation counters are surfaced in the loading row during scans.
+- User taps on folder clip buttons or favorite slots trigger guarded playback checks (playable/cooldown/max-stream).
+- Actual audio playback is started via `SoundboardAudioEngine` (`MediaPlayer` + async `prepareAsync` on SAF URIs), which is the reliability path for `.wav` clip triggering.
+- SoundPool load/cache state remains active for diagnostics + cache trimming policy, even though MediaPlayer is the runtime playback engine in this phase.
+
 ## Screen 3 scaffold progression
 
 - Phase 1 added loading diagnostics for folder scanning (processed/total/playable counters).
