@@ -70,7 +70,7 @@
     <string name="soundboard_section_collapse">Collapse</string>
     <string name="soundboard_state_ready">Soundboard ready: %1$d clips, %2$d streams active, %3$d cached, %4$d favorites pinned.</string>
     <string name="soundboard_state_playing">Soundboard playing: %1$s (%2$d streams active).</string>
-    <string name="soundboard_state_error">Soundboard state: error (%1$s) [cooldown:%2$d streams:%3$d load:%4$d]</string>
+    <string name="soundboard_state_error">Soundboard state: error (%1$s).</string>
     <string name="soundboard_state_error_missing">Missing or unsupported asset: %1$s</string>
     <string name="soundboard_state_error_playback">Playback failed for: %1$s</string>
     <string name="soundboard_state_error_permission_required">Grant audio/storage permission from Main Screen to read Music folder clips.</string>

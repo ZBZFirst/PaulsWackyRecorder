@@ -941,9 +941,6 @@ class Screen3Activity : ComponentActivity() {
                         state.favorites.count { it.clipId != null }
                     )
                 )
-                append(" cfg(streams=${state.constraintSnapshot.maxStreams}, cd=${state.constraintSnapshot.cooldownMs}, cache=${state.constraintSnapshot.maxCacheSize}, policy=${state.constraintSnapshot.cachePolicy})")
-                append(" load(u=${state.clipLoadSnapshot.unloaded},l=${state.clipLoadSnapshot.loading},ok=${state.clipLoadSnapshot.loaded},f=${state.clipLoadSnapshot.failed})")
-                state.lastRejection?.let { append(" lastReject=${it.reason}") }
             }
 
             is SoundboardStateMachine.State.Playing -> buildString {
@@ -958,7 +955,6 @@ class Screen3Activity : ComponentActivity() {
                         state.activeStreams
                     )
                 )
-                append(" load(ok=${state.clipLoadSnapshot.loaded},l=${state.clipLoadSnapshot.loading})")
             }
 
             is SoundboardStateMachine.State.Error -> {
@@ -968,11 +964,8 @@ class Screen3Activity : ComponentActivity() {
                 loadingProgressBar.progress = 0
                 getString(
                     R.string.soundboard_state_error,
-                    state.message,
-                    state.rejectionCounters.cooldownActive,
-                    state.rejectionCounters.maxStreamsReached,
-                    state.rejectionCounters.clipLoadFailed
-                ) + (state.lastRejection?.let { " at=${it.atEpochMs}" } ?: "")
+                    state.message
+                )
             }
         }
     }
