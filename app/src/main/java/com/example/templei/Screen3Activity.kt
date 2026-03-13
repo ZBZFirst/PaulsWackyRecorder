@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import android.widget.ProgressBar
 import android.widget.ScrollView
+import android.app.AlertDialog
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts

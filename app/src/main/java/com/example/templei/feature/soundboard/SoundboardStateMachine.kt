@@ -7,6 +7,7 @@ package com.example.templei.feature.soundboard
  * Invariant: sound playback is started only from an explicit button press event.
  */
 class SoundboardStateMachine {
+
     enum class ClipLoadState {
         UNLOADED,
         LOADING,
@@ -21,6 +22,13 @@ class SoundboardStateMachine {
         COOLDOWN_ACTIVE,
         MAX_STREAMS_REACHED,
         ENGINE_ERROR
+    }
+
+    enum class LoadingStage {
+        Discovering,
+        ScanningFiles,
+        Indexing,
+        Finalizing
     }
 
     data class ConstraintSnapshot(
@@ -66,7 +74,15 @@ class SoundboardStateMachine {
 
     sealed interface State {
         object NoRootSelected : State
-        object Loading : State
+
+        data class Loading(
+            val stage: LoadingStage,
+            val foldersDiscovered: Int,
+            val filesScanned: Int,
+            val playableFound: Int,
+            val indexed: Int,
+            val totalEstimated: Int?
+        ) : State
 
         data class Ready(
             val folderName: String?,
@@ -97,7 +113,7 @@ class SoundboardStateMachine {
         ) : State
     }
 
-    private var state: State = State.Loading
+    private var state: State = State.NoRootSelected
 
     fun currentState(): State = state
 
@@ -134,25 +150,11 @@ class SoundboardStateMachine {
         state = State.NoRootSelected
     }
 
-    fun onNoRootSelected() {
-        state = State.NoRootSelected
-    }
-
-    fun onNoRootSelected() {
-        state = State.NoRootSelected
-    }
 
     fun setNoRootSelectedState() {
         state = State.NoRootSelected
     }
 
-    fun setNoRootSelectedState() {
-        state = State.NoRootSelected
-    }
-
-    fun markNoRootSelected() {
-        state = State.NoRootSelected
-    }
 
     fun markNoRootSelected() {
         state = State.NoRootSelected
@@ -208,10 +210,22 @@ class SoundboardStateMachine {
         rejectionCounters: RejectionCounters,
         lastRejection: LastRejection?
     ) {
-        state = State.Error(message = "$reason: $detail", rejectionCounters = rejectionCounters, lastRejection = lastRejection)
+        state = State.Error(
+            message = "$reason: $detail",
+            rejectionCounters = rejectionCounters,
+            lastRejection = lastRejection
+        )
     }
 
-    fun onError(message: String, rejectionCounters: RejectionCounters, lastRejection: LastRejection?) {
-        state = State.Error(message = message, rejectionCounters = rejectionCounters, lastRejection = lastRejection)
+    fun onError(
+        message: String,
+        rejectionCounters: RejectionCounters,
+        lastRejection: LastRejection?
+    ) {
+        state = State.Error(
+            message = message,
+            rejectionCounters = rejectionCounters,
+            lastRejection = lastRejection
+        )
     }
 }

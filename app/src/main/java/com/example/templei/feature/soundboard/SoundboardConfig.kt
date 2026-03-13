@@ -11,3 +11,4 @@ data class SoundboardConfig(
     val unloadOnFolderChange: Boolean = true, // Option to unload clips when changing folders
     val cachePolicy: CachePolicy = CachePolicy.BALANCED // Cache policy
 )
+
