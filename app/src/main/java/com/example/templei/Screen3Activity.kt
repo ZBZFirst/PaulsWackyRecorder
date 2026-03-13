@@ -34,6 +34,8 @@ import com.example.templei.feature.soundboard.Screen3PlaybackPolicy
 import com.example.templei.feature.soundboard.Screen3ClipCacheManager
 import com.example.templei.feature.soundboard.Screen3FavoritesManager
 import com.example.templei.feature.soundboard.Screen3FolderBrowserCoordinator
+import com.example.templei.feature.soundboard.Screen3Coordinator
+import com.example.templei.feature.soundboard.Screen3Intent
 import com.example.templei.ui.navigation.TopNavigation
 import kotlin.math.max
 
@@ -84,9 +86,6 @@ class Screen3Activity : ComponentActivity() {
     private val rejectionCounts = mutableMapOf<SoundboardStateMachine.PlaybackRejectionReason, Int>()
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
-    private var isBrowserCollapsed: Boolean = true
-    private var isFavoritesCollapsed: Boolean = true
-    private var isControlsCollapsed: Boolean = true
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
     private lateinit var uiRenderer: Screen3UiRenderer
     private val settingsStore by lazy { Screen3SettingsStore(this) }
@@ -95,6 +94,7 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var clipCacheManager: Screen3ClipCacheManager
     private lateinit var favoritesManager: Screen3FavoritesManager
     private val folderBrowserCoordinator by lazy { Screen3FolderBrowserCoordinator(clipIndexRepository) }
+    private val screen3Coordinator = Screen3Coordinator(stateMachine = stateMachine, favoriteSlotCount = FAVORITE_SLOT_COUNT)
     private lateinit var clipBrowserRenderer: Screen3ClipBrowserRenderer
     private val favoritePadHelper = Screen3FavoritePadHelper()
     private lateinit var favoritePadButtons: List<Button>
@@ -187,6 +187,7 @@ class Screen3Activity : ComponentActivity() {
             favoritesManager.initialize()
             selectedAssignmentSlotIndex = favoritesManager.selectedSlotIndex()
             syncFavoritesFromManager()
+            screen3Coordinator.dispatch(Screen3Intent.Initialize)
 
             folderSpinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
             folderSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -194,12 +195,14 @@ class Screen3Activity : ComponentActivity() {
 
             previousFolderButton.setOnClickListener {
                 if (folderEntries.isNotEmpty()) {
+                    screen3Coordinator.dispatch(Screen3Intent.PreviousFolder)
                     applyIndexedState(folderBrowserCoordinator.movePreviousFolder())
                 }
             }
 
             nextFolderButton.setOnClickListener {
                 if (folderEntries.isNotEmpty()) {
+                    screen3Coordinator.dispatch(Screen3Intent.NextFolder)
                     applyIndexedState(folderBrowserCoordinator.moveNextFolder())
                 }
             }
@@ -208,6 +211,7 @@ class Screen3Activity : ComponentActivity() {
                 override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                     if (suppressFolderSpinnerSelection || folderEntries.isEmpty()) return
                     if (position == currentFolderIndex) return
+                    screen3Coordinator.dispatch(Screen3Intent.SelectFolderIndex(position))
                     applyIndexedState(folderBrowserCoordinator.selectFolder(position))
                 }
 
@@ -226,15 +230,18 @@ class Screen3Activity : ComponentActivity() {
             }
             clearSelectedSlotButton.setOnClickListener { showClearSlotDialog() }
             browserToggleButton.setOnClickListener {
-                isBrowserCollapsed = !isBrowserCollapsed
+                val next = !screen3Coordinator.currentViewState().isBrowserCollapsed
+                screen3Coordinator.dispatch(Screen3Intent.SetBrowserCollapsed(next))
                 updateSectionVisibility()
             }
             favoritesToggleButton.setOnClickListener {
-                isFavoritesCollapsed = !isFavoritesCollapsed
+                val next = !screen3Coordinator.currentViewState().isFavoritesCollapsed
+                screen3Coordinator.dispatch(Screen3Intent.SetFavoritesCollapsed(next))
                 updateSectionVisibility()
             }
             controlsToggleButton.setOnClickListener {
-                isControlsCollapsed = !isControlsCollapsed
+                val next = !screen3Coordinator.currentViewState().isControlsCollapsed
+                screen3Coordinator.dispatch(Screen3Intent.SetControlsCollapsed(next))
                 updateSectionVisibility()
             }
 
@@ -297,9 +304,11 @@ class Screen3Activity : ComponentActivity() {
     private fun initializeFromPersistedIndexOrNoRoot() {
         val indexedState = folderBrowserCoordinator.initializeFromPersistedRoot()
         if (!indexedState.hasRootSelection) {
+            screen3Coordinator.dispatch(Screen3Intent.FolderPicked(uri = null))
             renderNoRootSelected()
             return
         }
+        screen3Coordinator.dispatch(Screen3Intent.FolderPicked(indexedState.rootUri))
         applyIndexedState(indexedState)
     }
 
@@ -327,17 +336,10 @@ class Screen3Activity : ComponentActivity() {
         }.start()
     }
 
-    private fun bindFolderBrowserFromIndex() {
-        applyIndexedState(folderBrowserCoordinator.currentState())
-    }
-
-    private fun bindCurrentFolderFromIndex() {
-        applyIndexedState(folderBrowserCoordinator.currentState())
-    }
-
     private fun applyIndexedState(indexedState: Screen3FolderBrowserCoordinator.IndexedFolderState) {
         folderEntries = indexedState.folderNames.map { FolderEntry(it) }
         currentFolderIndex = indexedState.selectedFolderIndex.coerceAtMost(max(0, folderEntries.size - 1))
+        screen3Coordinator.setFolders(indexedState.folderNames, currentFolderIndex)
         if (folderEntries.isEmpty()) {
             renderIndexedEmptyState()
             return
@@ -362,6 +364,15 @@ class Screen3Activity : ComponentActivity() {
 
         activeFolderClips = clips
         activeFolderClips.forEach { clipById[it.id] = it }
+        screen3Coordinator.setClipItems(
+            clips = activeFolderClips.map {
+                com.example.templei.feature.soundboard.Screen3ClipItem(
+                    id = it.id,
+                    label = it.displayName,
+                    playable = it.isPlayable
+                )
+            }
+        )
         renderClipBrowser(activeFolderClips)
         trimClipCache(activeFolderClips.map { it.id }.toSet(), Screen3ClipCacheManager.TrimReason.FOLDER_SWITCH)
         refreshReadyState()
@@ -386,9 +397,15 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun updateSectionVisibility() {
-        uiRenderer.renderSectionVisibility(isBrowserCollapsed = isBrowserCollapsed, isFavoritesCollapsed = isFavoritesCollapsed)
-        controlsGroup.visibility = if (isControlsCollapsed) android.view.View.GONE else android.view.View.VISIBLE
-        controlsToggleButton.text = getString(if (isControlsCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse)
+        val viewState = screen3Coordinator.currentViewState()
+        uiRenderer.renderSectionVisibility(
+            isBrowserCollapsed = viewState.isBrowserCollapsed,
+            isFavoritesCollapsed = viewState.isFavoritesCollapsed
+        )
+        controlsGroup.visibility = if (viewState.isControlsCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        controlsToggleButton.text = getString(
+            if (viewState.isControlsCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
     }
 
 
