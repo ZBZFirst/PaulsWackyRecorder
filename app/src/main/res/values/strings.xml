@@ -59,6 +59,13 @@
     <string name="soundboard_folder_unknown">unknown</string>
     <string name="soundboard_folder_current">current-folder</string>
     <string name="soundboard_state_loading">Soundboard state: loading catalog...</string>
+    <string name="soundboard_loading_detail_idle">Waiting for folder selection.</string>
+    <string name="soundboard_loading_detail_loading">Loading folder clips.</string>
+    <string name="soundboard_loading_progress_discovery">Discovery: %1$d candidate files found.</string>
+    <string name="soundboard_loading_progress_validation">Validation: %1$d of %2$d processed, %3$d playable.</string>
+    <string name="soundboard_loading_detail_ready">Ready with %1$d playable clips and %2$d cached clips.</string>
+    <string name="soundboard_loading_detail_playing">Playing %1$s.</string>
+    <string name="soundboard_loading_detail_error">Loading stopped due to error.</string>
     <string name="soundboard_state_ready">Soundboard ready: %1$d clips, %2$d streams active, %3$d cached, %4$d favorites pinned.</string>
     <string name="soundboard_state_playing">Soundboard playing: %1$s (%2$d streams active).</string>
     <string name="soundboard_state_error">Soundboard state: error (%1$s) [cooldown:%2$d streams:%3$d load:%4$d]</string>
