@@ -426,6 +426,66 @@ class Screen3Activity : ComponentActivity() {
         loadingDetailText.text = getString(R.string.soundboard_loading_detail_index_empty)
     }
 
+    private fun updateSectionVisibility() {
+        clipBrowserScroll.visibility = if (isBrowserCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        favoritesPad.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        assignmentRow.visibility = if (isFavoritesCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+
+        browserToggleButton.text = getString(
+            if (isBrowserCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
+        favoritesToggleButton.text = getString(
+            if (isFavoritesCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
+        )
+    }
+
+    private fun bindFavoritePadButtons() {
+        favoritePadButtonIds.forEachIndexed { index, id ->
+            val button = findViewById<Button>(id)
+            button.setOnClickListener {
+                val clipId = favoriteSlotClipIds[index]
+                if (clipId == null) return@setOnClickListener reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_ASSIGNED,
+                    getString(R.string.soundboard_reject_not_assigned, index + 1)
+                )
+
+                val clip = clipById[clipId]
+                if (clip == null) return@setOnClickListener reject(
+                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE,
+                    getString(R.string.soundboard_reject_missing)
+                )
+
+                attemptPlayback(clip)
+            }
+
+            button.setOnLongClickListener {
+                selectedAssignmentSlotIndex = index
+                saveSelectedAssignmentSlotIndex(index)
+                renderAssignmentTarget()
+                true
+            }
+        }
+        renderFavoritePadButtons()
+        renderAssignmentTarget()
+    }
+
+    private fun renderFavoritePadButtons() {
+        favoritePadButtonIds.forEachIndexed { index, id ->
+            val button = findViewById<Button>(id)
+            val clipId = favoriteSlotClipIds[index]
+            val clip = clipId?.let { clipById[it] }
+            button.text = when {
+                clip == null && clipId == null -> getString(R.string.soundboard_favorite_slot_label_empty, index + 1)
+                clip != null -> getString(R.string.soundboard_favorite_slot_label_assigned, index + 1, clip.displayName)
+                else -> getString(R.string.soundboard_favorite_slot_label_saved, index + 1)
+            }
+        }
+    }
+
+    private fun renderAssignmentTarget() {
+        assignmentTargetText.text = getString(R.string.soundboard_assignment_target, selectedAssignmentSlotIndex + 1)
+    }
+
     private fun renderClipBrowser(clips: List<ClipMetadata>) {
         clipBrowserContainer.removeAllViews()
         if (clips.isEmpty()) {
