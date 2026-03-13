@@ -2,7 +2,6 @@ package com.example.templei
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.media.MediaMetadataRetriever
 import android.media.SoundPool
 import android.net.Uri
 import android.os.Bundle
@@ -50,6 +49,7 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var nextFolderButton: Button
     private lateinit var selectFolderButton: Button
     private lateinit var settingsButton: Button
+    private lateinit var rescanLibraryButton: Button
     private lateinit var clearSelectedSlotButton: Button
     private lateinit var assignmentTargetText: TextView
     private lateinit var assignmentRow: LinearLayout
@@ -95,8 +95,8 @@ class Screen3Activity : ComponentActivity() {
             }.onFailure {
                 Log.w(TAG, "Persistable URI permission failed for $uri", it)
             }
-            saveRootFolderUri(uri)
-            runCatching { bindFolderBrowser() }.onFailure(::failToMainMenu)
+            clipIndexRepository.setPersistedRootUri(uri)
+            runCatching { rebuildIndexAndBind(uri) }.onFailure(::failToMainMenu)
         }
     }
 
@@ -1098,7 +1098,7 @@ class Screen3Activity : ComponentActivity() {
         finish()
     }
 
-    private data class FolderEntry(val name: String, val folderUri: Uri)
+    private data class FolderEntry(val name: String)
     private data class ClipMetadata(
         val id: String,
         val displayName: String,
@@ -1120,7 +1120,6 @@ class Screen3Activity : ComponentActivity() {
         private const val TAG = "Screen3Soundboard"
         private const val MAX_SOUND_DURATION_MS = 6_000L
         private const val PREFS_NAME = "screen3_soundboard"
-        private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
         private const val KEY_MAX_STREAMS = "max_streams"
         private const val KEY_COOLDOWN_MS = "cooldown_ms"
         private const val KEY_MAX_CACHE_SIZE = "max_cache_size"
