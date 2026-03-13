@@ -387,6 +387,7 @@ class Screen3Activity : ComponentActivity() {
                 durationMs = indexed.durationMs,
                 isPlayable = indexed.playable
             )
+            renderState(stateMachine.currentState())
         }
 
         activeFolderClips = clips

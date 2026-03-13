@@ -62,6 +62,7 @@
     <string name="soundboard_state_select_folder_prompt">Soundboard state: select a root sample folder to begin.</string>
     <string name="soundboard_loading_detail_idle">Waiting for folder selection.</string>
     <string name="soundboard_loading_detail_loading">Loading folder clips.</string>
+    <string name="soundboard_loading_detail_progress">Folders: %1$d, scanned: %2$d, playable: %3$d, indexed: %4$d/%5$d</string>
     <string name="soundboard_loading_progress_discovery">Discovery: %1$d candidate files found.</string>
     <string name="soundboard_loading_progress_validation">Validation: %1$d of %2$d processed, %3$d playable.</string>
     <string name="soundboard_loading_detail_ready">Ready with %1$d playable clips and %2$d cached clips.</string>
