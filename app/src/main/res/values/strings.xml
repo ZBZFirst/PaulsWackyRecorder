@@ -59,6 +59,7 @@
     <string name="soundboard_folder_unknown">unknown</string>
     <string name="soundboard_folder_current">current-folder</string>
     <string name="soundboard_state_loading">Soundboard state: loading catalog...</string>
+    <string name="soundboard_state_select_folder_prompt">Soundboard state: select a root sample folder to begin.</string>
     <string name="soundboard_loading_detail_idle">Waiting for folder selection.</string>
     <string name="soundboard_loading_detail_loading">Loading folder clips.</string>
     <string name="soundboard_loading_progress_discovery">Discovery: %1$d candidate files found.</string>

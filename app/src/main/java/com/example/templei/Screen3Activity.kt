@@ -359,13 +359,7 @@ class Screen3Activity : ComponentActivity() {
     private fun bindCurrentFolder() {
         val folder = folderEntries.getOrNull(currentFolderIndex)
         if (folder == null) {
-            folderNameText.text = getString(R.string.soundboard_folder_none)
-            previousFolderButton.isEnabled = false
-            nextFolderButton.isEnabled = false
-            activeFolderClips = emptyList()
-            renderClipBrowser(emptyList())
-            stateMachine.onError(getString(R.string.soundboard_state_error_select_folder), rejectionCounters(), lastRejectionEvent)
-            renderState(stateMachine.currentState())
+            renderFolderSelectionRequired()
             return
         }
 
@@ -501,8 +495,12 @@ class Screen3Activity : ComponentActivity() {
         previousFolderButton.isEnabled = false
         nextFolderButton.isEnabled = false
         renderClipBrowser(emptyList())
-        stateMachine.onError(getString(R.string.soundboard_state_error_select_folder), rejectionCounters(), lastRejectionEvent)
+        stateMachine.onLoading()
         renderState(stateMachine.currentState())
+        statusText.text = getString(R.string.soundboard_state_select_folder_prompt)
+        loadingDetailText.text = getString(R.string.soundboard_loading_detail_idle)
+        loadingProgressBar.isIndeterminate = false
+        loadingProgressBar.progress = 0
     }
 
     private fun updateSectionVisibility() {

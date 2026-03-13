@@ -71,34 +71,6 @@
                 android:progress="0" />
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/soundboardLoadingProgressRow"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/soundboardStatusText">
-
-            <TextView
-                android:id="@+id/soundboardLoadingDetailText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/soundboard_loading_detail_idle" />
-
-            <ProgressBar
-                android:id="@+id/soundboardLoadingProgressBar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="120dp"
-                android:layout_height="wrap_content"
-                android:indeterminate="true"
-                android:max="100"
-                android:progress="0" />
-        </LinearLayout>
-
         <Button
             android:id="@+id/soundboardSelectFolderButton"
             android:layout_width="0dp"
