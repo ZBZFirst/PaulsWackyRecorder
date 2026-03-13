@@ -35,7 +35,7 @@ class Screen3UiRenderer(
                 context.getString(R.string.soundboard_state_no_root_selected)
             }
 
-            SoundboardStateMachine.State.Loading -> {
+            is SoundboardStateMachine.State.Loading -> {
                 context.getString(R.string.soundboard_state_loading)
             }
 
@@ -120,9 +120,4 @@ class Screen3UiRenderer(
         )
     }
 
-    fun renderFavoritePadLabels(buttons: List<Button>, labels: List<String>) {
-        buttons.forEachIndexed { idx, button ->
-            button.text = labels.getOrElse(idx) { "" }
-        }
-    }
 }

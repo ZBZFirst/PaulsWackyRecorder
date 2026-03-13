@@ -1,6 +1,5 @@
 package com.example.templei
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.media.SoundPool
 import android.net.Uri
@@ -8,13 +7,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.ViewGroup
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ProgressBar
@@ -28,6 +22,10 @@ import com.example.templei.feature.soundboard.SoundboardConfig
 import com.example.templei.feature.soundboard.ClipIndexRepository
 import com.example.templei.feature.soundboard.SoundboardStateMachine
 import com.example.templei.feature.soundboard.Screen3UiRenderer
+import com.example.templei.feature.soundboard.Screen3ClipBrowserRenderer
+import com.example.templei.feature.soundboard.Screen3SettingsStore
+import com.example.templei.feature.soundboard.Screen3SettingsDialogHelper
+import com.example.templei.feature.soundboard.Screen3FavoritePadHelper
 import com.example.templei.ui.navigation.TopNavigation
 import kotlin.math.max
 
@@ -85,6 +83,11 @@ class Screen3Activity : ComponentActivity() {
     private var isFavoritesCollapsed: Boolean = false
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
     private lateinit var uiRenderer: Screen3UiRenderer
+    private val settingsStore by lazy { Screen3SettingsStore(this) }
+    private val settingsDialogHelper by lazy { Screen3SettingsDialogHelper(this) }
+    private lateinit var clipBrowserRenderer: Screen3ClipBrowserRenderer
+    private val favoritePadHelper = Screen3FavoritePadHelper()
+    private lateinit var favoritePadButtons: List<Button>
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -124,6 +127,7 @@ class Screen3Activity : ComponentActivity() {
             favoritesPad = findViewById(R.id.soundboardFavoritesPad)
             browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
             favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
+            favoritePadButtons = favoritePadButtonIds.map { findViewById(it) }
 
             uiRenderer = Screen3UiRenderer(
                 context = this,
@@ -140,10 +144,21 @@ class Screen3Activity : ComponentActivity() {
                 browserToggleButton = browserToggleButton,
                 favoritesToggleButton = favoritesToggleButton
             )
+            clipBrowserRenderer = Screen3ClipBrowserRenderer(
+                context = this,
+                clipBrowserContainer = clipBrowserContainer
+            )
 
-            config = loadConfig()
-            selectedAssignmentSlotIndex = loadSelectedAssignmentSlotIndex()
-            favoriteSlotClipIds.putAll(loadFavoriteAssignments())
+            val defaults = Screen3SettingsStore.Defaults(
+                defaultMaxStreams = DEFAULT_MAX_STREAMS,
+                defaultCooldownMs = DEFAULT_COOLDOWN_MS,
+                defaultMaxCacheSize = DEFAULT_MAX_CACHE_SIZE,
+                defaultUnloadOnFolderChange = DEFAULT_UNLOAD_ON_FOLDER_CHANGE,
+                defaultCachePolicy = DEFAULT_CACHE_POLICY
+            )
+            config = settingsStore.loadConfig(defaults)
+            selectedAssignmentSlotIndex = settingsStore.loadSelectedAssignmentSlotIndex(FAVORITE_SLOT_COUNT)
+            favoriteSlotClipIds.putAll(settingsStore.loadFavoriteAssignments(FAVORITE_SLOT_COUNT))
             buildSoundPool(config.maxStreams)
 
             previousFolderButton.setOnClickListener {
@@ -216,7 +231,7 @@ class Screen3Activity : ComponentActivity() {
     private fun rebuildSoundPoolIfNeeded(newConfig: SoundboardConfig) {
         val streamChanged = newConfig.maxStreams != config.maxStreams
         config = newConfig
-        saveConfig(config)
+        settingsStore.saveConfig(config)
         if (streamChanged) {
             clearCacheAndPending()
             soundPool.release()
@@ -226,120 +241,19 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun showSettingsDialog() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 24, 40, 16)
-        }
-
-        fun rowLabel(text: String): TextView = TextView(this).apply { this.text = text }
-
-        val maxStreamsLabel = rowLabel(getString(R.string.soundboard_settings_max_streams, config.maxStreams))
-        val maxStreamsSeek = SeekBar(this).apply {
-            max = 7
-            progress = (config.maxStreams - 1).coerceIn(0, 7)
-            setOnSeekBarChangeListener(simpleSeekListener { _, value ->
-                maxStreamsLabel.text = getString(R.string.soundboard_settings_max_streams, value + 1)
-            })
-        }
-
-        val cooldownLabel = rowLabel(getString(R.string.soundboard_settings_cooldown_ms, config.cooldownMs.toInt()))
-        val cooldownSeek = SeekBar(this).apply {
-            max = 10
-            progress = (config.cooldownMs / 50L).toInt().coerceIn(0, 10)
-            setOnSeekBarChangeListener(simpleSeekListener { _, value ->
-                cooldownLabel.text = getString(R.string.soundboard_settings_cooldown_ms, value * 50)
-            })
-        }
-
-        val cacheLabel = rowLabel(getString(R.string.soundboard_settings_cache_size, config.maxCacheSize))
-        val cacheSeek = SeekBar(this).apply {
-            max = 28
-            progress = (config.maxCacheSize - 8).coerceIn(0, 28)
-            setOnSeekBarChangeListener(simpleSeekListener { _, value ->
-                cacheLabel.text = getString(R.string.soundboard_settings_cache_size, value + 8)
-            })
-        }
-
-        val unloadSwitch = CheckBox(this).apply {
-            text = getString(R.string.soundboard_settings_unload_on_folder_change)
-            isChecked = config.unloadOnFolderChange
-        }
-
-        val cachePolicyLabel = rowLabel(getString(R.string.soundboard_settings_cache_policy))
-        val cachePolicyGroup = RadioGroup(this).apply {
-            orientation = RadioGroup.VERTICAL
-        }
-        val aggressiveRadio = RadioButton(this).apply {
-            id = CACHE_POLICY_AGGRESSIVE_ID
-            text = getString(R.string.soundboard_settings_cache_policy_aggressive)
-        }
-        val balancedRadio = RadioButton(this).apply {
-            id = CACHE_POLICY_BALANCED_ID
-            text = getString(R.string.soundboard_settings_cache_policy_balanced)
-        }
-        val stickyRadio = RadioButton(this).apply {
-            id = CACHE_POLICY_STICKY_ID
-            text = getString(R.string.soundboard_settings_cache_policy_sticky)
-        }
-        cachePolicyGroup.addView(aggressiveRadio)
-        cachePolicyGroup.addView(balancedRadio)
-        cachePolicyGroup.addView(stickyRadio)
-        cachePolicyGroup.check(
-            when (config.cachePolicy) {
-                CachePolicy.AGGRESSIVE -> CACHE_POLICY_AGGRESSIVE_ID
-                CachePolicy.BALANCED -> CACHE_POLICY_BALANCED_ID
-                CachePolicy.STICKY -> CACHE_POLICY_STICKY_ID
-            }
-        )
-
-        root.addView(maxStreamsLabel)
-        root.addView(maxStreamsSeek)
-        root.addView(cooldownLabel)
-        root.addView(cooldownSeek)
-        root.addView(cacheLabel)
-        root.addView(cacheSeek)
-        root.addView(unloadSwitch)
-        root.addView(cachePolicyLabel)
-        root.addView(cachePolicyGroup)
-
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.soundboard_settings_title))
-            .setView(root)
-            .setNeutralButton(getString(R.string.soundboard_settings_reset)) { _, _ ->
+        settingsDialogHelper.show(
+            config = config,
+            onReset = {
                 rebuildSoundPoolIfNeeded(SoundboardConfig())
                 trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.SETTINGS_APPLY)
                 refreshReadyState()
-            }
-            .setPositiveButton(getString(R.string.soundboard_settings_apply)) { _, _ ->
-                val policy = when (cachePolicyGroup.checkedRadioButtonId) {
-                    CACHE_POLICY_AGGRESSIVE_ID -> CachePolicy.AGGRESSIVE
-                    CACHE_POLICY_STICKY_ID -> CachePolicy.STICKY
-                    else -> CachePolicy.BALANCED
-                }
-                val updated = SoundboardConfig(
-                    maxStreams = (maxStreamsSeek.progress + 1).coerceIn(1, 8),
-                    cooldownMs = (cooldownSeek.progress * 50L).coerceIn(0L, 500L),
-                    maxCacheSize = (cacheSeek.progress + 8).coerceIn(8, 36),
-                    unloadOnFolderChange = unloadSwitch.isChecked,
-                    cachePolicy = policy
-                )
+            },
+            onApply = { updated ->
                 rebuildSoundPoolIfNeeded(updated)
                 trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.SETTINGS_APPLY)
                 refreshReadyState()
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun simpleSeekListener(onChange: (SeekBar, Int) -> Unit): SeekBar.OnSeekBarChangeListener {
-        return object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                onChange(seekBar, progress)
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
-        }
+        )
     }
 
     private fun initializeFromPersistedIndexOrNoRoot() {
@@ -422,7 +336,7 @@ class Screen3Activity : ComponentActivity() {
         activeFolderClips = emptyList()
         currentFolderIndex = 0
         renderClipBrowser(emptyList())
-        stateMachine.setNoRootSelectedState()
+        stateMachine.markNoRootSelected()
         renderState(stateMachine.currentState())
         uiRenderer.renderNoRootSelectedVisuals()
     }
@@ -439,37 +353,38 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun bindFavoritePadButtons() {
-        favoritePadButtonIds.forEachIndexed { index, id ->
-            val button = findViewById<Button>(id)
-            button.setOnClickListener {
+        favoritePadHelper.bind(
+            buttons = favoritePadButtons,
+            onTapSlot = { index ->
                 val clipId = favoriteSlotClipIds[index]
-                if (clipId == null) return@setOnClickListener reject(
-                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_ASSIGNED,
-                    getString(R.string.soundboard_reject_not_assigned, index + 1)
-                )
-
-                val clip = clipById[clipId]
-                if (clip == null) return@setOnClickListener reject(
-                    SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE,
-                    getString(R.string.soundboard_reject_missing)
-                )
-
-                attemptPlayback(clip)
-            }
-
-            button.setOnLongClickListener {
+                if (clipId == null) {
+                    reject(
+                        SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_ASSIGNED,
+                        getString(R.string.soundboard_reject_not_assigned, index + 1)
+                    )
+                } else {
+                    val clip = clipById[clipId]
+                    if (clip == null) {
+                        reject(
+                            SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE,
+                            getString(R.string.soundboard_reject_missing)
+                        )
+                    } else {
+                        attemptPlayback(clip)
+                    }
+                }
+            },
+            onLongPressSlot = { index ->
                 selectedAssignmentSlotIndex = index
-                saveSelectedAssignmentSlotIndex(index)
+                settingsStore.saveSelectedAssignmentSlotIndex(index, FAVORITE_SLOT_COUNT)
                 renderAssignmentTarget()
-                true
             }
-        }
+        )
         renderFavoritePadButtons()
         renderAssignmentTarget()
     }
 
     private fun renderFavoritePadButtons() {
-        val buttons = favoritePadButtonIds.map { findViewById<Button>(it) }
         val labels = favoritePadButtonIds.indices.map { index ->
             val clipId = favoriteSlotClipIds[index]
             val clip = clipId?.let { clipById[it] }
@@ -479,7 +394,7 @@ class Screen3Activity : ComponentActivity() {
                 else -> getString(R.string.soundboard_favorite_slot_label_saved, index + 1)
             }
         }
-        uiRenderer.renderFavoritePadLabels(buttons, labels)
+        favoritePadHelper.renderLabels(favoritePadButtons, labels)
     }
 
     private fun renderAssignmentTarget() {
@@ -487,50 +402,18 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderClipBrowser(clips: List<ClipMetadata>) {
-        clipBrowserContainer.removeAllViews()
-        if (clips.isEmpty()) {
-            clipBrowserContainer.addView(TextView(this).apply { text = getString(R.string.soundboard_browser_empty) })
-            return
+        val models = clips.map {
+            Screen3ClipBrowserRenderer.ClipButtonModel(
+                displayName = it.displayName,
+                playable = it.isPlayable,
+                payloadId = it.id
+            )
         }
-
-        clips.chunked(3).forEach { rowClips ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).also { it.bottomMargin = 8 }
-            }
-
-            repeat(3) { index ->
-                val clip = rowClips.getOrNull(index)
-                val button = Button(this).apply {
-                    isAllCaps = false
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also {
-                        it.marginEnd = if (index < 2) 8 else 0
-                    }
-                }
-
-                if (clip == null) {
-                    button.isEnabled = false
-                    button.text = ""
-                    button.visibility = Button.INVISIBLE
-                } else {
-                    button.text = if (clip.isPlayable) {
-                        clip.displayName
-                    } else {
-                        "${clip.displayName} (${getString(R.string.soundboard_unplayable_suffix)})"
-                    }
-                    button.setOnClickListener { attemptPlayback(clip) }
-                    button.setOnLongClickListener {
-                        showAssignClipDialog(clip)
-                        true
-                    }
-                }
-                row.addView(button)
-            }
-            clipBrowserContainer.addView(row)
-        }
+        clipBrowserRenderer.render(
+            clips = models,
+            onTap = { clipId -> clipById[clipId]?.let(::attemptPlayback) },
+            onLongPress = { clipId -> clipById[clipId]?.let(::showAssignClipDialog) }
+        )
     }
 
     private fun showAssignClipDialog(clip: ClipMetadata) {
@@ -556,8 +439,8 @@ class Screen3Activity : ComponentActivity() {
         favoriteSlotClipIds[slotIndex] = clip.id
         selectedAssignmentSlotIndex = slotIndex
         pinClip(clip.id)
-        saveFavoriteAssignments()
-        saveSelectedAssignmentSlotIndex(slotIndex)
+        settingsStore.saveFavoriteAssignments(favoriteSlotClipIds)
+        settingsStore.saveSelectedAssignmentSlotIndex(slotIndex, FAVORITE_SLOT_COUNT)
         trimClipCache(activeFolderClips.map { it.id }.toSet(), TrimReason.SETTINGS_APPLY)
         renderFavoritePadButtons()
         renderAssignmentTarget()
@@ -566,7 +449,7 @@ class Screen3Activity : ComponentActivity() {
 
     private fun clearSelectedAssignmentSlot() {
         favoriteSlotClipIds.remove(selectedAssignmentSlotIndex)
-        saveFavoriteAssignments()
+        settingsStore.saveFavoriteAssignments(favoriteSlotClipIds)
         Toast.makeText(
             this,
             getString(R.string.soundboard_assignment_cleared, selectedAssignmentSlotIndex + 1),
@@ -841,74 +724,6 @@ class Screen3Activity : ComponentActivity() {
         uiRenderer.renderState(state)
     }
 
-    private fun isSupportedExtension(displayName: String): Boolean {
-        return displayName.endsWith(".wav", ignoreCase = true) || displayName.endsWith(".mp3", ignoreCase = true)
-    }
-
-    private fun saveFavoriteAssignments() {
-        val packed = favoriteSlotClipIds.entries
-            .sortedBy { it.key }
-            .joinToString(separator = "||") { "${it.key}::${it.value}" }
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit()
-            .putString(KEY_FAVORITE_ASSIGNMENTS, packed)
-            .apply()
-    }
-
-    private fun loadFavoriteAssignments(): Map<Int, String> {
-        val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getString(KEY_FAVORITE_ASSIGNMENTS, null)
-            .orEmpty()
-        if (raw.isBlank()) return emptyMap()
-
-        return raw.split("||")
-            .mapNotNull { chunk ->
-                val parts = chunk.split("::", limit = 2)
-                val index = parts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
-                val clipId = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                if (index !in 0 until FAVORITE_SLOT_COUNT) return@mapNotNull null
-                index to clipId
-            }
-            .toMap()
-    }
-
-    private fun saveSelectedAssignmentSlotIndex(index: Int) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_SELECTED_ASSIGNMENT_SLOT, index.coerceIn(0, FAVORITE_SLOT_COUNT - 1))
-            .apply()
-    }
-
-    private fun loadSelectedAssignmentSlotIndex(): Int {
-        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getInt(KEY_SELECTED_ASSIGNMENT_SLOT, 0)
-            .coerceIn(0, FAVORITE_SLOT_COUNT - 1)
-    }
-
-    private fun loadConfig(): SoundboardConfig {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val policyName = prefs.getString(KEY_CACHE_POLICY, DEFAULT_CACHE_POLICY.name) ?: DEFAULT_CACHE_POLICY.name
-        val cachePolicy = runCatching { CachePolicy.valueOf(policyName) }.getOrDefault(DEFAULT_CACHE_POLICY)
-        return SoundboardConfig(
-            maxStreams = prefs.getInt(KEY_MAX_STREAMS, DEFAULT_MAX_STREAMS).coerceIn(1, 8),
-            cooldownMs = prefs.getLong(KEY_COOLDOWN_MS, DEFAULT_COOLDOWN_MS).coerceIn(0L, 500L),
-            maxCacheSize = prefs.getInt(KEY_MAX_CACHE_SIZE, DEFAULT_MAX_CACHE_SIZE).coerceIn(8, 36),
-            unloadOnFolderChange = prefs.getBoolean(KEY_UNLOAD_ON_FOLDER_CHANGE, DEFAULT_UNLOAD_ON_FOLDER_CHANGE),
-            cachePolicy = cachePolicy
-        )
-    }
-
-    private fun saveConfig(config: SoundboardConfig) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_MAX_STREAMS, config.maxStreams)
-            .putLong(KEY_COOLDOWN_MS, config.cooldownMs)
-            .putInt(KEY_MAX_CACHE_SIZE, config.maxCacheSize)
-            .putBoolean(KEY_UNLOAD_ON_FOLDER_CHANGE, config.unloadOnFolderChange)
-            .putString(KEY_CACHE_POLICY, config.cachePolicy.name)
-            .apply()
-    }
-
     private fun failToMainMenu(error: Throwable) {
         Log.e(TAG, "Screen3 startup failure", error)
         Toast.makeText(this, getString(R.string.screen3_startup_failed), Toast.LENGTH_LONG).show()
@@ -937,14 +752,6 @@ class Screen3Activity : ComponentActivity() {
     private companion object {
         private const val TAG = "Screen3Soundboard"
         private const val MAX_SOUND_DURATION_MS = 6_000L
-        private const val PREFS_NAME = "screen3_soundboard"
-        private const val KEY_MAX_STREAMS = "max_streams"
-        private const val KEY_COOLDOWN_MS = "cooldown_ms"
-        private const val KEY_MAX_CACHE_SIZE = "max_cache_size"
-        private const val KEY_UNLOAD_ON_FOLDER_CHANGE = "unload_on_folder_change"
-        private const val KEY_CACHE_POLICY = "cache_policy"
-        private const val KEY_FAVORITE_ASSIGNMENTS = "favorite_assignments"
-        private const val KEY_SELECTED_ASSIGNMENT_SLOT = "selected_assignment_slot"
 
         private const val FAVORITE_SLOT_COUNT = 9
         private const val STREAM_RELEASE_PADDING_MS = 120L
@@ -955,8 +762,5 @@ class Screen3Activity : ComponentActivity() {
         private const val DEFAULT_UNLOAD_ON_FOLDER_CHANGE = true
         private val DEFAULT_CACHE_POLICY = CachePolicy.BALANCED
 
-        private const val CACHE_POLICY_AGGRESSIVE_ID = 1001
-        private const val CACHE_POLICY_BALANCED_ID = 1002
-        private const val CACHE_POLICY_STICKY_ID = 1003
     }
 }
