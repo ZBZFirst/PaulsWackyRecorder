@@ -74,30 +74,6 @@
                     android:progress="0" />
             </LinearLayout>
 
-            <Button
-                android:id="@+id/soundboardSelectFolderButton"
-                style="@style/Screen3PrimaryActionButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="@string/soundboard_select_folder" />
-
-            <Button
-                android:id="@+id/soundboardSettingsButton"
-                style="@style/Screen3SecondaryActionButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/soundboard_settings_button" />
-
-            <Button
-                android:id="@+id/soundboardRescanLibraryButton"
-                style="@style/Screen3SecondaryActionButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/soundboard_rescan_library" />
-
             <LinearLayout
                 android:id="@+id/soundboardFolderNavRow"
                 android:layout_width="match_parent"
@@ -116,28 +92,15 @@
                     android:layout_weight="1"
                     android:text="@string/soundboard_folder_prev" />
 
-                <LinearLayout
+                <Spinner
+                    android:id="@+id/soundboardFolderSpinner"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="8dp"
                     android:layout_weight="1.4"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/soundboardFolderNameText"
-                        style="@style/Screen3SectionHeaderText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:text="@string/soundboard_folder_none" />
-
-                    <SeekBar
-                        android:id="@+id/soundboardFolderSeekBar"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="0"
-                        android:progress="0" />
-                </LinearLayout>
+                    android:background="@drawable/bg_section_surface"
+                    android:popupBackground="@drawable/bg_section_surface"
+                    android:spinnerMode="dropdown" />
 
                 <Button
                     android:id="@+id/soundboardFolderNextButton"
@@ -313,6 +276,64 @@
                     android:layout_height="wrap_content"
                     android:text="@string/soundboard_assignment_clear_slot" />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/soundboardControlsHeaderRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/soundboardControlsTitle"
+                    style="@style/Screen3SectionHeaderText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/soundboard_controls_title" />
+
+                <Button
+                    android:id="@+id/soundboardControlsToggleButton"
+                    style="@style/Screen3SecondaryActionButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/soundboard_section_collapse" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/soundboardControlsGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_section_surface"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <Button
+                    android:id="@+id/soundboardSelectFolderButton"
+                    style="@style/Screen3PrimaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/soundboard_select_folder" />
+
+                <Button
+                    android:id="@+id/soundboardSettingsButton"
+                    style="@style/Screen3SecondaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/soundboard_settings_button" />
+
+                <Button
+                    android:id="@+id/soundboardRescanLibraryButton"
+                    style="@style/Screen3SecondaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/soundboard_rescan_library" />
+            </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

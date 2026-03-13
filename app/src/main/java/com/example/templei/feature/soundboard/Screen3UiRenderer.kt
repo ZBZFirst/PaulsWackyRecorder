@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import com.example.templei.R
 
@@ -16,8 +17,7 @@ class Screen3UiRenderer(
     private val statusText: TextView,
     private val loadingDetailText: TextView,
     private val loadingProgressBar: ProgressBar,
-    private val folderNameText: TextView,
-    private val folderSeekBar: SeekBar,
+    private val folderSpinner: Spinner,
     private val previousFolderButton: Button,
     private val nextFolderButton: Button,
     private val assignmentTargetText: TextView,
@@ -37,9 +37,7 @@ class Screen3UiRenderer(
                 context.getString(R.string.soundboard_state_no_root_selected)
             }
 
-            is SoundboardStateMachine.State.Loading -> {
-                context.getString(R.string.soundboard_state_loading)
-            }
+            is SoundboardStateMachine.State.Loading -> context.getString(R.string.soundboard_state_loading)
 
             is SoundboardStateMachine.State.Ready -> buildString {
                 loadingDetailText.text = context.getString(
@@ -80,10 +78,7 @@ class Screen3UiRenderer(
     }
 
     fun renderNoRootSelectedVisuals() {
-        folderNameText.text = context.getString(R.string.soundboard_folder_none)
-        folderSeekBar.max = 0
-        folderSeekBar.progress = 0
-        folderSeekBar.isEnabled = false
+        folderSpinner.isEnabled = false
         previousFolderButton.isEnabled = false
         nextFolderButton.isEnabled = false
         loadingProgressBar.isIndeterminate = false
@@ -93,10 +88,7 @@ class Screen3UiRenderer(
     }
 
     fun renderIndexedEmptyVisuals() {
-        folderNameText.text = context.getString(R.string.soundboard_folder_none)
-        folderSeekBar.max = 0
-        folderSeekBar.progress = 0
-        folderSeekBar.isEnabled = false
+        folderSpinner.isEnabled = false
         previousFolderButton.isEnabled = false
         nextFolderButton.isEnabled = false
         loadingProgressBar.isIndeterminate = false
@@ -105,11 +97,8 @@ class Screen3UiRenderer(
         loadingDetailText.text = context.getString(R.string.soundboard_loading_detail_index_empty)
     }
 
-    fun renderFolderHeader(folderName: String, hasMultipleFolders: Boolean, currentFolderIndex: Int, folderCount: Int) {
-        folderNameText.text = folderName
-        folderSeekBar.max = (folderCount - 1).coerceAtLeast(0)
-        folderSeekBar.progress = currentFolderIndex.coerceAtLeast(0)
-        folderSeekBar.isEnabled = folderCount > 1
+    fun renderFolderHeader(hasMultipleFolders: Boolean, folderCount: Int) {
+        folderSpinner.isEnabled = folderCount > 0
         previousFolderButton.isEnabled = hasMultipleFolders
         nextFolderButton.isEnabled = hasMultipleFolders
     }
@@ -130,5 +119,4 @@ class Screen3UiRenderer(
             if (isFavoritesCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
         )
     }
-
 }

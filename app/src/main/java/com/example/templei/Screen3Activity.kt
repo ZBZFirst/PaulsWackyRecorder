@@ -12,7 +12,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ProgressBar
-import android.widget.SeekBar
+import android.widget.Spinner
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
 import android.widget.ScrollView
 import android.app.AlertDialog
 import androidx.activity.ComponentActivity
@@ -41,8 +43,7 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var statusText: TextView
     private lateinit var loadingDetailText: TextView
     private lateinit var loadingProgressBar: ProgressBar
-    private lateinit var folderNameText: TextView
-    private lateinit var folderSeekBar: SeekBar
+    private lateinit var folderSpinner: Spinner
     private lateinit var previousFolderButton: Button
     private lateinit var nextFolderButton: Button
     private lateinit var selectFolderButton: Button
@@ -84,6 +85,7 @@ class Screen3Activity : ComponentActivity() {
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
     private var isBrowserCollapsed: Boolean = false
     private var isFavoritesCollapsed: Boolean = false
+    private var isControlsCollapsed: Boolean = false
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
     private lateinit var uiRenderer: Screen3UiRenderer
     private val settingsStore by lazy { Screen3SettingsStore(this) }
@@ -91,6 +93,10 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var clipBrowserRenderer: Screen3ClipBrowserRenderer
     private val favoritePadHelper = Screen3FavoritePadHelper()
     private lateinit var favoritePadButtons: List<Button>
+    private lateinit var controlsGroup: LinearLayout
+    private lateinit var controlsToggleButton: Button
+    private lateinit var folderSpinnerAdapter: ArrayAdapter<String>
+    private var suppressFolderSpinnerSelection: Boolean = false
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -116,8 +122,7 @@ class Screen3Activity : ComponentActivity() {
             statusText = findViewById(R.id.soundboardStatusText)
             loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
             loadingProgressBar = findViewById(R.id.soundboardLoadingProgressBar)
-            folderNameText = findViewById(R.id.soundboardFolderNameText)
-            folderSeekBar = findViewById(R.id.soundboardFolderSeekBar)
+            folderSpinner = findViewById(R.id.soundboardFolderSpinner)
             previousFolderButton = findViewById(R.id.soundboardFolderPrevButton)
             nextFolderButton = findViewById(R.id.soundboardFolderNextButton)
             selectFolderButton = findViewById(R.id.soundboardSelectFolderButton)
@@ -131,6 +136,8 @@ class Screen3Activity : ComponentActivity() {
             favoritesPad = findViewById(R.id.soundboardFavoritesPad)
             browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
             favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
+            controlsGroup = findViewById(R.id.soundboardControlsGroup)
+            controlsToggleButton = findViewById(R.id.soundboardControlsToggleButton)
             favoritePadButtons = favoritePadButtonIds.map { findViewById(it) }
 
             uiRenderer = Screen3UiRenderer(
@@ -138,8 +145,7 @@ class Screen3Activity : ComponentActivity() {
                 statusText = statusText,
                 loadingDetailText = loadingDetailText,
                 loadingProgressBar = loadingProgressBar,
-                folderNameText = folderNameText,
-                folderSeekBar = folderSeekBar,
+                folderSpinner = folderSpinner,
                 previousFolderButton = previousFolderButton,
                 nextFolderButton = nextFolderButton,
                 assignmentTargetText = assignmentTargetText,
@@ -166,6 +172,10 @@ class Screen3Activity : ComponentActivity() {
             favoriteSlotClipIds.putAll(settingsStore.loadFavoriteAssignments(FAVORITE_SLOT_COUNT))
             buildSoundPool(config.maxStreams)
 
+            folderSpinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
+            folderSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            folderSpinner.adapter = folderSpinnerAdapter
+
             previousFolderButton.setOnClickListener {
                 if (folderEntries.isNotEmpty()) {
                     currentFolderIndex = (currentFolderIndex - 1 + folderEntries.size) % folderEntries.size
@@ -180,17 +190,16 @@ class Screen3Activity : ComponentActivity() {
                 }
             }
 
-            folderSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    if (!fromUser || folderEntries.isEmpty()) return
-                    currentFolderIndex = progress.coerceIn(0, folderEntries.size - 1)
+            folderSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                    if (suppressFolderSpinnerSelection || folderEntries.isEmpty()) return
+                    if (position == currentFolderIndex) return
+                    currentFolderIndex = position.coerceIn(0, folderEntries.size - 1)
                     bindCurrentFolderFromIndex()
                 }
 
-                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-
-                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-            })
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
 
             selectFolderButton.setOnClickListener { pickFolderLauncher.launch(clipIndexRepository.getPersistedRootUri()) }
             settingsButton.setOnClickListener { showSettingsDialog() }
@@ -209,6 +218,10 @@ class Screen3Activity : ComponentActivity() {
             }
             favoritesToggleButton.setOnClickListener {
                 isFavoritesCollapsed = !isFavoritesCollapsed
+                updateSectionVisibility()
+            }
+            controlsToggleButton.setOnClickListener {
+                isControlsCollapsed = !isControlsCollapsed
                 updateSectionVisibility()
             }
 
@@ -324,11 +337,10 @@ class Screen3Activity : ComponentActivity() {
         }
 
         uiRenderer.renderFolderHeader(
-            folderName = folder.name,
             hasMultipleFolders = folderEntries.size > 1,
-            currentFolderIndex = currentFolderIndex,
             folderCount = folderEntries.size
         )
+        syncFolderSpinnerOptions()
 
         val clips: List<ClipMetadata> = buildList {
             clipIndexRepository.getIndexedClipsForFolder(folder.name).forEach { indexed ->
@@ -372,6 +384,25 @@ class Screen3Activity : ComponentActivity() {
 
     private fun updateSectionVisibility() {
         uiRenderer.renderSectionVisibility(isBrowserCollapsed = isBrowserCollapsed, isFavoritesCollapsed = isFavoritesCollapsed)
+        controlsGroup.visibility = if (isControlsCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        controlsToggleButton.text = getString(if (isControlsCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse)
+    }
+
+
+    private fun syncFolderSpinnerOptions() {
+        val folderNames = folderEntries.map { it.name }
+        suppressFolderSpinnerSelection = true
+        folderSpinnerAdapter.clear()
+        folderSpinnerAdapter.addAll(folderNames)
+        folderSpinnerAdapter.notifyDataSetChanged()
+
+        if (folderNames.isNotEmpty()) {
+            val safeIndex = currentFolderIndex.coerceIn(0, folderNames.lastIndex)
+            if (folderSpinner.selectedItemPosition != safeIndex) {
+                folderSpinner.setSelection(safeIndex, false)
+            }
+        }
+        suppressFolderSpinnerSelection = false
     }
 
     private fun bindFavoritePadButtons() {
