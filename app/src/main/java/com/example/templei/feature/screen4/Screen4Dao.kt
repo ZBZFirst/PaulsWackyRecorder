@@ -17,6 +17,9 @@ interface Screen4Dao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertColumns(columns: List<ColumnEntity>): List<Long>
 
+    @Insert
+    suspend fun insertColumn(column: ColumnEntity): Long
+
     @Update
     suspend fun updateColumn(column: ColumnEntity)
 
@@ -29,6 +32,9 @@ interface Screen4Dao {
     @Insert
     suspend fun insertCells(cells: List<CellEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCells(cells: List<CellEntity>)
+
     @Query("DELETE FROM rows WHERE id = :rowId")
     suspend fun deleteRow(rowId: Long)
 
@@ -38,6 +44,9 @@ interface Screen4Dao {
     @Query("SELECT * FROM rows ORDER BY id DESC LIMIT :limit")
     suspend fun getRows(limit: Int): List<RowEntity>
 
+    @Query("SELECT * FROM rows WHERE id = :rowId LIMIT 1")
+    suspend fun getRowById(rowId: Long): RowEntity?
+
     @Query(
         """
         SELECT c.rowId, c.columnId, c.value
@@ -46,6 +55,18 @@ interface Screen4Dao {
         """
     )
     suspend fun getCellsForRows(rowIds: List<Long>): List<RowCellRecord>
+
+    @Query(
+        """
+        SELECT c.rowId, c.columnId, c.value
+        FROM cells c
+        WHERE c.rowId = :rowId
+        """
+    )
+    suspend fun getCellsForRow(rowId: Long): List<RowCellRecord>
+
+    @Query("SELECT COALESCE(MAX(position), -1) FROM columns")
+    suspend fun getMaxColumnPosition(): Int
 
     @Query("SELECT * FROM columns WHERE id = :columnId LIMIT 1")
     suspend fun getColumnById(columnId: Long): ColumnEntity?

@@ -87,3 +87,4 @@ Key points for the current `.wav` path:
 - Rapid entry uses a draft row that is persisted through interruptions and hydrated on reopen.
 - `Commit Measurement` validates the draft and atomically inserts row + cell values in a single transaction.
 - Table preview is rendered from persisted data, with slider-controlled visible row count for large datasets.
+- Select-row, edit-selected, delete-selected, and add-column button paths are now wired to deterministic handlers.

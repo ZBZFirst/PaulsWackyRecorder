@@ -82,6 +82,70 @@ class Screen4Repository(
         return true
     }
 
+    suspend fun deleteMeasurementById(rowId: Long): Boolean {
+        val row = dao.getRowById(rowId) ?: return false
+        dao.deleteRow(row.id)
+        return true
+    }
+
+    suspend fun updateMeasurement(
+        rowId: Long,
+        updatedValuesByColumnId: Map<Long, String>,
+        activeColumns: List<ActiveColumn>,
+    ): Result<Unit> {
+        val candidateDraft = DraftRow(valuesByColumnId = updatedValuesByColumnId.toMutableMap())
+        val validationError = validateDraft(candidateDraft, activeColumns)
+        if (validationError != null) {
+            return Result.failure(IllegalArgumentException(validationError))
+        }
+
+        val row = dao.getRowById(rowId)
+            ?: return Result.failure(IllegalArgumentException("Row $rowId not found"))
+
+        database.withTransaction {
+            val cells = activeColumns.map { column ->
+                CellEntity(
+                    rowId = row.id,
+                    columnId = column.columnId,
+                    templateId = column.templateId,
+                    value = updatedValuesByColumnId[column.columnId].orEmpty().trim(),
+                )
+            }
+            dao.upsertCells(cells)
+        }
+        return Result.success(Unit)
+    }
+
+    suspend fun addColumn(label: String, sourceTemplateId: Long?): Result<Long> {
+        val templates = dao.getTemplates()
+        if (templates.isEmpty()) {
+            return Result.failure(IllegalStateException("No templates available"))
+        }
+        val template = if (sourceTemplateId == null) {
+            templates.first()
+        } else {
+            templates.firstOrNull { it.id == sourceTemplateId } ?: templates.first()
+        }
+
+        val nextPosition = dao.getMaxColumnPosition() + 1
+        val columnId = dao.insertColumn(
+            ColumnEntity(
+                templateId = template.id,
+                position = nextPosition,
+                label = label.ifBlank { template.defaultLabel },
+                isActive = true,
+            )
+        )
+        return Result.success(columnId)
+    }
+
+    suspend fun loadMeasurementDraftFromRow(rowId: Long): DraftRow {
+        val cells = dao.getCellsForRow(rowId)
+        return DraftRow(
+            valuesByColumnId = cells.associate { it.columnId to it.value }.toMutableMap()
+        )
+    }
+
     suspend fun loadTable(limit: Int): TableViewModel {
         val columns = loadActiveColumns()
         val rows = dao.getRows(limit)

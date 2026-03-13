@@ -1,5 +1,7 @@
 package com.example.templei
 
+import android.app.AlertDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
@@ -16,6 +18,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import com.example.templei.feature.screen4.ActiveColumn
+import com.example.templei.feature.screen4.DraftRow
 import com.example.templei.feature.screen4.Screen4Database
 import com.example.templei.feature.screen4.Screen4DraftStore
 import com.example.templei.feature.screen4.Screen4MeasurementEngine
@@ -41,6 +44,8 @@ class Screen4Activity : ComponentActivity() {
     private lateinit var tableLayout: TableLayout
 
     private var visibleRows: Int = Screen4MeasurementEngine.DEFAULT_VISIBLE_ROWS
+    private var selectedRowId: Long? = null
+    private var editMode: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +70,7 @@ class Screen4Activity : ComponentActivity() {
                 visibleRows = progress.coerceAtLeast(5)
                 rowDisplayLabel.text = getString(R.string.screen4_rows_visible, visibleRows)
                 if (fromUser) {
-                    refreshTable(statusOverride = getString(R.string.screen4_status_refreshed))
+                    refreshTable(statusOverride = getString(R.string.screen4_status_refreshed_rows, visibleRows))
                 }
             }
 
@@ -76,19 +81,33 @@ class Screen4Activity : ComponentActivity() {
 
     private fun bindButtons() {
         findViewById<Button>(R.id.selectRowButton).setOnClickListener {
+            editMode = false
+            selectedRowId = null
+            val draft = measurementEngine.startNewDraft()
             statusText.text = getString(R.string.screen4_status_rapid_entry)
-            renderRapidEntryForm(measurementEngine.beginRapidEntry(), measurementEngine.activeColumns())
+            renderRapidEntryForm(draft, measurementEngine.activeColumns())
         }
 
         findViewById<Button>(R.id.addRowButton).setOnClickListener {
             lifecycleScope.launch {
-                val result = measurementEngine.commitMeasurement(visibleRows)
-                result.onSuccess { model ->
-                    statusText.text = getString(R.string.screen4_status_measurement_saved, model.rows.firstOrNull()?.rowId ?: 0L)
-                    renderTable(model)
-                    renderRapidEntryForm(measurementEngine.currentDraft(), measurementEngine.activeColumns())
-                }.onFailure {
-                    statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
+                if (editMode && selectedRowId != null) {
+                    val result = measurementEngine.applyDraftToRow(selectedRowId!!, visibleRows)
+                    result.onSuccess { model ->
+                        statusText.text = getString(R.string.screen4_status_measurement_updated, selectedRowId!!)
+                        renderTable(model)
+                    }.onFailure {
+                        statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
+                    }
+                } else {
+                    val result = measurementEngine.commitMeasurement(visibleRows)
+                    result.onSuccess { model ->
+                        val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
+                        statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
+                        renderTable(model)
+                        renderRapidEntryForm(measurementEngine.currentDraft(), measurementEngine.activeColumns())
+                    }.onFailure {
+                        statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
+                    }
                 }
             }
         }
@@ -96,6 +115,10 @@ class Screen4Activity : ComponentActivity() {
         findViewById<Button>(R.id.deleteRowButton).setOnClickListener {
             lifecycleScope.launch {
                 val (deleted, model) = measurementEngine.deleteLatestMeasurement(visibleRows)
+                if (deleted && selectedRowId == model.rows.firstOrNull()?.rowId) {
+                    selectedRowId = null
+                    editMode = false
+                }
                 statusText.text = if (deleted) {
                     getString(R.string.screen4_status_deleted_latest)
                 } else {
@@ -106,15 +129,42 @@ class Screen4Activity : ComponentActivity() {
         }
 
         findViewById<Button>(R.id.editRowButton).setOnClickListener {
-            refreshTable(statusOverride = getString(R.string.screen4_status_refreshed))
+            val rowId = selectedRowId
+            if (rowId == null) {
+                refreshTable(statusOverride = getString(R.string.screen4_status_refreshed_rows, visibleRows))
+                return@setOnClickListener
+            }
+            lifecycleScope.launch {
+                val draft = measurementEngine.beginEditFromRow(rowId)
+                editMode = true
+                renderRapidEntryForm(draft, measurementEngine.activeColumns())
+                statusText.text = getString(R.string.screen4_status_editing_row, rowId)
+            }
         }
 
         findViewById<Button>(R.id.deleteSelectedRowButton).setOnClickListener {
-            statusText.text = getString(R.string.screen4_status_delete_selected_placeholder)
+            val rowId = selectedRowId
+            if (rowId == null) {
+                statusText.text = getString(R.string.screen4_status_select_row_first)
+                return@setOnClickListener
+            }
+            lifecycleScope.launch {
+                val (deleted, model) = measurementEngine.deleteSelectedMeasurement(rowId, visibleRows)
+                if (deleted) {
+                    selectedRowId = null
+                    editMode = false
+                }
+                statusText.text = if (deleted) {
+                    getString(R.string.screen4_status_deleted_selected, rowId)
+                } else {
+                    getString(R.string.screen4_status_delete_none)
+                }
+                renderTable(model)
+            }
         }
 
         findViewById<Button>(R.id.addColumnButton).setOnClickListener {
-            statusText.text = getString(R.string.screen4_status_add_column_placeholder)
+            showAddColumnDialog()
         }
     }
 
@@ -126,7 +176,7 @@ class Screen4Activity : ComponentActivity() {
         lifecycleScope.launch {
             val table = measurementEngine.initialize()
             statusText.text = getString(R.string.screen4_status_ready, table.columns.size)
-            renderRapidEntryForm(measurementEngine.currentDraft(), measurementEngine.activeColumns())
+            renderRapidEntryForm(measurementEngine.beginRapidEntry(), measurementEngine.activeColumns())
             renderTable(table)
         }
     }
@@ -139,7 +189,31 @@ class Screen4Activity : ComponentActivity() {
         }
     }
 
-    private fun renderRapidEntryForm(draft: com.example.templei.feature.screen4.DraftRow, columns: List<ActiveColumn>) {
+    private fun showAddColumnDialog() {
+        val input = EditText(this).apply {
+            hint = getString(R.string.screen4_add_column_hint)
+            setText(getString(R.string.screen4_default_new_column_label))
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_add_column_title))
+            .setView(input)
+            .setPositiveButton(getString(R.string.screen4_add_column_confirm)) { _, _ ->
+                lifecycleScope.launch {
+                    val result = measurementEngine.addColumn(input.text?.toString().orEmpty(), visibleRows)
+                    result.onSuccess { model ->
+                        renderRapidEntryForm(measurementEngine.currentDraft(), measurementEngine.activeColumns())
+                        renderTable(model)
+                        statusText.text = getString(R.string.screen4_status_column_added, model.columns.size)
+                    }.onFailure {
+                        statusText.text = getString(R.string.screen4_status_add_column_failed, it.message ?: "unknown")
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun renderRapidEntryForm(draft: DraftRow, columns: List<ActiveColumn>) {
         rapidEntryContainer.removeAllViews()
         columns.forEach { column ->
             val input = EditText(this).apply {
@@ -175,6 +249,8 @@ class Screen4Activity : ComponentActivity() {
         tableLayout.removeAllViews()
 
         if (model.rows.isEmpty()) {
+            selectedRowId = null
+            editMode = false
             val emptyRow = TableRow(this)
             emptyRow.addView(TextView(this).apply { text = getString(R.string.screen4_table_empty) })
             tableLayout.addView(emptyRow)
@@ -191,7 +267,17 @@ class Screen4Activity : ComponentActivity() {
 
         val formatter = SimpleDateFormat("HH:mm:ss", Locale.US)
         model.rows.forEach { row ->
-            val rowView = TableRow(this)
+            val rowView = TableRow(this).apply {
+                setOnClickListener {
+                    selectedRowId = row.rowId
+                    editMode = false
+                    renderTable(model)
+                    statusText.text = getString(R.string.screen4_status_selected_row, row.rowId)
+                }
+                setBackgroundColor(
+                    if (selectedRowId == row.rowId) Color.parseColor("#1A73E8") else Color.TRANSPARENT
+                )
+            }
             rowView.addView(bodyCell(row.rowId.toString()))
             rowView.addView(bodyCell(formatter.format(Date(row.createdAtMillis))))
             model.columns.forEach { column ->

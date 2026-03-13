@@ -19,6 +19,12 @@ class Screen4MeasurementEngine(
         return draftRow
     }
 
+    fun startNewDraft(): DraftRow {
+        draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+        repository.saveDraft(draftRow)
+        return draftRow
+    }
+
     fun userInputEvent(columnId: Long, value: String): DraftRow {
         draftRow.valuesByColumnId[columnId] = value
         repository.saveDraft(draftRow)
@@ -37,6 +43,34 @@ class Screen4MeasurementEngine(
         val deleted = repository.deleteLatestMeasurement()
         val table = repository.loadTable(limit = visibleRows)
         return deleted to table
+    }
+
+    suspend fun deleteSelectedMeasurement(rowId: Long, visibleRows: Int): Pair<Boolean, TableViewModel> {
+        val deleted = repository.deleteMeasurementById(rowId)
+        val table = repository.loadTable(limit = visibleRows)
+        return deleted to table
+    }
+
+    suspend fun beginEditFromRow(rowId: Long): DraftRow {
+        draftRow = repository.loadMeasurementDraftFromRow(rowId).normalize(activeColumns)
+        repository.saveDraft(draftRow)
+        return draftRow
+    }
+
+    suspend fun applyDraftToRow(rowId: Long, visibleRows: Int): Result<TableViewModel> {
+        return repository.updateMeasurement(rowId, draftRow.valuesByColumnId, activeColumns).mapCatching {
+            repository.loadTable(limit = visibleRows)
+        }
+    }
+
+    suspend fun addColumn(label: String, visibleRows: Int): Result<TableViewModel> {
+        return repository.addColumn(label = label, sourceTemplateId = activeColumns.firstOrNull()?.templateId)
+            .mapCatching {
+                activeColumns = repository.loadActiveColumns()
+                draftRow = draftRow.normalize(activeColumns)
+                repository.saveDraft(draftRow)
+                repository.loadTable(limit = visibleRows)
+            }
     }
 
     suspend fun tableModel(visibleRows: Int): TableViewModel = repository.loadTable(limit = visibleRows)
