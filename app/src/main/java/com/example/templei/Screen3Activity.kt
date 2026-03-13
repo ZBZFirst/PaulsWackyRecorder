@@ -378,16 +378,19 @@ class Screen3Activity : ComponentActivity() {
         previousFolderButton.isEnabled = folderEntries.size > 1
         nextFolderButton.isEnabled = folderEntries.size > 1
 
-        val clips: List<ClipMetadata> = clipIndexRepository.getIndexedClipsForFolder(folder.name).map { indexed ->
-            ClipMetadata(
-                id = indexed.clipId,
-                displayName = indexed.fileName,
-                uri = Uri.parse(indexed.clipUri),
-                folderName = indexed.folderName,
-                durationMs = indexed.durationMs,
-                isPlayable = indexed.playable
-            )
-            renderState(stateMachine.currentState())
+        val clips: List<ClipMetadata> = buildList {
+            clipIndexRepository.getIndexedClipsForFolder(folder.name).forEach { indexed ->
+                add(
+                    ClipMetadata(
+                        id = indexed.clipId,
+                        displayName = indexed.fileName,
+                        uri = Uri.parse(indexed.clipUri),
+                        folderName = indexed.folderName,
+                        durationMs = indexed.durationMs,
+                        isPlayable = indexed.playable
+                    )
+                )
+            }
         }
 
         activeFolderClips = clips
@@ -406,7 +409,7 @@ class Screen3Activity : ComponentActivity() {
         previousFolderButton.isEnabled = false
         nextFolderButton.isEnabled = false
         renderClipBrowser(emptyList())
-        stateMachine.onNoRootSelected()
+        stateMachine.setNoRootSelectedState()
         renderState(stateMachine.currentState())
         loadingProgressBar.isIndeterminate = false
         loadingProgressBar.max = 100
