@@ -77,6 +77,11 @@
     <string name="soundboard_state_error_permission_required">Grant audio/storage permission from Main Screen to read Music folder clips.</string>
     <string name="soundboard_state_error_select_folder">Choose a root sample folder to begin.</string>
     <string name="soundboard_settings_button">Soundboard Settings</string>
+
+    <string name="soundboard_rescan_library">Rescan Library</string>
+    <string name="soundboard_state_no_root_selected">Soundboard state: no root folder selected.</string>
+    <string name="soundboard_loading_detail_index_ready">Indexed %1$d playable clips (%2$d total) across %3$d folders.</string>
+    <string name="soundboard_loading_detail_index_empty">Indexed library is empty. Choose a folder or rescan.</string>
     <string name="soundboard_settings_title">Adjust Soundboard Constraints</string>
     <string name="soundboard_settings_max_streams">Max streams: %1$d</string>
     <string name="soundboard_settings_cooldown_ms">Cooldown (ms): %1$d</string>
