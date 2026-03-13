@@ -105,6 +105,7 @@
     <string name="soundboard_assignment_target_default">Assignment target: Slot 1 (long-press pad slot to change)</string>
     <string name="soundboard_assignment_target">Assignment target: Slot %1$d</string>
     <string name="soundboard_assignment_clear_slot">Clear Slot</string>
+    <string name="soundboard_clear_dialog_title">Select favorite slot to clear</string>
     <string name="soundboard_assignment_cleared">Cleared assignment for slot %1$d</string>
     <string name="soundboard_assignment_saved">Assigned slot %1$d to %2$s</string>
     <string name="soundboard_assign_dialog_title">Assign "%1$s" to favorite slot</string>

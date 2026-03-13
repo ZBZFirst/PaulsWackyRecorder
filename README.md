@@ -78,3 +78,5 @@ Key points for the current `.wav` path:
 - Phase 5 refinement adds explicit discovery+validation progress and renders one browser button per playable `.wav` in the active folder.
 - Phase 5 also persists folder catalog metadata by root URI so large libraries can reopen without a full initial rescan.
 - UI polish pass: Screen 3 now applies a dedicated themed visual treatment (gradient backdrop, card sections, styled action/favorite buttons) without changing playback/state logic.
+- Navigation refinement: folder switching now supports rapid SeekBar scrubbing between prev/next buttons, and Clear Slot now prompts for explicit target-slot selection before removal.
+
