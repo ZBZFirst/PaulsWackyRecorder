@@ -65,14 +65,8 @@ class SoundboardStateMachine {
     )
 
     sealed interface State {
-        data class Loading(
-            val stage: LoadingStage,
-            val foldersDiscovered: Int,
-            val filesScanned: Int,
-            val playableFound: Int,
-            val indexed: Int,
-            val totalEstimated: Int?
-        ) : State
+        data object NoRootSelected : State
+        data object Loading : State // No parameters needed
         data class Ready(
             val folderName: String?,
             val playableCount: Int,
@@ -145,6 +139,10 @@ class SoundboardStateMachine {
             indexed = indexed,
             totalEstimated = totalEstimated
         )
+    }
+
+    fun onNoRootSelected() {
+        state = State.NoRootSelected
     }
 
     fun onNoRootSelected() {
