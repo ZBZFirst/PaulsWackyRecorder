@@ -42,6 +42,34 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/topNavInclude" />
 
+        <LinearLayout
+            android:id="@+id/soundboardLoadingProgressRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardStatusText">
+
+            <TextView
+                android:id="@+id/soundboardLoadingDetailText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/soundboard_loading_detail_idle" />
+
+            <ProgressBar
+                android:id="@+id/soundboardLoadingProgressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                android:max="100"
+                android:progress="0" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/soundboardSelectFolderButton"
             android:layout_width="0dp"
@@ -50,7 +78,7 @@
             android:text="@string/soundboard_select_folder"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/soundboardStatusText" />
+            app:layout_constraintTop_toBottomOf="@id/soundboardLoadingProgressRow" />
 
         <Button
             android:id="@+id/soundboardSettingsButton"
@@ -97,16 +125,75 @@
                 android:text="@string/soundboard_folder_next" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/soundboardPadTitle"
+        <LinearLayout
+            android:id="@+id/soundboardBrowserHeaderRow"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/soundboard_favorites_title"
-            android:textStyle="bold"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/soundboardFolderNavRow" />
+            app:layout_constraintTop_toBottomOf="@id/soundboardFolderNavRow">
+
+            <TextView
+                android:id="@+id/soundboardBrowserTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/soundboard_browser_title"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/soundboardBrowserToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/soundboard_section_collapse" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/soundboardClipBrowserScroll"
+            android:layout_width="0dp"
+            android:layout_height="200dp"
+            android:layout_marginTop="8dp"
+            android:fillViewport="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardBrowserHeaderRow">
+
+            <LinearLayout
+                android:id="@+id/soundboardClipBrowserContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp" />
+        </ScrollView>
+
+        <LinearLayout
+            android:id="@+id/soundboardFavoritesHeaderRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/soundboardClipBrowserScroll">
+
+            <TextView
+                android:id="@+id/soundboardPadTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/soundboard_favorites_title"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/soundboardFavoritesToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/soundboard_section_collapse" />
+        </LinearLayout>
 
         <GridLayout
             android:id="@+id/soundboardFavoritesPad"
@@ -118,7 +205,7 @@
             android:useDefaultMargins="true"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/soundboardPadTitle">
+            app:layout_constraintTop_toBottomOf="@id/soundboardFavoritesHeaderRow">
 
             <Button android:id="@+id/favoritePadButton1" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
             <Button android:id="@+id/favoritePadButton2" android:layout_width="0dp" android:layout_height="84dp" android:layout_columnWeight="1" android:text="@string/soundboard_favorite_slot_empty" />
@@ -155,36 +242,6 @@
                 android:layout_height="wrap_content"
                 android:text="@string/soundboard_assignment_clear_slot" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/soundboardBrowserTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/soundboard_browser_title"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/soundboardAssignmentRow" />
-
-        <ScrollView
-            android:id="@+id/soundboardClipBrowserScroll"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginTop="8dp"
-            android:fillViewport="true"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/soundboardBrowserTitle">
-
-            <LinearLayout
-                android:id="@+id/soundboardClipBrowserContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="4dp" />
-        </ScrollView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
