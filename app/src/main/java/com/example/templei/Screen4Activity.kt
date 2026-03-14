@@ -2,6 +2,7 @@ package com.example.templei
 
 import android.app.AlertDialog
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
@@ -19,16 +20,20 @@ import android.widget.TableRow
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.example.templei.feature.screen4.ActiveColumn
 import com.example.templei.feature.screen4.DraftRow
 import com.example.templei.feature.screen4.Screen4Database
 import com.example.templei.feature.screen4.Screen4DraftStore
+import com.example.templei.feature.screen4.Screen4Coordinator
 import com.example.templei.feature.screen4.Screen4MeasurementEngine
+import com.example.templei.feature.screen4.Screen4RapidEntryStore
 import com.example.templei.feature.screen4.Screen4Repository
 import com.example.templei.feature.screen4.TableViewModel
 import com.example.templei.ui.navigation.TopNavigation
 import kotlinx.coroutines.launch
+import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,7 +44,7 @@ import java.util.Locale
 class Screen4Activity : ComponentActivity() {
     private enum class EntryMode { MANUAL, RAPID }
 
-    private lateinit var measurementEngine: Screen4MeasurementEngine
+    private lateinit var screen4Coordinator: Screen4Coordinator
     private lateinit var statusText: TextView
     private lateinit var rowDisplayLabel: TextView
     private lateinit var rowDisplaySlider: SeekBar
@@ -58,6 +63,15 @@ class Screen4Activity : ComponentActivity() {
     private var editMode: Boolean = false
     private var rapidEntryColumnIds: Set<Long> = emptySet()
     private var entryMode: EntryMode = EntryMode.MANUAL
+
+    private val exportCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri == null) {
+            statusText.text = getString(R.string.screen4_status_export_cancelled)
+            return@registerForActivityResult
+        }
+        exportTableToCsv(uri)
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,21 +125,21 @@ class Screen4Activity : ComponentActivity() {
 
     private fun bindButtons() {
         findViewById<Button>(R.id.selectRowButton).setOnClickListener {
-            if (!::measurementEngine.isInitialized) return@setOnClickListener
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
             showRapidEntryColumnsDialog()
         }
 
         findViewById<Button>(R.id.editRowButton).setOnClickListener {
-            if (!::measurementEngine.isInitialized) return@setOnClickListener
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
             setEntryMode(EntryMode.MANUAL)
             val rowId = selectedRowId
             if (rowId == null) {
-                renderEntryForms(measurementEngine.currentDraft())
+                renderEntryForms(screen4Coordinator.currentDraft())
                 statusText.text = getString(R.string.screen4_status_manual_entry)
                 return@setOnClickListener
             }
             lifecycleScope.launch {
-                val draft = measurementEngine.beginEditFromRow(rowId)
+                val draft = screen4Coordinator.beginEditFromRow(rowId)
                 editMode = true
                 renderEntryForms(draft)
                 statusText.text = getString(R.string.screen4_status_editing_row, rowId)
@@ -133,10 +147,10 @@ class Screen4Activity : ComponentActivity() {
         }
 
         findViewById<Button>(R.id.addRowButton).setOnClickListener {
-            if (!::measurementEngine.isInitialized) return@setOnClickListener
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
             lifecycleScope.launch {
                 if (editMode && selectedRowId != null) {
-                    val result = measurementEngine.applyDraftToRow(selectedRowId!!, visibleRows)
+                    val result = screen4Coordinator.applyDraftToRow(selectedRowId!!, visibleRows)
                     result.onSuccess { model ->
                         statusText.text = getString(R.string.screen4_status_measurement_updated, selectedRowId!!)
                         renderTable(model)
@@ -144,12 +158,12 @@ class Screen4Activity : ComponentActivity() {
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
                 } else {
-                    val result = measurementEngine.commitMeasurement(visibleRows)
+                    val result = screen4Coordinator.commitMeasurement(visibleRows, useRapidEntryConfig = entryMode == EntryMode.RAPID)
                     result.onSuccess { model ->
                         val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
                         statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
                         renderTable(model)
-                        renderEntryForms(measurementEngine.currentDraft())
+                        renderEntryForms(screen4Coordinator.currentDraft())
                     }.onFailure {
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
@@ -158,23 +172,23 @@ class Screen4Activity : ComponentActivity() {
         }
 
         findViewById<Button>(R.id.deleteRowButton).setOnClickListener {
-            if (!::measurementEngine.isInitialized) return@setOnClickListener
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
             lifecycleScope.launch {
-                val (deleted, model) = measurementEngine.deleteLatestMeasurement(visibleRows)
+                val (deleted, model) = screen4Coordinator.deleteLatestMeasurement(visibleRows)
                 statusText.text = if (deleted) getString(R.string.screen4_status_deleted_latest) else getString(R.string.screen4_status_delete_none)
                 renderTable(model)
             }
         }
 
         findViewById<Button>(R.id.deleteSelectedRowButton).setOnClickListener {
-            if (!::measurementEngine.isInitialized) return@setOnClickListener
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
             val rowId = selectedRowId
             if (rowId == null) {
                 statusText.text = getString(R.string.screen4_status_select_row_first)
                 return@setOnClickListener
             }
             lifecycleScope.launch {
-                val (deleted, model) = measurementEngine.deleteSelectedMeasurement(rowId, visibleRows)
+                val (deleted, model) = screen4Coordinator.deleteSelectedMeasurement(rowId, visibleRows)
                 if (deleted) {
                     selectedRowId = null
                     editMode = false
@@ -185,20 +199,34 @@ class Screen4Activity : ComponentActivity() {
         }
 
         findViewById<Button>(R.id.addColumnButton).setOnClickListener {
-            if (!::measurementEngine.isInitialized) return@setOnClickListener
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
             showColumnManagementDialog()
+        }
+
+        findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
+            statusText.text = getString(R.string.screen4_status_export_started)
+            exportCsvLauncher.launch(getString(R.string.screen4_export_default_filename))
         }
     }
 
     private fun initializeEngine() {
         val db = Screen4Database.getInstance(this)
-        measurementEngine = Screen4MeasurementEngine(Screen4Repository(db, Screen4DraftStore(this)))
+        screen4Coordinator = Screen4Coordinator(
+            Screen4MeasurementEngine(
+                Screen4Repository(
+                    db,
+                    Screen4DraftStore(this),
+                    Screen4RapidEntryStore(this),
+                )
+            )
+        )
 
         lifecycleScope.launch {
-            val table = measurementEngine.initialize()
-            rapidEntryColumnIds = table.columns.map { it.columnId }.toSet()
+            val table = screen4Coordinator.initialize()
+            rapidEntryColumnIds = screen4Coordinator.currentRapidEntryConfig().activeColumnIds
             statusText.text = getString(R.string.screen4_status_ready, table.columns.size)
-            renderEntryForms(measurementEngine.beginRapidEntry())
+            renderEntryForms(screen4Coordinator.beginRapidEntry())
             setEntryMode(EntryMode.MANUAL)
             renderTable(table)
         }
@@ -219,21 +247,21 @@ class Screen4Activity : ComponentActivity() {
     }
 
     private fun renderEntryForms(draft: DraftRow) {
-        renderFormIntoContainer(manualEntryContainer, draft, measurementEngine.activeColumns(), isRapid = false)
+        renderFormIntoContainer(manualEntryContainer, draft, screen4Coordinator.activeColumns(), isRapid = false)
         renderFormIntoContainer(rapidEntryContainer, draft, currentRapidEntryColumns(), isRapid = true)
     }
 
     private fun refreshTable(statusOverride: String) {
-        if (!::measurementEngine.isInitialized) return
+        if (!::screen4Coordinator.isInitialized) return
         lifecycleScope.launch {
-            val table = measurementEngine.tableModel(visibleRows)
+            val table = screen4Coordinator.tableModel(visibleRows)
             renderTable(table)
             statusText.text = statusOverride
         }
     }
 
     private fun showRapidEntryColumnsDialog() {
-        val allColumns = measurementEngine.activeColumns()
+        val allColumns = screen4Coordinator.activeColumns()
         if (allColumns.isEmpty()) {
             statusText.text = getString(R.string.screen4_status_columns_unavailable)
             return
@@ -263,11 +291,12 @@ class Screen4Activity : ComponentActivity() {
     }
 
     private fun startRapidEntry(columnIds: Set<Long>) {
-        rapidEntryColumnIds = columnIds
+        val config = screen4Coordinator.configureRapidEntry(columnIds)
+        rapidEntryColumnIds = config.activeColumnIds - config.autoColumns.keys
         editMode = false
         selectedRowId = null
         setEntryMode(EntryMode.RAPID)
-        val draft = measurementEngine.startNewDraft()
+        val draft = screen4Coordinator.startNewDraft()
         renderEntryForms(draft)
     }
 
@@ -289,10 +318,10 @@ class Screen4Activity : ComponentActivity() {
             .setView(input)
             .setPositiveButton(getString(R.string.screen4_add_column_confirm)) { _, _ ->
                 lifecycleScope.launch {
-                    measurementEngine.addColumn(input.text?.toString().orEmpty(), visibleRows)
+                    screen4Coordinator.addColumn(input.text?.toString().orEmpty(), visibleRows)
                         .onSuccess { model ->
-                            rapidEntryColumnIds = model.columns.map { it.columnId }.toSet()
-                            renderEntryForms(measurementEngine.currentDraft())
+                            rapidEntryColumnIds = screen4Coordinator.currentRapidEntryConfig().activeColumnIds - screen4Coordinator.currentRapidEntryConfig().autoColumns.keys
+                            renderEntryForms(screen4Coordinator.currentDraft())
                             renderTable(model)
                             statusText.text = getString(R.string.screen4_status_column_added, model.columns.size)
                         }
@@ -306,7 +335,7 @@ class Screen4Activity : ComponentActivity() {
     }
 
     private fun showPruneColumnsDialog() {
-        val prunableColumns = measurementEngine.activeColumns().filterNot { it.required }
+        val prunableColumns = screen4Coordinator.activeColumns().filterNot { it.required }
         if (prunableColumns.isEmpty()) {
             statusText.text = getString(R.string.screen4_status_prune_none_available)
             return
@@ -319,13 +348,11 @@ class Screen4Activity : ComponentActivity() {
             .setPositiveButton(getString(R.string.screen4_prune_columns_confirm)) { _, _ ->
                 lifecycleScope.launch {
                     val toPrune = prunableColumns.mapIndexedNotNull { index, column -> if (checked[index]) column.columnId else null }
-                    measurementEngine.pruneColumns(toPrune, visibleRows)
+                    screen4Coordinator.pruneColumns(toPrune, visibleRows)
                         .onSuccess { model ->
-                            rapidEntryColumnIds = rapidEntryColumnIds.intersect(model.columns.map { it.columnId }.toSet())
-                            if (rapidEntryColumnIds.isEmpty()) {
-                                rapidEntryColumnIds = model.columns.filter { it.required }.map { it.columnId }.toSet()
-                            }
-                            renderEntryForms(measurementEngine.currentDraft())
+                            val config = screen4Coordinator.currentRapidEntryConfig()
+                            rapidEntryColumnIds = config.activeColumnIds - config.autoColumns.keys
+                            renderEntryForms(screen4Coordinator.currentDraft())
                             renderTable(model)
                             statusText.text = getString(R.string.screen4_status_pruned_columns, toPrune.size)
                         }
@@ -339,11 +366,17 @@ class Screen4Activity : ComponentActivity() {
     }
 
     private fun currentRapidEntryColumns(): List<ActiveColumn> {
-        val activeColumns = measurementEngine.activeColumns()
-        val requiredIds = activeColumns.filter { it.required }.map { it.columnId }.toSet()
-        if (rapidEntryColumnIds.isEmpty()) return activeColumns.filter { it.columnId in requiredIds }
-        val effectiveIds = rapidEntryColumnIds + requiredIds
-        return activeColumns.filter { it.columnId in effectiveIds }
+        val activeColumns = screen4Coordinator.activeColumns()
+        val config = screen4Coordinator.currentRapidEntryConfig()
+        val autoIds = config.autoColumns.keys
+        val configuredIds = if (config.activeColumnIds.isEmpty()) {
+            activeColumns.map { it.columnId }.toSet()
+        } else {
+            config.activeColumnIds
+        }
+        val visibleInputIds = configuredIds - autoIds
+        if (visibleInputIds.isEmpty()) return emptyList()
+        return activeColumns.filter { it.columnId in visibleInputIds }
     }
 
     private fun renderFormIntoContainer(
@@ -362,17 +395,18 @@ class Screen4Activity : ComponentActivity() {
                     if (column.required) getString(R.string.screen4_required) else getString(R.string.screen4_optional),
                     column.maxLength,
                 )
-                inputType = when {
-                    column.fakerKey.contains("number") -> InputType.TYPE_CLASS_NUMBER
-                    column.fakerKey.contains("science") -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-                    else -> InputType.TYPE_CLASS_TEXT
-                }
+                val columnType = screen4Coordinator.resolveColumnType(column)
+                inputType = inputTypeForWidget(columnType.uiWidget)
                 setText(draft.valuesByColumnId[column.columnId].orEmpty())
+                val initialError = screen4Coordinator.validateField(column, text?.toString().orEmpty())
+                error = initialError
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                     override fun afterTextChanged(s: Editable?) {
-                        measurementEngine.userInputEvent(column.columnId, s?.toString().orEmpty())
+                        val currentValue = s?.toString().orEmpty()
+                        screen4Coordinator.userInputEvent(column.columnId, currentValue)
+                        error = screen4Coordinator.validateField(column, currentValue)
                     }
                 })
 
@@ -425,6 +459,58 @@ class Screen4Activity : ComponentActivity() {
             rowView.addView(bodyCell(formatter.format(Date(row.createdAtMillis))))
             model.columns.forEach { rowView.addView(bodyCell(row.valuesByColumnId[it.columnId].orEmpty())) }
             tableLayout.addView(rowView)
+        }
+    }
+
+    private fun exportTableToCsv(uri: Uri) {
+        lifecycleScope.launch {
+            runCatching {
+                val table = screen4Coordinator.tableModel(visibleRows)
+                contentResolver.openOutputStream(uri)?.use { stream ->
+                    OutputStreamWriter(stream).use { writer ->
+                        val headers = buildList {
+                            add(getString(R.string.screen4_table_header_row_id))
+                            add(getString(R.string.screen4_table_header_created))
+                            addAll(table.columns.map { it.label })
+                        }
+                        writer.appendLine(headers.toCsvLine())
+
+                        table.rows.forEach { row ->
+                            val values = buildList {
+                                add(row.rowId.toString())
+                                add(row.createdAtMillis.toString())
+                                addAll(table.columns.map { column -> row.valuesByColumnId[column.columnId].orEmpty() })
+                            }
+                            writer.appendLine(values.toCsvLine())
+                        }
+                    }
+                } ?: error("Unable to open output stream")
+                table.rows.size
+            }.onSuccess { count ->
+                statusText.text = getString(R.string.screen4_status_export_success, count)
+            }.onFailure { throwable ->
+                statusText.text = getString(R.string.screen4_status_export_failed, throwable.message ?: "unknown")
+            }
+        }
+    }
+
+    private fun List<String>.toCsvLine(): String {
+        return joinToString(",") { value ->
+            val escaped = value.replace("\"", "\"\"")
+            "\"$escaped\""
+        }
+    }
+
+    private fun inputTypeForWidget(widget: String): Int {
+        return when (widget) {
+            "NumericInput" -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+            "DecimalInput" -> InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+            "EmailInput" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            "PhoneInput" -> InputType.TYPE_CLASS_PHONE
+            "DateInput" -> InputType.TYPE_CLASS_DATETIME
+            "TimeInput" -> InputType.TYPE_CLASS_DATETIME
+            "TimestampInput" -> InputType.TYPE_CLASS_NUMBER
+            else -> InputType.TYPE_CLASS_TEXT
         }
     }
 

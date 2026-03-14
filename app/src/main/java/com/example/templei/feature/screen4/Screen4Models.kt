@@ -4,6 +4,7 @@ data class ActiveColumn(
     val columnId: Long,
     val templateId: Long,
     val fakerKey: String,
+    val constraintType: String,
     val label: String,
     val maxLength: Int,
     val required: Boolean,

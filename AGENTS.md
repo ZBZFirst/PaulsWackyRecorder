@@ -180,42 +180,32 @@ Use this section to keep incremental delivery transparent and reproducible.
 
 
 ## Screen 4 build-out summary (current conversation)
-Use this summary as the implementation contract for evolving Screen 4 from placeholder shell to table workflow.
+Use this summary as the implementation contract for Screen 4's typed table workflow (independent from Screen 3).
 
-- Screen 4 is currently UI-only scaffold; no table commands are wired in code yet.
-- Screen 4 should become a table editor surface where button actions map to explicit data operations.
-- Current Screen 3 persistence does **not** use Room; it uses `SharedPreferences` + serialized payloads.
-- Room is a Jetpack (`androidx`) library added via Gradle dependencies (not a paid SDK by default).
-- Target capability for Screen 4: CRUD actions, row selection/editing, visible-row controls, and CSV export.
+### Phase review snapshot (current)
+- **Phase 1 completed**: command routing boundary is implemented via `Screen4Coordinator`, and `Screen4Activity` delegates command flows.
+- **Phase 2 completed (core)**: semantic registry + validator core is in place and enforced before insert/update paths.
+- **Phase 3 completed (core)**: `RapidEntryConfig` persistence (`ActiveColumns` + `AutoColumns`) and base→input→auto row composition are implemented.
+- **Phase 4 completed (core)**: XML form widgets map from registry metadata and show field-level validation feedback.
+- **Phase 5 completed (core)**: CSV export through SAF create-document flow is available from Screen 4 actions.
+- **Phase 6 completed (baseline gate)**: registry declares all 107 semantic type names; unit tests enforce count/uniqueness/alias resolution.
 
-### Screen 4 phased build plan
-#### Phase 1 (planned): Wire existing controls to explicit command handlers
-- Connect `addRowButton`, `deleteRowButton`, `selectRowButton`, `editRowButton`, `deleteSelectedRowButton`, and `rowDisplaySlider` to deterministic handlers.
-- Keep handlers small and route through a Screen 4 coordinator/repository boundary.
-- Replace placeholder-only behavior with visible status/toast updates for each command path.
+### Current capability (as-built)
+- Screen 4 now functions as a typed, Room-backed table editor surface with deterministic validation and rapid-entry behavior.
+- Screen 3 persistence remains separate and unchanged (`SharedPreferences` + serialized payloads).
 
-#### Phase 2 (planned): Add Room-backed local table persistence
-- Add `androidx.room` dependencies in Gradle and configure annotation processing.
-- Define Screen 4 entity/dao/database classes under a Screen 4 feature module path.
-- Support baseline commands: insert row, query rows, update row, delete row, delete selected row.
-- Keep Room schema intentionally small and reproducible to align with scaffold goals.
-
-#### Phase 3 (planned): Render persisted rows in the Screen 4 preview
-- Replace static sample preview rows with runtime data from the Screen 4 repository.
-- Keep XML-first screen structure; update only row rendering behavior.
-- Ensure row selection state is explicit and survives simple activity recreation.
-
-#### Phase 4 (planned): Export + backend bridge preparation
-- Add CSV export of current table snapshot through SAF write flow.
-- Keep remote SQL/NoSQL integration optional and decoupled behind repository interfaces.
-- Treat Room as local source-of-truth; add sync adapters later if product direction requires cloud/backend linkage.
+### Post-phase hardening backlog
+- Expand validator depth for each semantic type family (beyond baseline mapping).
+- Add migration/versioning tests for Room schema evolution.
+- Add integration/UI coverage for rapid-entry loop behavior and CSV export edge cases.
 
 ### Files currently involved in Screen 4 build-out context
-- `app/src/main/java/com/example/templei/Screen4Activity.kt` (Screen 4 shell host + nav binding).
-- `app/src/main/res/layout/activity_screen4.xml` (Screen 4 control surface + table preview scaffold).
-- `app/src/main/res/layout/view_top_navigation.xml` (shared top navigation component used by Screen 4).
-- `app/src/main/java/com/example/templei/ui/navigation/TopNavigation.kt` (screen-to-screen routing behavior).
-- `app/src/main/res/values/strings.xml` (Screen 4 title and future string resources for commands/status).
-- `app/build.gradle.kts` and `gradle/libs.versions.toml` (future Room dependency wiring location).
-- `app/src/main/java/com/example/templei/feature/soundboard/ClipIndexRepository.kt` (reference: current non-Room persistence pattern in Screen 3).
-- `app/src/main/java/com/example/templei/feature/soundboard/Screen3SettingsStore.kt` (reference: current non-Room settings persistence pattern).
+- `app/src/main/java/com/example/templei/Screen4Activity.kt` (Screen 4 shell host + CSV export action wiring).
+- `app/src/main/java/com/example/templei/feature/screen4/Screen4Coordinator.kt` (command boundary + field-validation helpers).
+- `app/src/main/java/com/example/templei/feature/screen4/Screen4MeasurementEngine.kt` (rapid-entry composition + commit behavior).
+- `app/src/main/java/com/example/templei/feature/screen4/Screen4Repository.kt` (Room command paths + validation gate).
+- `app/src/main/java/com/example/templei/feature/screen4/Screen4ColumnTypeRegistry.kt` (107-type registry baseline).
+- `app/src/main/java/com/example/templei/feature/screen4/Screen4ValidationEngine.kt` (semantic validator dispatch).
+- `app/src/main/java/com/example/templei/feature/screen4/Screen4RapidEntryConfig.kt` and `Screen4RapidEntryStore.kt` (rapid-entry config persistence).
+- `app/src/main/res/layout/activity_screen4.xml` and `app/src/main/res/values/strings.xml` (Screen 4 control surface + export/status text).
+- `app/src/test/java/com/example/templei/feature/screen4/Screen4ColumnTypeRegistryTest.kt` (phase-6 registry gate tests).

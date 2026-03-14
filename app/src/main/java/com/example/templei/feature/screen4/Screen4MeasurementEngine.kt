@@ -5,10 +5,12 @@ class Screen4MeasurementEngine(
 ) {
     private var activeColumns: List<ActiveColumn> = emptyList()
     private var draftRow: DraftRow = DraftRow(mutableMapOf())
+    private var rapidEntryConfig: RapidEntryConfig = RapidEntryConfig(emptySet(), emptyMap())
 
     suspend fun initialize(): TableViewModel {
         repository.ensureSchema()
         activeColumns = repository.loadActiveColumns()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
         draftRow = repository.loadDraft().normalize(activeColumns)
         return repository.loadTable(limit = DEFAULT_VISIBLE_ROWS)
     }
@@ -31,9 +33,35 @@ class Screen4MeasurementEngine(
         return draftRow
     }
 
-    suspend fun commitMeasurement(visibleRows: Int): Result<TableViewModel> {
-        return repository.commitMeasurement(draftRow, activeColumns).mapCatching {
-            draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+    fun configureRapidEntry(activeColumnIds: Set<Long>): RapidEntryConfig {
+        val allIds = activeColumns.map { it.columnId }.toSet()
+        val sanitizedActive = (if (activeColumnIds.isEmpty()) allIds else activeColumnIds).intersect(allIds)
+        val autoColumns = activeColumns
+            .filter { it.columnId in sanitizedActive }
+            .filter { shouldAutoFill(it) }
+            .associate { it.columnId to AutoValueSource.SYSTEM_TIME_UNIX_MS }
+
+        rapidEntryConfig = RapidEntryConfig(
+            activeColumnIds = sanitizedActive,
+            autoColumns = autoColumns,
+        )
+        repository.saveRapidEntryConfig(rapidEntryConfig)
+        return rapidEntryConfig
+    }
+
+    suspend fun commitMeasurement(visibleRows: Int, useRapidEntryConfig: Boolean = false): Result<TableViewModel> {
+        val candidateDraft = if (useRapidEntryConfig) {
+            buildRapidEntryDraft()
+        } else {
+            draftRow
+        }
+
+        return repository.commitMeasurement(candidateDraft, activeColumns).mapCatching {
+            draftRow = if (useRapidEntryConfig) {
+                nextRapidEntryDraft()
+            } else {
+                DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+            }
             repository.saveDraft(draftRow)
             repository.loadTable(limit = visibleRows)
         }
@@ -67,6 +95,7 @@ class Screen4MeasurementEngine(
         return repository.addColumn(label = label, sourceTemplateId = activeColumns.firstOrNull()?.templateId)
             .mapCatching {
                 activeColumns = repository.loadActiveColumns()
+                rapidEntryConfig = hydrateRapidEntryConfig(rapidEntryConfig)
                 draftRow = draftRow.normalize(activeColumns)
                 repository.saveDraft(draftRow)
                 repository.loadTable(limit = visibleRows)
@@ -76,6 +105,7 @@ class Screen4MeasurementEngine(
     suspend fun pruneColumns(columnIds: List<Long>, visibleRows: Int): Result<TableViewModel> {
         return repository.pruneColumns(columnIds, activeColumns).mapCatching {
             activeColumns = repository.loadActiveColumns()
+            rapidEntryConfig = hydrateRapidEntryConfig(rapidEntryConfig)
             draftRow = draftRow.normalize(activeColumns)
             repository.saveDraft(draftRow)
             repository.loadTable(limit = visibleRows)
@@ -87,6 +117,56 @@ class Screen4MeasurementEngine(
     fun activeColumns(): List<ActiveColumn> = activeColumns
 
     fun currentDraft(): DraftRow = draftRow
+
+    fun currentRapidEntryConfig(): RapidEntryConfig = rapidEntryConfig
+
+    private fun buildRapidEntryDraft(): DraftRow {
+        val base = draftRow.normalize(activeColumns).valuesByColumnId
+        val activeIds = if (rapidEntryConfig.activeColumnIds.isEmpty()) {
+            activeColumns.map { it.columnId }.toSet()
+        } else {
+            rapidEntryConfig.activeColumnIds
+        }
+
+        val composed = activeColumns.associate { column ->
+            val value = when {
+                column.columnId in rapidEntryConfig.autoColumns -> autoValueFor(rapidEntryConfig.autoColumns.getValue(column.columnId))
+                column.columnId in activeIds -> base[column.columnId].orEmpty()
+                else -> ""
+            }
+            column.columnId to value
+        }.toMutableMap()
+
+        return DraftRow(valuesByColumnId = composed)
+    }
+
+    private fun nextRapidEntryDraft(): DraftRow {
+        val next = activeColumns.associate { column ->
+            val retained = if (column.columnId in rapidEntryConfig.autoColumns) "" else draftRow.valuesByColumnId[column.columnId].orEmpty()
+            column.columnId to retained
+        }.toMutableMap()
+        return DraftRow(valuesByColumnId = next)
+    }
+
+    private fun shouldAutoFill(column: ActiveColumn): Boolean {
+        val normalized = column.constraintType.trim().uppercase()
+        return normalized == "TIMESTAMP" || normalized == "TIMESTAMP_UNIX_MS"
+    }
+
+    private fun autoValueFor(source: AutoValueSource): String {
+        return when (source) {
+            AutoValueSource.SYSTEM_TIME_UNIX_MS -> System.currentTimeMillis().toString()
+        }
+    }
+
+    private fun hydrateRapidEntryConfig(candidate: RapidEntryConfig): RapidEntryConfig {
+        val allIds = activeColumns.map { it.columnId }.toSet()
+        val active = if (candidate.activeColumnIds.isEmpty()) allIds else candidate.activeColumnIds.intersect(allIds)
+        val auto = candidate.autoColumns.filterKeys { it in active && it in allIds }
+        val hydrated = RapidEntryConfig(activeColumnIds = active, autoColumns = auto)
+        repository.saveRapidEntryConfig(hydrated)
+        return hydrated
+    }
 
     private fun DraftRow.normalize(columns: List<ActiveColumn>): DraftRow {
         val normalized = columns.associate { column ->

@@ -83,6 +83,14 @@ Key points for the current `.wav` path:
 
 ## Screen 4 serial measurement engine (current)
 
+- Phase 6 implementation has started: Screen 4 registry now declares all 107 semantic type names with deterministic metadata and has unit-test coverage for count/uniqueness and alias resolution.
+- Phase 5 implementation has started: Screen 4 now supports SAF-based CSV export from the current table snapshot.
+- Phase 4 implementation has started: Screen 4 now maps input widgets from registry metadata and shows field-level validation feedback in XML entry forms.
+- Phase 3 implementation has started: Screen 4 now persists `RapidEntryConfig` (active + auto columns) and composes rapid rows with base/input/auto stages before commit.
+- Phase 2 implementation has started: Screen 4 now includes a core `Screen4ColumnTypeRegistry` + `Screen4ValidationEngine` and enforces semantic validation before row insert/update.
+- Phase 1 implementation has started: Screen 4 now routes activity commands through `Screen4Coordinator` and includes typed-contract scaffolding in `feature/screen4/Screen4Contracts.kt`.
+- Screen 4 from-scratch implementation is now organized as a concise 6-phase execution plan with copy/paste prompt pack in `SCREEN4_TYPED_RAPID_ENTRY_PLAN.md`.
+- Screen 4 typed rapid-entry architecture and 107-type rollout checklist are tracked in `SCREEN4_TYPED_RAPID_ENTRY_PLAN.md` (including a dependency-impact section for existing Room/Coroutine/Compose libs).
 - Screen 4 now boots a Room-backed schema (`ColumnTemplates`, `Columns`, `Rows`, `Cells`) for deterministic measurement storage.
 - Rapid entry uses a draft row that is persisted through interruptions and hydrated on reopen.
 - `Commit Measurement` validates the draft and atomically inserts row + cell values in a single transaction.
