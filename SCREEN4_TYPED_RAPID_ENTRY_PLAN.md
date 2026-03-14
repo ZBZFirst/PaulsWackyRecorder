@@ -171,6 +171,18 @@ Validation contract:
 
 This keeps each step concise enough for agent prompting while still preserving deterministic architecture boundaries.
 
+### Phase status review (current)
+
+| Phase | Status | Review note |
+|---|---|---|
+| 1 | Completed | Coordinator boundary and typed contracts are in place. |
+| 2 | Completed (core) | Registry + validator core enforced before persistence. |
+| 3 | Completed (core) | Rapid-entry config persistence and base→input→auto composition implemented. |
+| 4 | Completed (core) | XML widget mapping and field-level validation feedback implemented. |
+| 5 | Completed (core) | SAF CSV export workflow implemented. |
+| 6 | Completed (baseline gate) | 107-type registry baseline + count/uniqueness/alias tests in place. |
+
+
 ### Phase 1 — Bootstrapped foundation (Room + contracts)
 
 - Confirm/initialize Screen 4 Room schema objects and repository boundaries.
@@ -207,6 +219,10 @@ This keeps each step concise enough for agent prompting while still preserving d
 - For each type: registry + validator + widget + examples + tests.
 - Mark release readiness only when checklist and tests are complete.
 
+Phase-6 progress update (current):
+- Registry baseline now declares all 107 semantic type names with deterministic metadata.
+- Automated unit tests now enforce registry count (107), uniqueness, and legacy alias resolution behavior.
+
 ---
 
 ## Concise agent prompt pack (from-scratch execution)
@@ -227,6 +243,16 @@ Use these prompts sequentially to keep context short and deterministic.
    - "Work through the 107-type checklist; each completed type must include registry mapping, validator mapping, widget mapping, examples, and tests."
 
 ---
+
+
+## Phase review notes (implementation evidence)
+
+- Phase 1 evidence: `Screen4Coordinator` routes activity command flows and keeps the activity shell thin.
+- Phase 2 evidence: repository validation path dispatches through semantic registry + validator engine before writes.
+- Phase 3 evidence: rapid-entry config is persisted and hydrated; commit supports base→input→auto assembly.
+- Phase 4 evidence: XML input `InputType` selection is driven by registry `uiWidget` metadata and per-field validation feedback is surfaced.
+- Phase 5 evidence: Screen 4 action panel includes SAF CSV export using create-document flow.
+- Phase 6 evidence: registry contains all 107 semantic type names with automated count/uniqueness/alias tests.
 
 ## Testing matrix
 

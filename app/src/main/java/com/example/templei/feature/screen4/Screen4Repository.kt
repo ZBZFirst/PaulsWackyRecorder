@@ -5,8 +5,10 @@ import androidx.room.withTransaction
 class Screen4Repository(
     private val database: Screen4Database,
     private val draftStore: Screen4DraftStore,
+    private val rapidEntryStore: Screen4RapidEntryStore,
 ) {
     private val dao = database.screen4Dao()
+    private val validationEngine = Screen4ValidationEngine(Screen4ColumnTypeRegistry)
 
     suspend fun ensureSchema() {
         if (dao.getTemplates().isNotEmpty()) return
@@ -33,6 +35,7 @@ class Screen4Repository(
                 columnId = column.id,
                 templateId = template.id,
                 fakerKey = template.fakerKey,
+                constraintType = template.constraintType,
                 label = column.label,
                 maxLength = template.maxLength,
                 required = template.required,
@@ -44,6 +47,13 @@ class Screen4Repository(
 
     fun saveDraft(draftRow: DraftRow) {
         draftStore.saveDraft(draftRow.valuesByColumnId)
+    }
+
+
+    fun loadRapidEntryConfig(): RapidEntryConfig = rapidEntryStore.load()
+
+    fun saveRapidEntryConfig(config: RapidEntryConfig) {
+        rapidEntryStore.save(config)
     }
 
     suspend fun commitMeasurement(draftRow: DraftRow, activeColumns: List<ActiveColumn>): Result<Long> {
@@ -184,6 +194,10 @@ class Screen4Repository(
             }
             if (value.length > column.maxLength) {
                 return "${column.label} exceeds max length ${column.maxLength}"
+            }
+            val validationError = validationEngine.validate(column, value)
+            if (validationError != null) {
+                return "${column.label}: $validationError"
             }
         }
         return null

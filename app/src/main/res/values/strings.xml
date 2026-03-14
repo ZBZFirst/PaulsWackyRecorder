@@ -136,6 +136,12 @@
     <string name="screen4_refresh_table">Refresh / Edit Selected</string>
     <string name="screen4_delete_selected_placeholder">Delete Selected</string>
     <string name="screen4_add_column_placeholder">Add Column</string>
+    <string name="screen4_export_csv">Export CSV</string>
+    <string name="screen4_export_default_filename">screen4_measurements.csv</string>
+    <string name="screen4_status_export_started">Preparing CSV export...</string>
+    <string name="screen4_status_export_cancelled">CSV export cancelled.</string>
+    <string name="screen4_status_export_success">Exported CSV: %1$s rows.</string>
+    <string name="screen4_status_export_failed">CSV export failed: %1$s</string>
     <string name="screen4_table_preview">Table Preview</string>
     <string name="screen4_draft_hint">Enter %1$s (%2$s, max %3$d)</string>
     <string name="screen4_required">required</string>

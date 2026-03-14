@@ -12,6 +12,11 @@
 
 ## State note
 Screen 4 now hosts a deterministic serial-measurement workflow with Room persistence:
+- Phase 6 foundation is now present: registry includes all 107 semantic type definitions with executable count/uniqueness test coverage.
+- Phase 5 foundation is now present: table snapshot can be exported to CSV through SAF create-document flow.
+- Phase 4 foundation is now present: XML inputs map from registry widget metadata and show per-field validation feedback.
+- Phase 3 foundation is now present: rapid-entry config persists active/auto columns and commit composes base→input→auto row values.
+- Phase 2 foundation is now present: a core Screen 4 type registry + validator engine runs prior to row insert/update.
 - `Screen4MeasurementEngine` initializes schema + active columns and manages rapid-entry draft state.
 - Commits are atomic (`Row` + `Cell` inserts in one transaction) and draft values persist through interruptions.
 - The table preview is runtime-rendered from persisted rows/cells with visible-row slider control.
@@ -26,4 +31,10 @@ Screen 4 now hosts a deterministic serial-measurement workflow with Room persist
 - `feature/screen4/Screen4Entities.kt`
 - `feature/screen4/Screen4Repository.kt`
 - `feature/screen4/Screen4MeasurementEngine.kt`
+- `feature/screen4/Screen4Coordinator.kt`
+- `feature/screen4/Screen4Contracts.kt`
+- `feature/screen4/Screen4ColumnTypeRegistry.kt`
+- `feature/screen4/Screen4ValidationEngine.kt`
+- `feature/screen4/Screen4RapidEntryConfig.kt`
+- `feature/screen4/Screen4RapidEntryStore.kt`
 - `feature/screen4/Screen4DraftStore.kt`
