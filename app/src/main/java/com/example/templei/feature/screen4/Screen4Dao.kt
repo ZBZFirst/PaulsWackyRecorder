@@ -14,6 +14,13 @@ interface Screen4Dao {
     @Query("SELECT * FROM column_templates ORDER BY id")
     suspend fun getTemplates(): List<ColumnTemplateEntity>
 
+
+    @Insert
+    suspend fun insertTemplate(template: ColumnTemplateEntity): Long
+
+    @Query("SELECT * FROM column_templates WHERE constraintType = :constraintType LIMIT 1")
+    suspend fun getTemplateByConstraintType(constraintType: String): ColumnTemplateEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertColumns(columns: List<ColumnEntity>): List<Long>
 
