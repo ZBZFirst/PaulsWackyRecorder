@@ -126,16 +126,10 @@ class Screen4Repository(
         return Result.success(Unit)
     }
 
-    suspend fun addColumn(label: String, sourceTemplateId: Long?): Result<Long> {
-        val templates = dao.getTemplates()
-        if (templates.isEmpty()) {
-            return Result.failure(IllegalStateException("No templates available"))
-        }
-        val template = if (sourceTemplateId == null) {
-            templates.first()
-        } else {
-            templates.firstOrNull { it.id == sourceTemplateId } ?: templates.first()
-        }
+    suspend fun addColumn(label: String, constraintType: String): Result<Long> {
+        val resolvedType = Screen4ColumnTypeRegistry.resolveByConstraintType(constraintType).name
+        val template = dao.getTemplateByConstraintType(resolvedType)
+            ?: createDynamicTemplate(resolvedType, label.ifBlank { resolvedType })
 
         val nextPosition = dao.getMaxColumnPosition() + 1
         val columnId = dao.insertColumn(
@@ -184,6 +178,27 @@ class Screen4Repository(
             )
         }
         return TableViewModel(columns = columns, rows = viewRows)
+    }
+
+
+    private suspend fun createDynamicTemplate(resolvedType: String, fallbackLabel: String): ColumnTemplateEntity {
+        val definition = Screen4ColumnTypeRegistry.resolveByConstraintType(resolvedType)
+        val maxLength = when (definition.primitiveType) {
+            Screen4PrimitiveType.INTEGER -> 16
+            Screen4PrimitiveType.DECIMAL -> 24
+            Screen4PrimitiveType.TIMESTAMP -> 16
+            else -> 64
+        }
+
+        val template = ColumnTemplateEntity(
+            fakerKey = "screen4.dynamic.$resolvedType",
+            defaultLabel = fallbackLabel,
+            constraintType = definition.name,
+            maxLength = maxLength,
+            required = false,
+        )
+        val id = dao.insertTemplate(template)
+        return template.copy(id = id)
     }
 
     private fun validateDraft(draftRow: DraftRow, activeColumns: List<ActiveColumn>): String? {
