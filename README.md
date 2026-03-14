@@ -83,6 +83,8 @@ Key points for the current `.wav` path:
 
 ## Screen 4 serial measurement engine (current)
 
+- Screen 4 from-scratch implementation is now organized as a concise 6-phase execution plan with copy/paste prompt pack in `SCREEN4_TYPED_RAPID_ENTRY_PLAN.md`.
+- Screen 4 typed rapid-entry architecture and 107-type rollout checklist are tracked in `SCREEN4_TYPED_RAPID_ENTRY_PLAN.md` (including a dependency-impact section for existing Room/Coroutine/Compose libs).
 - Screen 4 now boots a Room-backed schema (`ColumnTemplates`, `Columns`, `Rows`, `Cells`) for deterministic measurement storage.
 - Rapid entry uses a draft row that is persisted through interruptions and hydrated on reopen.
 - `Commit Measurement` validates the draft and atomically inserts row + cell values in a single transaction.

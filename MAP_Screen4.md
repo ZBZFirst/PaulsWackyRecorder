@@ -1,6 +1,7 @@
 # MAP: Screen 4
 
 ## Source files
+- [SCREEN4_TYPED_RAPID_ENTRY_PLAN.md](SCREEN4_TYPED_RAPID_ENTRY_PLAN.md)
 - [activity_screen4.xml](app/src/main/res/layout/activity_screen4.xml)
 - [Screen4Activity.kt](app/src/main/java/com/example/templei/Screen4Activity.kt)
 
