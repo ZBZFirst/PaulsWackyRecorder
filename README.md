@@ -81,3 +81,12 @@ Key points for the current `.wav` path:
 - Navigation refinement: folder switching now uses a dropdown spinner between prev/next for rapid scrolling through long folder lists, and Clear Slot prompts for explicit target-slot selection before removal.
 - Control actions (Choose Folder / Settings / Rescan) are grouped in a collapsible Library Controls section at the bottom of Screen 3 content.
 
+## Screen 4 serial measurement engine (current)
+
+- Screen 4 now boots a Room-backed schema (`ColumnTemplates`, `Columns`, `Rows`, `Cells`) for deterministic measurement storage.
+- Rapid entry uses a draft row that is persisted through interruptions and hydrated on reopen.
+- `Commit Measurement` validates the draft and atomically inserts row + cell values in a single transaction.
+- Table preview is rendered from persisted data, with slider-controlled visible row count for large datasets.
+- Select-row, edit-selected, delete-selected, and add-column button paths are now wired to deterministic handlers.
+- Begin Rapid Entry now prompts for optional-column inclusion (required columns are always included), and Enter on the final field commits quickly for serial row capture.
+- Column management includes optional-column pruning so users can reduce field surface during fast capture sessions.
