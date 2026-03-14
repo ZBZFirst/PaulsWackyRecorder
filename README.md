@@ -88,3 +88,5 @@ Key points for the current `.wav` path:
 - `Commit Measurement` validates the draft and atomically inserts row + cell values in a single transaction.
 - Table preview is rendered from persisted data, with slider-controlled visible row count for large datasets.
 - Select-row, edit-selected, delete-selected, and add-column button paths are now wired to deterministic handlers.
+- Begin Rapid Entry now prompts for optional-column inclusion (required columns are always included), and Enter on the final field commits quickly for serial row capture.
+- Column management includes optional-column pruning so users can reduce field surface during fast capture sessions.

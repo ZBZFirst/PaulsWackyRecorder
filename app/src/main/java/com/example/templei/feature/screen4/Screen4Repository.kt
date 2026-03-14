@@ -139,6 +139,18 @@ class Screen4Repository(
         return Result.success(columnId)
     }
 
+    suspend fun pruneColumns(columnIds: List<Long>, activeColumns: List<ActiveColumn>): Result<Int> {
+        if (columnIds.isEmpty()) return Result.success(0)
+
+        val requiredColumnIds = activeColumns.filter { it.required }.map { it.columnId }.toSet()
+        if (columnIds.any { it in requiredColumnIds }) {
+            return Result.failure(IllegalArgumentException("Required columns cannot be pruned"))
+        }
+
+        dao.deactivateColumns(columnIds)
+        return Result.success(columnIds.size)
+    }
+
     suspend fun loadMeasurementDraftFromRow(rowId: Long): DraftRow {
         val cells = dao.getCellsForRow(rowId)
         return DraftRow(

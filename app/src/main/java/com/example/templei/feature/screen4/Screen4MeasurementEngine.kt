@@ -73,6 +73,15 @@ class Screen4MeasurementEngine(
             }
     }
 
+    suspend fun pruneColumns(columnIds: List<Long>, visibleRows: Int): Result<TableViewModel> {
+        return repository.pruneColumns(columnIds, activeColumns).mapCatching {
+            activeColumns = repository.loadActiveColumns()
+            draftRow = draftRow.normalize(activeColumns)
+            repository.saveDraft(draftRow)
+            repository.loadTable(limit = visibleRows)
+        }
+    }
+
     suspend fun tableModel(visibleRows: Int): TableViewModel = repository.loadTable(limit = visibleRows)
 
     fun activeColumns(): List<ActiveColumn> = activeColumns

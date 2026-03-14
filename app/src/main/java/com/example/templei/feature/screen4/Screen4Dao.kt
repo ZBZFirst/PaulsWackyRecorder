@@ -26,6 +26,9 @@ interface Screen4Dao {
     @Query("SELECT * FROM columns WHERE isActive = 1 ORDER BY position")
     suspend fun getActiveColumns(): List<ColumnEntity>
 
+    @Query("UPDATE columns SET isActive = 0 WHERE id IN (:columnIds)")
+    suspend fun deactivateColumns(columnIds: List<Long>)
+
     @Insert
     suspend fun insertRow(row: RowEntity): Long
 

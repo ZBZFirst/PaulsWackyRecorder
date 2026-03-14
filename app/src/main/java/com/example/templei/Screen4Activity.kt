@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -46,6 +48,7 @@ class Screen4Activity : ComponentActivity() {
     private var visibleRows: Int = Screen4MeasurementEngine.DEFAULT_VISIBLE_ROWS
     private var selectedRowId: Long? = null
     private var editMode: Boolean = false
+    private var rapidEntryColumnIds: Set<Long> = emptySet()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,11 +84,7 @@ class Screen4Activity : ComponentActivity() {
 
     private fun bindButtons() {
         findViewById<Button>(R.id.selectRowButton).setOnClickListener {
-            editMode = false
-            selectedRowId = null
-            val draft = measurementEngine.startNewDraft()
-            statusText.text = getString(R.string.screen4_status_rapid_entry)
-            renderRapidEntryForm(draft, measurementEngine.activeColumns())
+            showRapidEntryColumnsDialog()
         }
 
         findViewById<Button>(R.id.addRowButton).setOnClickListener {
@@ -104,7 +103,7 @@ class Screen4Activity : ComponentActivity() {
                         val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
                         statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
                         renderTable(model)
-                        renderRapidEntryForm(measurementEngine.currentDraft(), measurementEngine.activeColumns())
+                        renderRapidEntryForm(measurementEngine.currentDraft(), currentRapidEntryColumns())
                     }.onFailure {
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
@@ -137,7 +136,7 @@ class Screen4Activity : ComponentActivity() {
             lifecycleScope.launch {
                 val draft = measurementEngine.beginEditFromRow(rowId)
                 editMode = true
-                renderRapidEntryForm(draft, measurementEngine.activeColumns())
+                renderRapidEntryForm(draft, currentRapidEntryColumns())
                 statusText.text = getString(R.string.screen4_status_editing_row, rowId)
             }
         }
@@ -163,9 +162,7 @@ class Screen4Activity : ComponentActivity() {
             }
         }
 
-        findViewById<Button>(R.id.addColumnButton).setOnClickListener {
-            showAddColumnDialog()
-        }
+        findViewById<Button>(R.id.addColumnButton).setOnClickListener { showColumnManagementDialog() }
     }
 
     private fun initializeEngine() {
@@ -175,10 +172,54 @@ class Screen4Activity : ComponentActivity() {
 
         lifecycleScope.launch {
             val table = measurementEngine.initialize()
+            rapidEntryColumnIds = table.columns.map { it.columnId }.toSet()
             statusText.text = getString(R.string.screen4_status_ready, table.columns.size)
-            renderRapidEntryForm(measurementEngine.beginRapidEntry(), measurementEngine.activeColumns())
+            renderRapidEntryForm(measurementEngine.beginRapidEntry(), currentRapidEntryColumns())
             renderTable(table)
         }
+    }
+
+    private fun showRapidEntryColumnsDialog() {
+        val allColumns = measurementEngine.activeColumns()
+        val requiredColumns = allColumns.filter { it.required }
+        val optionalColumns = allColumns.filterNot { it.required }
+
+        if (optionalColumns.isEmpty()) {
+            editMode = false
+            selectedRowId = null
+            val draft = measurementEngine.startNewDraft()
+            rapidEntryColumnIds = requiredColumns.map { it.columnId }.toSet()
+            renderRapidEntryForm(draft, currentRapidEntryColumns())
+            statusText.text = getString(R.string.screen4_status_rapid_entry_required_only)
+            return
+        }
+
+        val labels = optionalColumns.map { it.label }.toTypedArray()
+        val checked = optionalColumns.map { rapidEntryColumnIds.contains(it.columnId) }.toBooleanArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_rapid_entry_dialog_title))
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton(getString(R.string.screen4_rapid_entry_apply)) { _, _ ->
+                val selectedOptionalIds = optionalColumns.mapIndexedNotNull { index, column ->
+                    if (checked[index]) column.columnId else null
+                }.toSet()
+                rapidEntryColumnIds = requiredColumns.map { it.columnId }.toSet() + selectedOptionalIds
+
+                editMode = false
+                selectedRowId = null
+                val draft = measurementEngine.startNewDraft()
+                renderRapidEntryForm(draft, currentRapidEntryColumns())
+                statusText.text = getString(
+                    R.string.screen4_status_rapid_entry_columns_selected,
+                    rapidEntryColumnIds.size,
+                    allColumns.size,
+                )
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun refreshTable(statusOverride: String) {
@@ -187,6 +228,22 @@ class Screen4Activity : ComponentActivity() {
             renderTable(table)
             statusText.text = statusOverride
         }
+    }
+
+    private fun showColumnManagementDialog() {
+        val options = arrayOf(
+            getString(R.string.screen4_column_management_add),
+            getString(R.string.screen4_column_management_prune),
+        )
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_column_management_title))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showAddColumnDialog()
+                    1 -> showPruneColumnsDialog()
+                }
+            }
+            .show()
     }
 
     private fun showAddColumnDialog() {
@@ -201,7 +258,8 @@ class Screen4Activity : ComponentActivity() {
                 lifecycleScope.launch {
                     val result = measurementEngine.addColumn(input.text?.toString().orEmpty(), visibleRows)
                     result.onSuccess { model ->
-                        renderRapidEntryForm(measurementEngine.currentDraft(), measurementEngine.activeColumns())
+                        rapidEntryColumnIds = model.columns.map { it.columnId }.toSet()
+                        renderRapidEntryForm(measurementEngine.currentDraft(), currentRapidEntryColumns())
                         renderTable(model)
                         statusText.text = getString(R.string.screen4_status_column_added, model.columns.size)
                     }.onFailure {
@@ -213,9 +271,55 @@ class Screen4Activity : ComponentActivity() {
             .show()
     }
 
+    private fun showPruneColumnsDialog() {
+        val prunableColumns = measurementEngine.activeColumns().filterNot { it.required }
+        if (prunableColumns.isEmpty()) {
+            statusText.text = getString(R.string.screen4_status_prune_none_available)
+            return
+        }
+
+        val labels = prunableColumns.map { it.label }.toTypedArray()
+        val checked = BooleanArray(prunableColumns.size)
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_prune_columns_title))
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton(getString(R.string.screen4_prune_columns_confirm)) { _, _ ->
+                lifecycleScope.launch {
+                    val toPrune = prunableColumns.mapIndexedNotNull { index, column ->
+                        if (checked[index]) column.columnId else null
+                    }
+                    val result = measurementEngine.pruneColumns(toPrune, visibleRows)
+                    result.onSuccess { model ->
+                        rapidEntryColumnIds = rapidEntryColumnIds.intersect(model.columns.map { it.columnId }.toSet())
+                        if (rapidEntryColumnIds.isEmpty()) {
+                            rapidEntryColumnIds = model.columns.filter { it.required }.map { it.columnId }.toSet()
+                        }
+                        renderRapidEntryForm(measurementEngine.currentDraft(), currentRapidEntryColumns())
+                        renderTable(model)
+                        statusText.text = getString(R.string.screen4_status_pruned_columns, toPrune.size)
+                    }.onFailure {
+                        statusText.text = getString(R.string.screen4_status_prune_failed, it.message ?: "unknown")
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun currentRapidEntryColumns(): List<ActiveColumn> {
+        val activeColumns = measurementEngine.activeColumns()
+        if (rapidEntryColumnIds.isEmpty()) return activeColumns
+        val requiredIds = activeColumns.filter { it.required }.map { it.columnId }.toSet()
+        val effectiveIds = rapidEntryColumnIds + requiredIds
+        return activeColumns.filter { it.columnId in effectiveIds }
+    }
+
     private fun renderRapidEntryForm(draft: DraftRow, columns: List<ActiveColumn>) {
         rapidEntryContainer.removeAllViews()
-        columns.forEach { column ->
+        columns.forEachIndexed { index, column ->
             val input = EditText(this).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -240,6 +344,20 @@ class Screen4Activity : ComponentActivity() {
                         measurementEngine.userInputEvent(column.columnId, s?.toString().orEmpty())
                     }
                 })
+
+                val isLastField = index == columns.lastIndex
+                if (isLastField) {
+                    imeOptions = EditorInfo.IME_ACTION_DONE
+                    setOnEditorActionListener { _, actionId, event ->
+                        val enterPressed = event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN
+                        if (actionId == EditorInfo.IME_ACTION_DONE || enterPressed) {
+                            findViewById<Button>(R.id.addRowButton).performClick()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                }
             }
             rapidEntryContainer.addView(input)
         }
