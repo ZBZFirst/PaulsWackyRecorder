@@ -120,6 +120,13 @@
     <string name="soundboard_reject_engine">Audio engine rejected playback request.</string>
     <string name="screen3_startup_failed">Screen 3 failed to load. Returning to Main Screen.</string>
     <string name="screen4_controls_title">Serial Measurement Controls</string>
+    <string name="screen4_actions_title">Screen 4 Actions</string>
+    <string name="screen4_entry_mode_title">Entry Mode Panels</string>
+    <string name="screen4_manual_entry_card_title">Manual Entry</string>
+    <string name="screen4_rapid_entry_card_title">Rapid Entry</string>
+    <string name="screen4_switch_manual_entry">Manual Entry</string>
+    <string name="screen4_section_expand">Expand</string>
+    <string name="screen4_section_collapse">Collapse</string>
     <string name="screen4_status_initializing">Initializing Screen 4 measurement engine...</string>
     <string name="screen4_rows_visible_default">Rows Visible: 20</string>
     <string name="screen4_rows_visible">Rows Visible: %1$d</string>
@@ -135,6 +142,7 @@
     <string name="screen4_optional">optional</string>
     <string name="screen4_status_ready">Ready. Active columns: %1$d.</string>
     <string name="screen4_status_rapid_entry">Rapid entry initialized.</string>
+    <string name="screen4_status_manual_entry">Manual entry mode enabled.</string>
     <string name="screen4_status_measurement_saved">Measurement %1$d committed atomically.</string>
     <string name="screen4_status_measurement_failed">Commit failed: %1$s</string>
     <string name="screen4_status_deleted_latest">Latest row deleted.</string>
@@ -156,6 +164,7 @@
     <string name="screen4_rapid_entry_apply">Start Rapid Entry</string>
     <string name="screen4_status_rapid_entry_columns_selected">Rapid entry ready: %1$d of %2$d columns selected.</string>
     <string name="screen4_status_rapid_entry_required_only">Rapid entry started with required columns only.</string>
+    <string name="screen4_status_columns_unavailable">Columns are still loading. Try again in a moment.</string>
     <string name="screen4_column_management_title">Column Management</string>
     <string name="screen4_column_management_add">Add Column</string>
     <string name="screen4_column_management_prune">Prune Columns</string>
