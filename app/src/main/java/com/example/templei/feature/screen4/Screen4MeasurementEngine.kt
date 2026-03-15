@@ -91,8 +91,8 @@ class Screen4MeasurementEngine(
         }
     }
 
-    suspend fun addColumn(label: String, visibleRows: Int): Result<TableViewModel> {
-        return repository.addColumn(label = label, sourceTemplateId = activeColumns.firstOrNull()?.templateId)
+    suspend fun addColumn(label: String, constraintType: String, visibleRows: Int): Result<TableViewModel> {
+        return repository.addColumn(label = label, constraintType = constraintType)
             .mapCatching {
                 activeColumns = repository.loadActiveColumns()
                 rapidEntryConfig = hydrateRapidEntryConfig(rapidEntryConfig)
