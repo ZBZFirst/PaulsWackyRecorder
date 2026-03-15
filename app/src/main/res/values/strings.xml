@@ -166,7 +166,16 @@
     <string name="screen4_add_column_hint">Column label</string>
     <string name="screen4_add_column_confirm">Add</string>
     <string name="screen4_default_new_column_label">New Field</string>
+    <string name="screen4_add_column_group_title">Select Format Group</string>
+    <string name="screen4_add_column_type_title">Select Format (%1$s)</string>
+    <string name="screen4_dialog_back">Back</string>
+    <string name="screen4_status_column_added_with_type">Column added (%2$s). Active columns: %1$d.</string>
     <string name="screen4_rapid_entry_dialog_title">Rapid Entry Optional Columns</string>
+    <string name="screen4_rapid_entry_required_item">%1$s (required)</string>
+    <string name="screen4_status_required_columns_enforced">Required columns must remain selected for rapid entry.</string>
+    <string name="screen4_rapid_entry_popup_title">Rapid Entry (%1$d columns)</string>
+    <string name="screen4_rapid_entry_commit_next">Commit &amp; Next</string>
+    <string name="screen4_rapid_entry_reselect">Re-select Columns</string>
     <string name="screen4_rapid_entry_apply">Start Rapid Entry</string>
     <string name="screen4_status_rapid_entry_columns_selected">Rapid entry ready: %1$d of %2$d columns selected.</string>
     <string name="screen4_status_rapid_entry_required_only">Rapid entry started with required columns only.</string>

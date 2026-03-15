@@ -27,9 +27,11 @@ import com.example.templei.feature.screen4.DraftRow
 import com.example.templei.feature.screen4.Screen4Database
 import com.example.templei.feature.screen4.Screen4DraftStore
 import com.example.templei.feature.screen4.Screen4Coordinator
+import com.example.templei.feature.screen4.Screen4FormatGroup
 import com.example.templei.feature.screen4.Screen4MeasurementEngine
 import com.example.templei.feature.screen4.Screen4RapidEntryStore
 import com.example.templei.feature.screen4.Screen4Repository
+import com.example.templei.feature.screen4.Screen4FieldInputFormatter
 import com.example.templei.feature.screen4.TableViewModel
 import com.example.templei.ui.navigation.TopNavigation
 import kotlinx.coroutines.launch
@@ -98,16 +100,8 @@ class Screen4Activity : ComponentActivity() {
         actionSectionToggleButton = findViewById(R.id.actionSectionToggleButton)
         entrySectionToggleButton = findViewById(R.id.entrySectionToggleButton)
 
-        actionSectionToggleButton.setOnClickListener {
-            val collapsed = actionSectionBody.visibility == View.GONE
-            actionSectionBody.visibility = if (collapsed) View.VISIBLE else View.GONE
-            actionSectionToggleButton.text = getString(if (collapsed) R.string.screen4_section_collapse else R.string.screen4_section_expand)
-        }
-        entrySectionToggleButton.setOnClickListener {
-            val collapsed = entrySectionBody.visibility == View.GONE
-            entrySectionBody.visibility = if (collapsed) View.VISIBLE else View.GONE
-            entrySectionToggleButton.text = getString(if (collapsed) R.string.screen4_section_collapse else R.string.screen4_section_expand)
-        }
+        bindCollapsibleSection(actionSectionBody, actionSectionToggleButton)
+        bindCollapsibleSection(entrySectionBody, entrySectionToggleButton)
 
         rowDisplaySlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -234,21 +228,13 @@ class Screen4Activity : ComponentActivity() {
 
     private fun setEntryMode(mode: EntryMode) {
         entryMode = mode
-        when (mode) {
-            EntryMode.MANUAL -> {
-                manualEntryCard.visibility = View.VISIBLE
-                rapidEntryCard.visibility = View.GONE
-            }
-            EntryMode.RAPID -> {
-                manualEntryCard.visibility = View.GONE
-                rapidEntryCard.visibility = View.VISIBLE
-            }
-        }
+        manualEntryCard.visibility = View.VISIBLE
+        rapidEntryCard.visibility = View.GONE
     }
 
     private fun renderEntryForms(draft: DraftRow) {
         renderFormIntoContainer(manualEntryContainer, draft, screen4Coordinator.activeColumns(), isRapid = false)
-        renderFormIntoContainer(rapidEntryContainer, draft, currentRapidEntryColumns(), isRapid = true)
+        rapidEntryContainer.removeAllViews()
     }
 
     private fun refreshTable(statusOverride: String) {
@@ -266,25 +252,36 @@ class Screen4Activity : ComponentActivity() {
             statusText.text = getString(R.string.screen4_status_columns_unavailable)
             return
         }
-        val requiredColumns = allColumns.filter { it.required }
-        val optionalColumns = allColumns.filterNot { it.required }
 
-        if (optionalColumns.isEmpty()) {
-            startRapidEntry(requiredColumns.map { it.columnId }.toSet())
-            statusText.text = getString(R.string.screen4_status_rapid_entry_required_only)
-            return
-        }
+        val labels = allColumns.map { column ->
+            if (column.required) {
+                getString(R.string.screen4_rapid_entry_required_item, column.label)
+            } else {
+                column.label
+            }
+        }.toTypedArray()
 
-        val labels = optionalColumns.map { it.label }.toTypedArray()
-        val checked = optionalColumns.map { rapidEntryColumnIds.contains(it.columnId) }.toBooleanArray()
+        val checked = allColumns.map { column ->
+            column.required || rapidEntryColumnIds.contains(column.columnId)
+        }.toBooleanArray()
 
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.screen4_rapid_entry_dialog_title))
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                val column = allColumns[which]
+                if (column.required && !isChecked) {
+                    checked[which] = true
+                    statusText.text = getString(R.string.screen4_status_required_columns_enforced)
+                } else {
+                    checked[which] = isChecked
+                }
+            }
             .setPositiveButton(getString(R.string.screen4_rapid_entry_apply)) { _, _ ->
-                val selectedOptionalIds = optionalColumns.mapIndexedNotNull { index, column -> if (checked[index]) column.columnId else null }.toSet()
-                startRapidEntry(requiredColumns.map { it.columnId }.toSet() + selectedOptionalIds)
-                statusText.text = getString(R.string.screen4_status_rapid_entry_columns_selected, rapidEntryColumnIds.size, allColumns.size)
+                val selectedColumnIds = allColumns.mapIndexedNotNull { index, column ->
+                    if (checked[index] || column.required) column.columnId else null
+                }.toSet()
+                startRapidEntry(selectedColumnIds)
+                statusText.text = getString(R.string.screen4_status_rapid_entry_columns_selected, selectedColumnIds.size, allColumns.size)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -298,6 +295,115 @@ class Screen4Activity : ComponentActivity() {
         setEntryMode(EntryMode.RAPID)
         val draft = screen4Coordinator.startNewDraft()
         renderEntryForms(draft)
+        showRapidEntryInputDialog()
+    }
+
+
+    private fun showRapidEntryInputDialog() {
+        val rapidColumns = currentRapidEntryColumns()
+        if (rapidColumns.isEmpty()) {
+            statusText.text = getString(R.string.screen4_status_columns_unavailable)
+            return
+        }
+
+        val draft = screen4Coordinator.currentDraft()
+        val inputContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 12, 16, 4)
+        }
+        val inputsByColumn = mutableMapOf<ActiveColumn, EditText>()
+
+        rapidColumns.forEachIndexed { index, column ->
+            val input = EditText(this).apply {
+                hint = getString(
+                    R.string.screen4_draft_hint,
+                    column.label,
+                    if (column.required) getString(R.string.screen4_required) else getString(R.string.screen4_optional),
+                    column.maxLength,
+                )
+                val columnType = screen4Coordinator.resolveColumnType(column)
+                inputType = inputTypeForWidget(columnType.uiWidget)
+                setText(draft.valuesByColumnId[column.columnId].orEmpty())
+                var formattingInProgress = false
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+                    override fun afterTextChanged(s: Editable?) {
+                        if (formattingInProgress) return
+                        val currentValue = s?.toString().orEmpty()
+                        val normalizedValue = if (Screen4FieldInputFormatter.supports(column.constraintType)) {
+                            Screen4FieldInputFormatter.format(column.constraintType, currentValue)
+                        } else {
+                            currentValue
+                        }
+                        if (normalizedValue != currentValue) {
+                            formattingInProgress = true
+                            setText(normalizedValue)
+                            setSelection(normalizedValue.length)
+                            formattingInProgress = false
+                        }
+                        screen4Coordinator.userInputEvent(column.columnId, normalizedValue)
+                        error = screen4Coordinator.validateField(column, normalizedValue)
+                    }
+                })
+
+                if (index == rapidColumns.lastIndex) {
+                    imeOptions = EditorInfo.IME_ACTION_DONE
+                }
+            }
+            inputsByColumn[column] = input
+            inputContainer.addView(input)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_rapid_entry_popup_title, rapidColumns.size))
+            .setView(inputContainer)
+            .setPositiveButton(getString(R.string.screen4_rapid_entry_commit_next), null)
+            .setNeutralButton(getString(R.string.screen4_rapid_entry_reselect), null)
+            .setNegativeButton(getString(R.string.screen4_switch_manual_entry), null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                var hasErrors = false
+                inputsByColumn.forEach { (column, input) ->
+                    val value = input.text?.toString().orEmpty()
+                    val validationError = screen4Coordinator.validateField(column, value)
+                    input.error = validationError
+                    if (validationError != null) hasErrors = true
+                }
+                if (hasErrors) return@setOnClickListener
+
+                lifecycleScope.launch {
+                    val result = screen4Coordinator.commitMeasurement(visibleRows, useRapidEntryConfig = true)
+                    result.onSuccess { model ->
+                        val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
+                        statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
+                        renderTable(model)
+                        renderEntryForms(screen4Coordinator.currentDraft())
+                        dialog.dismiss()
+                        if (entryMode == EntryMode.RAPID) {
+                            showRapidEntryInputDialog()
+                        }
+                    }.onFailure {
+                        statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
+                    }
+                }
+            }
+
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                dialog.dismiss()
+                showRapidEntryColumnsDialog()
+            }
+
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                setEntryMode(EntryMode.MANUAL)
+                statusText.text = getString(R.string.screen4_status_manual_entry)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun showColumnManagementDialog() {
@@ -308,27 +414,68 @@ class Screen4Activity : ComponentActivity() {
             .show()
     }
 
-    private fun showAddColumnDialog() {
+    private fun showAddColumnDialog(initialLabel: String = getString(R.string.screen4_default_new_column_label)) {
         val input = EditText(this).apply {
             hint = getString(R.string.screen4_add_column_hint)
-            setText(getString(R.string.screen4_default_new_column_label))
+            setText(initialLabel)
         }
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.screen4_add_column_title))
             .setView(input)
             .setPositiveButton(getString(R.string.screen4_add_column_confirm)) { _, _ ->
+                val label = input.text?.toString().orEmpty()
+                showColumnFormatGroupDialog(label)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showColumnFormatGroupDialog(label: String) {
+        val groups = screen4Coordinator.columnFormatGroups()
+        if (groups.isEmpty()) {
+            statusText.text = getString(R.string.screen4_status_add_column_failed, "no format groups")
+            return
+        }
+
+        val labels = groups.map { it.label }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_add_column_group_title))
+            .setItems(labels) { _, which ->
+                showColumnFormatTypeDialog(label, groups[which])
+            }
+            .setNeutralButton(getString(R.string.screen4_dialog_back)) { _, _ ->
+                showAddColumnDialog(initialLabel = label)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showColumnFormatTypeDialog(label: String, group: Screen4FormatGroup) {
+        val options = screen4Coordinator.columnFormatOptions(group.key)
+        if (options.isEmpty()) {
+            statusText.text = getString(R.string.screen4_status_add_column_failed, "no formats in group")
+            return
+        }
+        val labels = options.map { "${it.label} • ${it.previewExample} • ${it.uiWidget}" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_add_column_type_title, group.label))
+            .setItems(labels) { _, which ->
                 lifecycleScope.launch {
-                    screen4Coordinator.addColumn(input.text?.toString().orEmpty(), visibleRows)
+                    val selected = options[which]
+                    screen4Coordinator.addColumn(label = label, constraintType = selected.typeName, visibleRows = visibleRows)
                         .onSuccess { model ->
                             rapidEntryColumnIds = screen4Coordinator.currentRapidEntryConfig().activeColumnIds - screen4Coordinator.currentRapidEntryConfig().autoColumns.keys
                             renderEntryForms(screen4Coordinator.currentDraft())
                             renderTable(model)
-                            statusText.text = getString(R.string.screen4_status_column_added, model.columns.size)
+                            statusText.text = getString(R.string.screen4_status_column_added_with_type, model.columns.size, "${selected.label}: ${selected.previewExample}")
                         }
                         .onFailure {
                             statusText.text = getString(R.string.screen4_status_add_column_failed, it.message ?: "unknown")
                         }
                 }
+            }
+            .setNeutralButton(getString(R.string.screen4_dialog_back)) { _, _ ->
+                showColumnFormatGroupDialog(label)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -365,6 +512,16 @@ class Screen4Activity : ComponentActivity() {
             .show()
     }
 
+
+    private fun bindCollapsibleSection(body: View, toggleButton: Button) {
+        toggleButton.setOnClickListener {
+            val isCollapsed = body.visibility == View.GONE
+            body.visibility = if (isCollapsed) View.VISIBLE else View.GONE
+            toggleButton.text = getString(if (isCollapsed) R.string.screen4_section_collapse else R.string.screen4_section_expand)
+            toggleButton.alpha = if (isCollapsed) 1.0f else 0.75f
+        }
+    }
+
     private fun currentRapidEntryColumns(): List<ActiveColumn> {
         val activeColumns = screen4Coordinator.activeColumns()
         val config = screen4Coordinator.currentRapidEntryConfig()
@@ -398,15 +555,32 @@ class Screen4Activity : ComponentActivity() {
                 val columnType = screen4Coordinator.resolveColumnType(column)
                 inputType = inputTypeForWidget(columnType.uiWidget)
                 setText(draft.valuesByColumnId[column.columnId].orEmpty())
-                val initialError = screen4Coordinator.validateField(column, text?.toString().orEmpty())
+                val initialValue = text?.toString().orEmpty()
+                val initialError = screen4Coordinator.validateField(column, initialValue)
                 error = initialError
+                var formattingInProgress = false
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                     override fun afterTextChanged(s: Editable?) {
+                        if (formattingInProgress) return
+
                         val currentValue = s?.toString().orEmpty()
-                        screen4Coordinator.userInputEvent(column.columnId, currentValue)
-                        error = screen4Coordinator.validateField(column, currentValue)
+                        val normalizedValue = if (Screen4FieldInputFormatter.supports(column.constraintType)) {
+                            Screen4FieldInputFormatter.format(column.constraintType, currentValue)
+                        } else {
+                            currentValue
+                        }
+
+                        if (normalizedValue != currentValue) {
+                            formattingInProgress = true
+                            setText(normalizedValue)
+                            setSelection(normalizedValue.length)
+                            formattingInProgress = false
+                        }
+
+                        screen4Coordinator.userInputEvent(column.columnId, normalizedValue)
+                        error = screen4Coordinator.validateField(column, normalizedValue)
                     }
                 })
 
