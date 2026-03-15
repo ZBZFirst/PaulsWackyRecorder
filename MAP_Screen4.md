@@ -23,7 +23,12 @@ Screen 4 now hosts a deterministic serial-measurement workflow with Room persist
 - Table rows are now selectable for edit/delete-selected operations, and add-column is wired through a prompt-driven command path.
 - Rapid Entry now opens a multi-select column picker (required columns always enforced) and supports enter-key commit loops.
 - Column Management now supports optional-column pruning for field-level streamlining during collection.
-- Entry UX now uses explicit Manual vs Rapid states rendered in separate cards, with collapsible action/entry sections to reduce visual clutter.
+- Entry UX now uses explicit Long Form vs Rapid states rendered in separate cards, with collapsible action/entry sections to reduce visual clutter.
+- Rapid Entry Phase 1 shell is now a custom modal layout with committed-preview panel, new-value panel, append/commit footer actions, re-select button, and a placeholder for future measurements-included content.
+- Rapid Entry Phase 2 now visualizes recent committed context as a layered card stack (max 5 session snapshots) with detailed top-card values and compact lower-card summaries.
+- Rapid Entry Phase 3 append semantics now validate-and-stage input into local committed history and clear input fields for the next capture without writing to persistence.
+- Rapid Entry Phase 4 now hardens commit-loop behavior with duplicate-tap guards, explicit commit-in-progress status, and resilient error recovery that re-enables rapid controls after failure.
+- Rapid Entry Phase 5 now exposes a framed measurements-included placeholder section (non-interactive) to reserve future UI space without changing commit payload or validator behavior.
 
 ## Screen 4 persistence surface
 - `feature/screen4/Screen4Database.kt`

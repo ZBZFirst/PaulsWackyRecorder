@@ -100,4 +100,9 @@ Key points for the current `.wav` path:
 - Column management includes optional-column pruning so users can reduce field surface during fast capture sessions.
 - Add-column flow now uses a deterministic two-step semantic picker (format group → specific type), so a new "Date" column can be bound to a concrete date/time format family and corresponding input widget at creation time.
 - Separator-driven input formatting is now applied for selected semantic types (date/time/timestamp and grouped numbers), so operators can type value characters while the selected format injects visual separators.
-- Screen 4 now separates Manual Entry and Rapid Entry into distinct cards and uses collapsible action/entry sections (similar clutter-reduction pattern used elsewhere in scaffold UI).
+- Screen 4 now separates Long Form Entry and Rapid Entry into distinct cards and uses collapsible action/entry sections (similar clutter-reduction pattern used elsewhere in scaffold UI).
+- Rapid Entry Phase 1 modal scaffolding is now in place with a custom two-column shell (committed preview + new values), append/commit actions, re-select control, and a non-interactive "Measurements Included (Coming Soon)" placeholder.
+- Rapid Entry Phase 2 committed-history visualization now renders as a layered in-session card stack (up to five recent commits), with a detailed top card and reduced-detail lower cards.
+- Rapid Entry Phase 3 now applies explicit append behavior: validated inputs are staged into committed preview history and rapid fields are cleared for the next capture without persisting a row until `Commit & Next`.
+- Rapid Entry Phase 4 hardening now guards commit actions against duplicate taps, shows in-progress commit status, and keeps failure paths recoverable without leaving the modal loop.
+- Rapid Entry Phase 5 now renders a dedicated non-interactive "Measurements Included (Coming Soon)" placeholder region (title/body/disabled action) with no persistence or validation contract changes.
