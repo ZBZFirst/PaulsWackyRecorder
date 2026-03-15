@@ -33,6 +33,35 @@ The modal should support re-selecting active columns and quick exit back to long
 
 ---
 
+## Phase A (current): Long Form/Short Form architecture alignment
+- Treat `Screen4Activity` as the Long Form host surface.
+- Relabel prior rapid-entry UX copy to Short Form Entry before full screen-level promotion.
+- Preserve existing coordinator/engine/repository pipeline unchanged while host surfaces evolve.
+
+---
+
+
+## Phase B (current): Dedicated short-form host surface
+- Introduce `Screen4ShortFormActivity` as a permanent host screen for short-form capture loops.
+- Launch short-form from `Screen4Activity` action controls instead of keeping short-form scoped to a transient dialog host.
+- Preserve the existing coordinator/engine/repository/validation pipeline while moving only host orchestration.
+
+---
+
+## Phase C (current): Long Form host simplification after promotion
+- Remove legacy short-form modal orchestration from `Screen4Activity` now that short-form runs on `Screen4ShortFormActivity`.
+- Keep `Screen4Activity` focused on Long Form table operations (edit/commit/delete/add/prune/export) and short-form launch intent only.
+- Preserve schema/validator/repository behavior; this phase is host cleanup and responsibility clarity.
+
+---
+
+## Phase D (current): Session resilience on dedicated short-form host
+- Persist transient short-form UI session state (selected columns, modal state, committed preview history) across activity recreation.
+- Rebind `RapidEntryConfig` from restored selected columns and render the short-form surface without forcing column reselection.
+- Keep persistence schema and validator contracts unchanged; this phase hardens host lifecycle resilience only.
+
+---
+
 ## Phase 0 — Contract & terminology alignment
 Goal: lock naming and interaction contracts before refactor.
 

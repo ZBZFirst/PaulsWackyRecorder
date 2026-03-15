@@ -4,6 +4,8 @@
 - [SCREEN4_TYPED_RAPID_ENTRY_PLAN.md](SCREEN4_TYPED_RAPID_ENTRY_PLAN.md)
 - [activity_screen4.xml](app/src/main/res/layout/activity_screen4.xml)
 - [Screen4Activity.kt](app/src/main/java/com/example/templei/Screen4Activity.kt)
+- [Screen4ShortFormActivity.kt](app/src/main/java/com/example/templei/Screen4ShortFormActivity.kt)
+- [activity_screen4_short_form.xml](app/src/main/res/layout/activity_screen4_short_form.xml)
 
 ## Intersections
 - Enter from [[MAP_MainMenu]]
@@ -21,9 +23,13 @@ Screen 4 now hosts a deterministic serial-measurement workflow with Room persist
 - Commits are atomic (`Row` + `Cell` inserts in one transaction) and draft values persist through interruptions.
 - The table preview is runtime-rendered from persisted rows/cells with visible-row slider control.
 - Table rows are now selectable for edit/delete-selected operations, and add-column is wired through a prompt-driven command path.
-- Rapid Entry now opens a multi-select column picker (required columns always enforced) and supports enter-key commit loops.
+- Short Form Entry now opens a multi-select column picker (required columns always enforced) and supports enter-key commit loops.
 - Column Management now supports optional-column pruning for field-level streamlining during collection.
-- Entry UX now uses explicit Long Form vs Rapid states rendered in separate cards, with collapsible action/entry sections to reduce visual clutter.
+- Entry UX now uses explicit Long Form vs Short Form states rendered in separate cards, with collapsible action/entry sections to reduce visual clutter.
+- Phase A alignment is in progress: Screen 4 remains the Long Form host while Short Form naming now replaces rapid-entry terminology at the UX layer before dedicated-screen promotion.
+- Phase B promotion is now in progress: short-form capture runs on dedicated `Screen4ShortFormActivity` launched from Screen 4 actions, while persistence/validation contracts remain unchanged.
+- Phase C cleanup is in progress: `Screen4Activity` now focuses on Long Form/table command paths and launches short-form without retaining duplicate modal orchestration code.
+- Phase D resilience is in progress: dedicated short-form host restores selected columns + in-session committed preview state across activity recreation.
 - Rapid Entry Phase 1 shell is now a custom modal layout with committed-preview panel, new-value panel, append/commit footer actions, re-select button, and a placeholder for future measurements-included content.
 - Rapid Entry Phase 2 now visualizes recent committed context as a layered card stack (max 5 session snapshots) with detailed top-card values and compact lower-card summaries.
 - Rapid Entry Phase 3 append semantics now validate-and-stage input into local committed history and clear input fields for the next capture without writing to persistence.
