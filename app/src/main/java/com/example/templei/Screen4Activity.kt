@@ -27,9 +27,11 @@ import com.example.templei.feature.screen4.DraftRow
 import com.example.templei.feature.screen4.Screen4Database
 import com.example.templei.feature.screen4.Screen4DraftStore
 import com.example.templei.feature.screen4.Screen4Coordinator
+import com.example.templei.feature.screen4.Screen4FormatGroup
 import com.example.templei.feature.screen4.Screen4MeasurementEngine
 import com.example.templei.feature.screen4.Screen4RapidEntryStore
 import com.example.templei.feature.screen4.Screen4Repository
+import com.example.templei.feature.screen4.Screen4FieldInputFormatter
 import com.example.templei.feature.screen4.TableViewModel
 import com.example.templei.ui.navigation.TopNavigation
 import kotlinx.coroutines.launch
@@ -317,13 +319,48 @@ class Screen4Activity : ComponentActivity() {
             .setTitle(getString(R.string.screen4_add_column_title))
             .setView(input)
             .setPositiveButton(getString(R.string.screen4_add_column_confirm)) { _, _ ->
+                val label = input.text?.toString().orEmpty()
+                showColumnFormatGroupDialog(label)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showColumnFormatGroupDialog(label: String) {
+        val groups = screen4Coordinator.columnFormatGroups()
+        if (groups.isEmpty()) {
+            statusText.text = getString(R.string.screen4_status_add_column_failed, "no format groups")
+            return
+        }
+
+        val labels = groups.map { it.label }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_add_column_group_title))
+            .setItems(labels) { _, which ->
+                showColumnFormatTypeDialog(label, groups[which])
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showColumnFormatTypeDialog(label: String, group: Screen4FormatGroup) {
+        val options = screen4Coordinator.columnFormatOptions(group.key)
+        if (options.isEmpty()) {
+            statusText.text = getString(R.string.screen4_status_add_column_failed, "no formats in group")
+            return
+        }
+        val labels = options.map { "${it.label} (${it.uiWidget})" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_add_column_type_title, group.label))
+            .setItems(labels) { _, which ->
                 lifecycleScope.launch {
-                    screen4Coordinator.addColumn(input.text?.toString().orEmpty(), visibleRows)
+                    val selected = options[which]
+                    screen4Coordinator.addColumn(label = label, constraintType = selected.typeName, visibleRows = visibleRows)
                         .onSuccess { model ->
                             rapidEntryColumnIds = screen4Coordinator.currentRapidEntryConfig().activeColumnIds - screen4Coordinator.currentRapidEntryConfig().autoColumns.keys
                             renderEntryForms(screen4Coordinator.currentDraft())
                             renderTable(model)
-                            statusText.text = getString(R.string.screen4_status_column_added, model.columns.size)
+                            statusText.text = getString(R.string.screen4_status_column_added_with_type, model.columns.size, selected.label)
                         }
                         .onFailure {
                             statusText.text = getString(R.string.screen4_status_add_column_failed, it.message ?: "unknown")
@@ -398,15 +435,32 @@ class Screen4Activity : ComponentActivity() {
                 val columnType = screen4Coordinator.resolveColumnType(column)
                 inputType = inputTypeForWidget(columnType.uiWidget)
                 setText(draft.valuesByColumnId[column.columnId].orEmpty())
-                val initialError = screen4Coordinator.validateField(column, text?.toString().orEmpty())
+                val initialValue = text?.toString().orEmpty()
+                val initialError = screen4Coordinator.validateField(column, initialValue)
                 error = initialError
+                var formattingInProgress = false
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                     override fun afterTextChanged(s: Editable?) {
+                        if (formattingInProgress) return
+
                         val currentValue = s?.toString().orEmpty()
-                        screen4Coordinator.userInputEvent(column.columnId, currentValue)
-                        error = screen4Coordinator.validateField(column, currentValue)
+                        val normalizedValue = if (Screen4FieldInputFormatter.supports(column.constraintType)) {
+                            Screen4FieldInputFormatter.format(column.constraintType, currentValue)
+                        } else {
+                            currentValue
+                        }
+
+                        if (normalizedValue != currentValue) {
+                            formattingInProgress = true
+                            setText(normalizedValue)
+                            setSelection(normalizedValue.length)
+                            formattingInProgress = false
+                        }
+
+                        screen4Coordinator.userInputEvent(column.columnId, normalizedValue)
+                        error = screen4Coordinator.validateField(column, normalizedValue)
                     }
                 })
 

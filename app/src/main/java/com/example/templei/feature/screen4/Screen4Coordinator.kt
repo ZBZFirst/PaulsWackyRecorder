@@ -39,13 +39,19 @@ class Screen4Coordinator(
     suspend fun applyDraftToRow(rowId: Long, visibleRows: Int): Result<TableViewModel> =
         measurementEngine.applyDraftToRow(rowId, visibleRows)
 
-    suspend fun addColumn(label: String, visibleRows: Int): Result<TableViewModel> =
-        measurementEngine.addColumn(label, visibleRows)
+    suspend fun addColumn(label: String, constraintType: String, visibleRows: Int): Result<TableViewModel> =
+        measurementEngine.addColumn(label, constraintType, visibleRows)
 
     suspend fun pruneColumns(columnIds: List<Long>, visibleRows: Int): Result<TableViewModel> =
         measurementEngine.pruneColumns(columnIds, visibleRows)
 
     suspend fun tableModel(visibleRows: Int): TableViewModel = measurementEngine.tableModel(visibleRows)
+
+
+    fun columnFormatGroups(): List<Screen4FormatGroup> = Screen4ColumnFormatCatalog.allGroups()
+
+    fun columnFormatOptions(groupKey: String): List<Screen4FormatOption> =
+        Screen4ColumnFormatCatalog.optionsForGroup(groupKey)
 
     fun activeColumns(): List<ActiveColumn> = measurementEngine.activeColumns()
 
