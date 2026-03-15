@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TableLayout
@@ -44,7 +45,17 @@ import java.util.Locale
  * Screen 4 deterministic serial measurement engine host.
  */
 class Screen4Activity : ComponentActivity() {
-    private enum class EntryMode { MANUAL, RAPID }
+    private enum class EntryMode { LONG_FORM, RAPID }
+
+    /**
+     * Phase 0 explicit rapid modal state vocabulary used for UI/flow observability.
+     */
+    private enum class RapidModalState { IDLE, EDITING, APPENDED, COMMITTED, ERROR }
+
+    private data class RapidCommittedSnapshot(
+        val valuesByColumnId: Map<Long, String>,
+        val committedAtMillis: Long,
+    )
 
     private lateinit var screen4Coordinator: Screen4Coordinator
     private lateinit var statusText: TextView
@@ -64,7 +75,13 @@ class Screen4Activity : ComponentActivity() {
     private var selectedRowId: Long? = null
     private var editMode: Boolean = false
     private var rapidEntryColumnIds: Set<Long> = emptySet()
-    private var entryMode: EntryMode = EntryMode.MANUAL
+    private var entryMode: EntryMode = EntryMode.LONG_FORM
+    private var rapidModalState: RapidModalState = RapidModalState.IDLE
+    private val rapidCommittedHistory: MutableList<RapidCommittedSnapshot> = mutableListOf()
+
+    companion object {
+        private const val MAX_RAPID_HISTORY = 5
+    }
 
     private val exportCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri == null) {
@@ -125,7 +142,7 @@ class Screen4Activity : ComponentActivity() {
 
         findViewById<Button>(R.id.editRowButton).setOnClickListener {
             if (!::screen4Coordinator.isInitialized) return@setOnClickListener
-            setEntryMode(EntryMode.MANUAL)
+            setEntryMode(EntryMode.LONG_FORM)
             val rowId = selectedRowId
             if (rowId == null) {
                 renderEntryForms(screen4Coordinator.currentDraft())
@@ -149,16 +166,19 @@ class Screen4Activity : ComponentActivity() {
                         statusText.text = getString(R.string.screen4_status_measurement_updated, selectedRowId!!)
                         renderTable(model)
                     }.onFailure {
+                        rapidModalState = RapidModalState.ERROR
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
                 } else {
                     val result = screen4Coordinator.commitMeasurement(visibleRows, useRapidEntryConfig = entryMode == EntryMode.RAPID)
                     result.onSuccess { model ->
                         val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
+                        rapidModalState = RapidModalState.COMMITTED
                         statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
                         renderTable(model)
                         renderEntryForms(screen4Coordinator.currentDraft())
                     }.onFailure {
+                        rapidModalState = RapidModalState.ERROR
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
                 }
@@ -221,7 +241,7 @@ class Screen4Activity : ComponentActivity() {
             rapidEntryColumnIds = screen4Coordinator.currentRapidEntryConfig().activeColumnIds
             statusText.text = getString(R.string.screen4_status_ready, table.columns.size)
             renderEntryForms(screen4Coordinator.beginRapidEntry())
-            setEntryMode(EntryMode.MANUAL)
+            setEntryMode(EntryMode.LONG_FORM)
             renderTable(table)
         }
     }
@@ -293,6 +313,7 @@ class Screen4Activity : ComponentActivity() {
         editMode = false
         selectedRowId = null
         setEntryMode(EntryMode.RAPID)
+        rapidCommittedHistory.clear()
         val draft = screen4Coordinator.startNewDraft()
         renderEntryForms(draft)
         showRapidEntryInputDialog()
@@ -302,19 +323,29 @@ class Screen4Activity : ComponentActivity() {
     private fun showRapidEntryInputDialog() {
         val rapidColumns = currentRapidEntryColumns()
         if (rapidColumns.isEmpty()) {
+            rapidModalState = RapidModalState.ERROR
             statusText.text = getString(R.string.screen4_status_columns_unavailable)
             return
         }
 
+        rapidModalState = RapidModalState.EDITING
         val draft = screen4Coordinator.currentDraft()
-        val inputContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(16, 12, 16, 4)
-        }
+        // Phase 5 placeholder contract: measurements-included region is UI-only and intentionally
+        // non-interactive in this phase. It must not mutate draft/commit payload behavior.
+        // See SCREEN4_RAPID_ENTRY_PHASE5_REVIEW.md for acceptance notes.
+        val modalView = layoutInflater.inflate(R.layout.dialog_screen4_rapid_entry, null)
+        val titleText = modalView.findViewById<TextView>(R.id.rapidModalTitle)
+        val committedContainer = modalView.findViewById<FrameLayout>(R.id.rapidCommittedContainer)
+        val newValuesContainer = modalView.findViewById<LinearLayout>(R.id.rapidNewValuesContainer)
+        val modalStatus = modalView.findViewById<TextView>(R.id.rapidModalStatus)
+        titleText.text = getString(R.string.screen4_rapid_entry_popup_title, rapidColumns.size)
+        renderCommittedPreviewRows(committedContainer, rapidColumns)
+
         val inputsByColumn = mutableMapOf<ActiveColumn, EditText>()
 
         rapidColumns.forEachIndexed { index, column ->
             val input = EditText(this).apply {
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { it.topMargin = 8 }
                 hint = getString(
                     R.string.screen4_draft_hint,
                     column.label,
@@ -352,58 +383,193 @@ class Screen4Activity : ComponentActivity() {
                 }
             }
             inputsByColumn[column] = input
-            inputContainer.addView(input)
+            newValuesContainer.addView(input)
         }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.screen4_rapid_entry_popup_title, rapidColumns.size))
-            .setView(inputContainer)
-            .setPositiveButton(getString(R.string.screen4_rapid_entry_commit_next), null)
-            .setNeutralButton(getString(R.string.screen4_rapid_entry_reselect), null)
-            .setNegativeButton(getString(R.string.screen4_switch_manual_entry), null)
+            .setView(modalView)
             .create()
 
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                var hasErrors = false
-                inputsByColumn.forEach { (column, input) ->
-                    val value = input.text?.toString().orEmpty()
-                    val validationError = screen4Coordinator.validateField(column, value)
-                    input.error = validationError
-                    if (validationError != null) hasErrors = true
-                }
-                if (hasErrors) return@setOnClickListener
+            val appendButton = modalView.findViewById<Button>(R.id.rapidAppendButton)
+            val commitButton = modalView.findViewById<Button>(R.id.rapidCommitNextButton)
 
-                lifecycleScope.launch {
-                    val result = screen4Coordinator.commitMeasurement(visibleRows, useRapidEntryConfig = true)
-                    result.onSuccess { model ->
-                        val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
-                        statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
-                        renderTable(model)
-                        renderEntryForms(screen4Coordinator.currentDraft())
-                        dialog.dismiss()
-                        if (entryMode == EntryMode.RAPID) {
-                            showRapidEntryInputDialog()
-                        }
-                    }.onFailure {
-                        statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
-                    }
-                }
+            appendButton.setOnClickListener {
+                if (hasRapidInputErrors(inputsByColumn)) return@setOnClickListener
+                appendRapidCommitted(
+                    inputsByColumn = inputsByColumn,
+                    committedContainer = committedContainer,
+                    rapidColumns = rapidColumns,
+                    modalStatus = modalStatus,
+                )
             }
 
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            commitButton.setOnClickListener {
+                if (hasRapidInputErrors(inputsByColumn)) return@setOnClickListener
+                commitRapidMeasurement(
+                    commitButton = commitButton,
+                    appendButton = appendButton,
+                    modalStatus = modalStatus,
+                    dialog = dialog,
+                    inputsByColumn = inputsByColumn,
+                )
+            }
+
+            modalView.findViewById<Button>(R.id.rapidModalReselectButton).setOnClickListener {
+                rapidModalState = RapidModalState.IDLE
                 dialog.dismiss()
                 showRapidEntryColumnsDialog()
             }
 
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-                setEntryMode(EntryMode.MANUAL)
+            modalView.findViewById<Button>(R.id.rapidModalCloseButton).setOnClickListener {
+                rapidModalState = RapidModalState.IDLE
+                setEntryMode(EntryMode.LONG_FORM)
                 statusText.text = getString(R.string.screen4_status_manual_entry)
                 dialog.dismiss()
             }
         }
 
         dialog.show()
+    }
+
+    private fun hasRapidInputErrors(inputsByColumn: Map<ActiveColumn, EditText>): Boolean {
+        var hasErrors = false
+        inputsByColumn.forEach { (column, input) ->
+            val value = input.text?.toString().orEmpty()
+            val validationError = screen4Coordinator.validateField(column, value)
+            input.error = validationError
+            if (validationError != null) hasErrors = true
+        }
+        return hasErrors
+    }
+
+    private fun appendRapidCommitted(
+        inputsByColumn: Map<ActiveColumn, EditText>,
+        committedContainer: FrameLayout,
+        rapidColumns: List<ActiveColumn>,
+        modalStatus: TextView,
+    ) {
+        val snapshot = buildRapidInputSnapshot(inputsByColumn)
+        addRapidCommittedSnapshot(snapshot)
+        clearRapidInputFields(inputsByColumn)
+        renderCommittedPreviewRows(committedContainer, rapidColumns)
+        rapidModalState = RapidModalState.APPENDED
+        val populatedCount = snapshot.valuesByColumnId.values.count { it.isNotBlank() }
+        modalStatus.text = getString(R.string.screen4_rapid_entry_append_success, populatedCount)
+    }
+
+    private fun clearRapidInputFields(inputsByColumn: Map<ActiveColumn, EditText>) {
+        inputsByColumn.forEach { (column, input) ->
+            input.setText("")
+            input.error = null
+            screen4Coordinator.userInputEvent(column.columnId, "")
+        }
+    }
+
+    private fun commitRapidMeasurement(
+        commitButton: Button,
+        appendButton: Button,
+        modalStatus: TextView,
+        dialog: AlertDialog,
+        inputsByColumn: Map<ActiveColumn, EditText>,
+    ) {
+        if (!commitButton.isEnabled) return
+
+        commitButton.isEnabled = false
+        appendButton.isEnabled = false
+        modalStatus.text = getString(R.string.screen4_rapid_entry_commit_in_progress)
+
+        lifecycleScope.launch {
+            val result = screen4Coordinator.commitMeasurement(visibleRows, useRapidEntryConfig = true)
+            result.onSuccess { model ->
+                val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
+                addRapidCommittedSnapshot(buildRapidInputSnapshot(inputsByColumn))
+                rapidModalState = RapidModalState.COMMITTED
+                statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
+                renderTable(model)
+                renderEntryForms(screen4Coordinator.currentDraft())
+                dialog.dismiss()
+                if (entryMode == EntryMode.RAPID) {
+                    showRapidEntryInputDialog()
+                }
+            }.onFailure {
+                rapidModalState = RapidModalState.ERROR
+                statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
+                modalStatus.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
+                commitButton.isEnabled = true
+                appendButton.isEnabled = true
+            }
+        }
+    }
+
+    private fun buildRapidInputSnapshot(inputsByColumn: Map<ActiveColumn, EditText>): RapidCommittedSnapshot {
+        val values = inputsByColumn.entries.associate { (column, input) ->
+            column.columnId to input.text?.toString().orEmpty().trim()
+        }
+        return RapidCommittedSnapshot(valuesByColumnId = values, committedAtMillis = System.currentTimeMillis())
+    }
+
+    private fun addRapidCommittedSnapshot(snapshot: RapidCommittedSnapshot) {
+        rapidCommittedHistory.add(0, snapshot)
+        while (rapidCommittedHistory.size > MAX_RAPID_HISTORY) {
+            rapidCommittedHistory.removeAt(rapidCommittedHistory.lastIndex)
+        }
+    }
+
+    private fun renderCommittedPreviewRows(container: FrameLayout, columns: List<ActiveColumn>) {
+        container.removeAllViews()
+        if (rapidCommittedHistory.isEmpty() || columns.isEmpty()) {
+            container.addView(TextView(this).apply {
+                text = getString(R.string.screen4_rapid_entry_committed_empty)
+                setPadding(8, 8, 8, 8)
+            })
+            return
+        }
+
+        val displayed = rapidCommittedHistory.take(MAX_RAPID_HISTORY).reversed()
+        displayed.forEachIndexed { index, snapshot ->
+            val isTopCard = index == displayed.lastIndex
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_card_surface)
+                setPadding(12, 10, 12, 10)
+                translationX = ((displayed.size - 1 - index) * 8).toFloat()
+                translationY = ((displayed.size - 1 - index) * 10).toFloat()
+                alpha = if (isTopCard) 1.0f else 0.72f
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                )
+            }
+
+            val title = TextView(this).apply {
+                text = if (isTopCard) {
+                    getString(R.string.screen4_rapid_entry_latest_commit)
+                } else {
+                    getString(R.string.screen4_rapid_entry_previous_commit, displayed.size - index)
+                }
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            card.addView(title)
+
+            if (isTopCard) {
+                columns.forEach { column ->
+                    val value = snapshot.valuesByColumnId[column.columnId].orEmpty().ifBlank { "—" }
+                    card.addView(TextView(this).apply {
+                        text = getString(R.string.screen4_rapid_entry_committed_item, column.label, value)
+                        setPadding(0, 4, 0, 0)
+                    })
+                }
+            } else {
+                val populatedCount = snapshot.valuesByColumnId.values.count { it.isNotBlank() }
+                card.addView(TextView(this).apply {
+                    text = getString(R.string.screen4_rapid_entry_previous_summary, populatedCount)
+                    setPadding(0, 4, 0, 0)
+                })
+            }
+
+            container.addView(card)
+        }
     }
 
     private fun showColumnManagementDialog() {
