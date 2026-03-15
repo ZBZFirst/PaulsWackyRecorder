@@ -31,6 +31,7 @@ import com.example.templei.feature.screen4.Screen4FormatGroup
 import com.example.templei.feature.screen4.Screen4MeasurementEngine
 import com.example.templei.feature.screen4.Screen4RapidEntryStore
 import com.example.templei.feature.screen4.Screen4Repository
+import com.example.templei.feature.screen4.Screen4FieldInputFormatter
 import com.example.templei.feature.screen4.TableViewModel
 import com.example.templei.ui.navigation.TopNavigation
 import kotlinx.coroutines.launch
@@ -434,15 +435,32 @@ class Screen4Activity : ComponentActivity() {
                 val columnType = screen4Coordinator.resolveColumnType(column)
                 inputType = inputTypeForWidget(columnType.uiWidget)
                 setText(draft.valuesByColumnId[column.columnId].orEmpty())
-                val initialError = screen4Coordinator.validateField(column, text?.toString().orEmpty())
+                val initialValue = text?.toString().orEmpty()
+                val initialError = screen4Coordinator.validateField(column, initialValue)
                 error = initialError
+                var formattingInProgress = false
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                     override fun afterTextChanged(s: Editable?) {
+                        if (formattingInProgress) return
+
                         val currentValue = s?.toString().orEmpty()
-                        screen4Coordinator.userInputEvent(column.columnId, currentValue)
-                        error = screen4Coordinator.validateField(column, currentValue)
+                        val normalizedValue = if (Screen4FieldInputFormatter.supports(column.constraintType)) {
+                            Screen4FieldInputFormatter.format(column.constraintType, currentValue)
+                        } else {
+                            currentValue
+                        }
+
+                        if (normalizedValue != currentValue) {
+                            formattingInProgress = true
+                            setText(normalizedValue)
+                            setSelection(normalizedValue.length)
+                            formattingInProgress = false
+                        }
+
+                        screen4Coordinator.userInputEvent(column.columnId, normalizedValue)
+                        error = screen4Coordinator.validateField(column, normalizedValue)
                     }
                 })
 

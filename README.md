@@ -99,4 +99,5 @@ Key points for the current `.wav` path:
 - Begin Rapid Entry now prompts for optional-column inclusion (required columns are always included), and Enter on the final field commits quickly for serial row capture.
 - Column management includes optional-column pruning so users can reduce field surface during fast capture sessions.
 - Add-column flow now uses a deterministic two-step semantic picker (format group → specific type), so a new "Date" column can be bound to a concrete date/time format family and corresponding input widget at creation time.
+- Separator-driven input formatting is now applied for selected semantic types (date/time/timestamp and grouped numbers), so operators can type value characters while the selected format injects visual separators.
 - Screen 4 now separates Manual Entry and Rapid Entry into distinct cards and uses collapsible action/entry sections (similar clutter-reduction pattern used elsewhere in scaffold UI).
