@@ -13,9 +13,9 @@ class Screen4ColumnFormatCatalogTest {
     }
 
     @Test
-    fun time_group_options_include_widget_metadata() {
+    fun time_group_options_include_widget_metadata_and_preview_examples() {
         val options = Screen4ColumnFormatCatalog.optionsForGroup("time")
         assertTrue(options.isNotEmpty())
-        assertTrue(options.any { it.typeName == "time_hh_mm_ss" && it.uiWidget.isNotBlank() })
+        assertTrue(options.any { it.typeName == "time_hh_mm_ss" && it.uiWidget.isNotBlank() && it.previewExample.contains(":") })
     }
 }

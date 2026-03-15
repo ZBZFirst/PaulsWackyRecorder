@@ -100,16 +100,8 @@ class Screen4Activity : ComponentActivity() {
         actionSectionToggleButton = findViewById(R.id.actionSectionToggleButton)
         entrySectionToggleButton = findViewById(R.id.entrySectionToggleButton)
 
-        actionSectionToggleButton.setOnClickListener {
-            val collapsed = actionSectionBody.visibility == View.GONE
-            actionSectionBody.visibility = if (collapsed) View.VISIBLE else View.GONE
-            actionSectionToggleButton.text = getString(if (collapsed) R.string.screen4_section_collapse else R.string.screen4_section_expand)
-        }
-        entrySectionToggleButton.setOnClickListener {
-            val collapsed = entrySectionBody.visibility == View.GONE
-            entrySectionBody.visibility = if (collapsed) View.VISIBLE else View.GONE
-            entrySectionToggleButton.text = getString(if (collapsed) R.string.screen4_section_collapse else R.string.screen4_section_expand)
-        }
+        bindCollapsibleSection(actionSectionBody, actionSectionToggleButton)
+        bindCollapsibleSection(entrySectionBody, entrySectionToggleButton)
 
         rowDisplaySlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -310,10 +302,10 @@ class Screen4Activity : ComponentActivity() {
             .show()
     }
 
-    private fun showAddColumnDialog() {
+    private fun showAddColumnDialog(initialLabel: String = getString(R.string.screen4_default_new_column_label)) {
         val input = EditText(this).apply {
             hint = getString(R.string.screen4_add_column_hint)
-            setText(getString(R.string.screen4_default_new_column_label))
+            setText(initialLabel)
         }
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.screen4_add_column_title))
@@ -339,6 +331,9 @@ class Screen4Activity : ComponentActivity() {
             .setItems(labels) { _, which ->
                 showColumnFormatTypeDialog(label, groups[which])
             }
+            .setNeutralButton(getString(R.string.screen4_dialog_back)) { _, _ ->
+                showAddColumnDialog(initialLabel = label)
+            }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
@@ -349,7 +344,7 @@ class Screen4Activity : ComponentActivity() {
             statusText.text = getString(R.string.screen4_status_add_column_failed, "no formats in group")
             return
         }
-        val labels = options.map { "${it.label} (${it.uiWidget})" }.toTypedArray()
+        val labels = options.map { "${it.label} • ${it.previewExample} • ${it.uiWidget}" }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.screen4_add_column_type_title, group.label))
             .setItems(labels) { _, which ->
@@ -360,12 +355,15 @@ class Screen4Activity : ComponentActivity() {
                             rapidEntryColumnIds = screen4Coordinator.currentRapidEntryConfig().activeColumnIds - screen4Coordinator.currentRapidEntryConfig().autoColumns.keys
                             renderEntryForms(screen4Coordinator.currentDraft())
                             renderTable(model)
-                            statusText.text = getString(R.string.screen4_status_column_added_with_type, model.columns.size, selected.label)
+                            statusText.text = getString(R.string.screen4_status_column_added_with_type, model.columns.size, "${selected.label}: ${selected.previewExample}")
                         }
                         .onFailure {
                             statusText.text = getString(R.string.screen4_status_add_column_failed, it.message ?: "unknown")
                         }
                 }
+            }
+            .setNeutralButton(getString(R.string.screen4_dialog_back)) { _, _ ->
+                showColumnFormatGroupDialog(label)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -400,6 +398,16 @@ class Screen4Activity : ComponentActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+
+    private fun bindCollapsibleSection(body: View, toggleButton: Button) {
+        toggleButton.setOnClickListener {
+            val isCollapsed = body.visibility == View.GONE
+            body.visibility = if (isCollapsed) View.VISIBLE else View.GONE
+            toggleButton.text = getString(if (isCollapsed) R.string.screen4_section_collapse else R.string.screen4_section_expand)
+            toggleButton.alpha = if (isCollapsed) 1.0f else 0.75f
+        }
     }
 
     private fun currentRapidEntryColumns(): List<ActiveColumn> {

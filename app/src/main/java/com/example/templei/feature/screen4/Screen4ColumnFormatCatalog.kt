@@ -10,6 +10,7 @@ data class Screen4FormatOption(
     val typeName: String,
     val label: String,
     val uiWidget: String,
+    val previewExample: String,
 )
 
 /**
@@ -63,7 +64,34 @@ object Screen4ColumnFormatCatalog {
                 typeName = definition.name,
                 label = typeName.toDisplayLabel(),
                 uiWidget = definition.uiWidget,
+                previewExample = previewForType(definition.name),
             )
+        }
+    }
+
+
+
+    private fun previewForType(typeName: String): String {
+        return when (typeName) {
+            "date_mdy_dash_yyyy" -> "12-31-2024"
+            "date_mdy_slash_yyyy" -> "12/31/2024"
+            "date_mdy_dash_yy" -> "12-31-24"
+            "date_mdy_slash_yy" -> "12/31/24"
+            "timestamp_mdy_dash_minute" -> "12-31-2024 09:15"
+            "timestamp_mdy_slash_minute" -> "12/31/2024 09:15"
+            "timestamp_mdy_dash_second" -> "12-31-2024 09:15:30"
+            "timestamp_mdy_slash_second" -> "12/31/2024 09:15:30"
+            "timestamp_mdy_dash_millisecond" -> "12-31-2024 09:15:30.123"
+            "timestamp_mdy_slash_millisecond" -> "12/31/2024 09:15:30.123"
+            "time_hh_mm" -> "09:15"
+            "time_hh_mm_ss" -> "09:15:30"
+            "time_hh_mm_ss_mmm" -> "09:15:30.123"
+            "time_hh_mm_am_pm" -> "09:15 AM"
+            "time_hh_mm_ss_am_pm" -> "09:15:30 PM"
+            "time_hh_mm_ss_mmm_am_pm" -> "09:15:30.123 PM"
+            "number_grouped" -> "1,234,567"
+            "decimal_grouped_2" -> "1,234.56"
+            else -> typeName.replace('_', ' ')
         }
     }
 
