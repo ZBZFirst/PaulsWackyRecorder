@@ -14,7 +14,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
+import android.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.example.templei.feature.screen4.ActiveColumn
 import com.example.templei.feature.screen4.Screen4Coordinator
