@@ -2,18 +2,11 @@ package com.example.templei
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import android.text.InputType
-import com.example.templei.feature.screen4.ActiveColumn
-import android.text.TextWatcher
-import android.text.Editable
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TableLayout
 import android.widget.TableRow
@@ -39,17 +32,12 @@ class Screen4Activity : ComponentActivity() {
     private lateinit var statusText: TextView
     private lateinit var rowDisplayLabel: TextView
     private lateinit var rowDisplaySlider: SeekBar
-    private lateinit var manualEntryContainer: LinearLayout
-    private lateinit var rapidEntryContainer: LinearLayout
     private lateinit var tableLayout: TableLayout
-    private lateinit var actionSectionBody: LinearLayout
-    private lateinit var entrySectionBody: LinearLayout
+    private lateinit var actionSectionBody: View
     private lateinit var actionSectionToggleButton: Button
-    private lateinit var entrySectionToggleButton: Button
 
     private var visibleRows: Int = Screen4MeasurementEngine.DEFAULT_VISIBLE_ROWS
     private var selectedRowId: Long? = null
-    private var editMode: Boolean = false
 
     private val exportCsvLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
@@ -83,16 +71,11 @@ class Screen4Activity : ComponentActivity() {
         statusText = findViewById(R.id.statusText)
         rowDisplayLabel = findViewById(R.id.rowDisplayLabel)
         rowDisplaySlider = findViewById(R.id.rowDisplaySlider)
-        manualEntryContainer = findViewById(R.id.manualEntryContainer)
-        rapidEntryContainer = findViewById(R.id.rapidEntryContainer)
         tableLayout = findViewById(R.id.tableLayout)
         actionSectionBody = findViewById(R.id.actionSectionBody)
-        entrySectionBody = findViewById(R.id.entrySectionBody)
         actionSectionToggleButton = findViewById(R.id.actionSectionToggleButton)
-        entrySectionToggleButton = findViewById(R.id.entrySectionToggleButton)
 
         bindCollapsibleSection(actionSectionBody, actionSectionToggleButton)
-        bindCollapsibleSection(entrySectionBody, entrySectionToggleButton)
 
         rowDisplaySlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
 
@@ -174,7 +157,6 @@ class Screen4Activity : ComponentActivity() {
                 val (deleted, model) = screen4Coordinator.deleteSelectedMeasurement(rowId, visibleRows)
                 if (deleted) {
                     selectedRowId = null
-                    editMode = false
                     statusText.text = getString(R.string.screen4_status_deleted_selected, rowId)
                 } else {
                     statusText.text = getString(R.string.screen4_status_delete_none)
@@ -191,127 +173,6 @@ class Screen4Activity : ComponentActivity() {
 
             statusText.text =
                 getString(R.string.screen4_status_short_form_opened)
-        }
-
-        findViewById<Button>(R.id.editRowButton).setOnClickListener {
-
-            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
-
-            val rowId = selectedRowId
-
-            if (rowId == null) {
-
-                renderEntryForms(screen4Coordinator.currentDraft())
-
-                statusText.text =
-                    getString(R.string.screen4_status_manual_entry)
-
-                return@setOnClickListener
-            }
-
-            lifecycleScope.launch {
-
-                val draft = screen4Coordinator.beginEditFromRow(rowId)
-
-                editMode = true
-
-                renderEntryForms(draft)
-
-                statusText.text =
-                    getString(
-                        R.string.screen4_status_editing_row,
-                        rowId
-                    )
-            }
-        }
-
-        findViewById<Button>(R.id.addRowButton).setOnClickListener {
-
-            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
-
-            lifecycleScope.launch {
-
-                if (editMode && selectedRowId != null) {
-
-                    val result =
-                        screen4Coordinator.applyDraftToRow(
-                            selectedRowId!!,
-                            visibleRows
-                        )
-
-                    result.onSuccess { model ->
-
-                        statusText.text =
-                            getString(
-                                R.string.screen4_status_measurement_updated,
-                                selectedRowId!!
-                            )
-
-                        renderTable(model)
-                    }
-
-                    result.onFailure {
-
-                        statusText.text =
-                            getString(
-                                R.string.screen4_status_measurement_failed,
-                                it.message ?: "unknown"
-                            )
-                    }
-
-                } else {
-
-                    val result =
-                        screen4Coordinator.commitMeasurement(
-                            visibleRows,
-                            useRapidEntryConfig = false
-                        )
-
-                    result.onSuccess { model ->
-
-                        val insertedId =
-                            model.rows.firstOrNull()?.rowId ?: 0L
-
-                        statusText.text =
-                            getString(
-                                R.string.screen4_status_measurement_saved,
-                                insertedId
-                            )
-
-                        renderTable(model)
-
-                        renderEntryForms(
-                            screen4Coordinator.currentDraft()
-                        )
-                    }
-
-                    result.onFailure {
-
-                        statusText.text =
-                            getString(
-                                R.string.screen4_status_measurement_failed,
-                                it.message ?: "unknown"
-                            )
-                    }
-                }
-            }
-        }
-
-        findViewById<Button>(R.id.deleteRowButton).setOnClickListener {
-
-            lifecycleScope.launch {
-
-                val (deleted, model) =
-                    screen4Coordinator.deleteLatestMeasurement(visibleRows)
-
-                statusText.text =
-                    if (deleted)
-                        getString(R.string.screen4_status_deleted_latest)
-                    else
-                        getString(R.string.screen4_status_delete_none)
-
-                renderTable(model)
-            }
         }
 
         findViewById<Button>(R.id.exportCsvButton).setOnClickListener {
@@ -355,106 +216,7 @@ class Screen4Activity : ComponentActivity() {
                     workspaceName
                 )
 
-            renderEntryForms(
-                screen4Coordinator.beginRapidEntry()
-            )
-
             renderTable(table)
-        }
-    }
-
-    private fun renderEntryForms(
-        draft: DraftRow
-    ) {
-
-        renderFormIntoContainer(
-            manualEntryContainer,
-            draft,
-            screen4Coordinator.activeColumns()
-        )
-
-        rapidEntryContainer.removeAllViews()
-    }
-
-    private fun renderFormIntoContainer(
-        container: LinearLayout,
-        draft: DraftRow,
-        columns: List<ActiveColumn>
-    ) {
-
-        container.removeAllViews()
-
-        columns.forEach { column ->
-
-            val fieldInput =
-                EditText(this).apply {
-
-                    layoutParams =
-                        LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                        ).also { lp ->
-                            lp.topMargin = 8
-                        }
-
-                    hint =
-                        getString(
-                            R.string.screen4_draft_hint,
-                            column.label,
-                            if (column.required) getString(R.string.screen4_required) else getString(R.string.screen4_optional),
-                            column.maxLength
-                        )
-
-                    val columnType =
-                        screen4Coordinator.resolveColumnType(column)
-
-                    inputType =
-                        inputTypeForWidget(columnType.uiWidget)
-
-                    val initialValue =
-                        draft.valuesByColumnId[column.columnId].orEmpty()
-
-                    setText(initialValue)
-
-                    error =
-                        screen4Coordinator.validateField(column, initialValue)
-
-                    addTextChangedListener(object : TextWatcher {
-
-                        override fun beforeTextChanged(
-                            s: CharSequence?,
-                            start: Int,
-                            count: Int,
-                            after: Int
-                        ) = Unit
-
-                        override fun onTextChanged(
-                            s: CharSequence?,
-                            start: Int,
-                            before: Int,
-                            count: Int
-                        ) = Unit
-
-                        override fun afterTextChanged(s: Editable?) {
-
-                            val value =
-                                s?.toString().orEmpty()
-
-                            screen4Coordinator.userInputEvent(
-                                column.columnId,
-                                value
-                            )
-
-                            error =
-                                screen4Coordinator.validateField(
-                                    column,
-                                    value
-                                )
-                        }
-                    })
-                }
-
-            container.addView(fieldInput)
         }
     }
 
@@ -474,9 +236,7 @@ class Screen4Activity : ComponentActivity() {
                     val tableName = nameInput.text.toString().trim()
                     val model = screen4Coordinator.createAndSelectWorkspace(tableName, visibleRows)
                     selectedRowId = null
-                    editMode = false
                     renderTable(model)
-                    renderEntryForms(screen4Coordinator.startNewDraft())
                     statusText.text = getString(
                         R.string.screen4_status_new_table_workspace_started,
                         tableName.ifBlank { getString(R.string.screen4_new_table_default_name) }
@@ -508,10 +268,8 @@ class Screen4Activity : ComponentActivity() {
                             return@launch
                         }
                         selectedRowId = null
-                        editMode = false
                         val table = screen4Coordinator.tableModel(visibleRows)
                         renderTable(table)
-                        renderEntryForms(screen4Coordinator.startNewDraft())
                         statusText.text = getString(R.string.screen4_status_open_table_loaded_workspace, workspace.name)
                     }
                 }
@@ -535,10 +293,8 @@ class Screen4Activity : ComponentActivity() {
                         return@launch
                     }
                     selectedRowId = null
-                    editMode = false
                     val table = screen4Coordinator.tableModel(visibleRows)
                     renderTable(table)
-                    renderEntryForms(screen4Coordinator.startNewDraft())
                     statusText.text = getString(R.string.screen4_status_archive_table_success)
                 }
             }
@@ -567,10 +323,8 @@ class Screen4Activity : ComponentActivity() {
                             return@launch
                         }
                         selectedRowId = null
-                        editMode = false
                         val table = screen4Coordinator.tableModel(visibleRows)
                         renderTable(table)
-                        renderEntryForms(screen4Coordinator.startNewDraft())
                         statusText.text = getString(R.string.screen4_status_restore_table_success, workspace.name)
                     }
                 }
@@ -597,7 +351,7 @@ class Screen4Activity : ComponentActivity() {
                 val formatOptions = screen4Coordinator.columnFormatOptions(group.key)
                 AlertDialog.Builder(this)
                     .setTitle(getString(R.string.screen4_add_column_type_title, group.label))
-                    .setItems(formatOptions.map { it.label }.toTypedArray()) { _, whichFormat ->
+                    .setItems(formatOptions.map { "${it.label} (e.g., ${it.previewExample})" }.toTypedArray()) { _, whichFormat ->
                         val chosenFormat = formatOptions[whichFormat]
                         AlertDialog.Builder(this)
                             .setTitle(R.string.screen4_add_column_title)
@@ -610,7 +364,6 @@ class Screen4Activity : ComponentActivity() {
                                     val result = screen4Coordinator.addColumn(requestedLabel, chosenFormat.typeName, visibleRows)
                                     result.onSuccess { table ->
                                         renderTable(table)
-                                        renderEntryForms(screen4Coordinator.startNewDraft())
                                         statusText.text = getString(
                                             R.string.screen4_status_column_added_with_type,
                                             table.columns.size,
@@ -637,14 +390,14 @@ class Screen4Activity : ComponentActivity() {
 
     private fun showPruneColumnsDialog() {
 
-        val optionalColumns = screen4Coordinator.activeColumns().filterNot { it.required }
-        if (optionalColumns.isEmpty()) {
+        val activeColumns = screen4Coordinator.activeColumns()
+        if (activeColumns.isEmpty()) {
             statusText.text = getString(R.string.screen4_status_prune_none_available)
             return
         }
 
-        val labels = optionalColumns.map { it.label }.toTypedArray()
-        val checked = BooleanArray(optionalColumns.size)
+        val labels = activeColumns.map { it.label }.toTypedArray()
+        val checked = BooleanArray(activeColumns.size)
 
         AlertDialog.Builder(this)
             .setTitle(R.string.screen4_prune_columns_title)
@@ -652,14 +405,13 @@ class Screen4Activity : ComponentActivity() {
                 checked[which] = isChecked
             }
             .setPositiveButton(R.string.screen4_prune_columns_confirm) { _, _ ->
-                val selectedIds = optionalColumns.mapIndexedNotNull { index, column ->
+                val selectedIds = activeColumns.mapIndexedNotNull { index, column ->
                     if (checked[index]) column.columnId else null
                 }
                 lifecycleScope.launch {
                     val result = screen4Coordinator.pruneColumns(selectedIds, visibleRows)
                     result.onSuccess { table ->
                         renderTable(table)
-                        renderEntryForms(screen4Coordinator.startNewDraft())
                         statusText.text = getString(R.string.screen4_status_pruned_columns, selectedIds.size)
                     }
                     result.onFailure {
@@ -714,6 +466,11 @@ class Screen4Activity : ComponentActivity() {
 
             val rowView =
                 TableRow(this)
+
+            rowView.setOnClickListener {
+                selectedRowId = row.rowId
+                statusText.text = getString(R.string.screen4_status_selected_row, row.rowId)
+            }
 
             rowView.addView(
                 bodyCell(row.rowId.toString())
@@ -808,28 +565,6 @@ class Screen4Activity : ComponentActivity() {
 
                 table.rows.size
             }
-        }
-    }
-
-    private fun inputTypeForWidget(widget: String): Int {
-
-        return when (widget) {
-
-            "NumericInput" ->
-                InputType.TYPE_CLASS_NUMBER
-
-            "DecimalInput" ->
-                InputType.TYPE_CLASS_NUMBER or
-                        InputType.TYPE_NUMBER_FLAG_DECIMAL
-
-            "EmailInput" ->
-                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-
-            "PhoneInput" ->
-                InputType.TYPE_CLASS_PHONE
-
-            else ->
-                InputType.TYPE_CLASS_TEXT
         }
     }
 
