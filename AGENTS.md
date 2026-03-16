@@ -209,3 +209,70 @@ Use this summary as the implementation contract for Screen 4's typed table workf
 - `app/src/main/java/com/example/templei/feature/screen4/Screen4RapidEntryConfig.kt` and `Screen4RapidEntryStore.kt` (rapid-entry config persistence).
 - `app/src/main/res/layout/activity_screen4.xml` and `app/src/main/res/values/strings.xml` (Screen 4 control surface + export/status text).
 - `app/src/test/java/com/example/templei/feature/screen4/Screen4ColumnTypeRegistryTest.kt` (phase-6 registry gate tests).
+
+## Consolidated markdown digest (single source going forward)
+This section consolidates key intent from repository markdown notes so agents can use `AGENTS.md` as the primary operational document.
+
+### Canonical-doc policy (effective now)
+- `AGENTS.md` is the canonical machine-facing contract and should be kept up to date first.
+- Other markdown notes are retained as historical/reference artifacts, but agent behavior should default to this file when conflicts or drift appear.
+- When scaffold behavior changes, update this consolidated digest in the same change.
+
+### Human scaffold recap (from README + map notes)
+- App remains an XML-first reproducible scaffold with `MainActivity` launcher/menu and shared top navigation.
+- Screen shells should stay lightweight and easy to duplicate for domain-specific variants.
+- Keep user copy in `strings.xml`, keep navigation shared via `view_top_navigation.xml`, and keep package namespace `com.example.templei`.
+- Obsidian map notes (`MINDMAP.md`, `MAP_*`) are conceptual navigation aids; they do not supersede source-of-truth behavior contracts.
+
+### Screen 3 consolidated status
+- Screen 3 is the Action Pad/Soundboard surface with folder-scoped discovery from SAF picker.
+- Supported file formats remain `.wav` and `.mp3`; playable limit remains `<= 6s`.
+- State vocabulary remains explicit: `Loading`, `Ready`, `Playing`, `Error`.
+- Implemented direction includes:
+  - load progress diagnostics,
+  - favorites/browser responsibility split,
+  - framed collapsible sections + vertical scrolling,
+  - dynamic folder clip actions (tap play, long-press assign),
+  - hardened playback path (`MediaPlayer` async SAF URI),
+  - persisted folder catalog metadata for faster reopen,
+  - control-surface polish and operator UX refinements.
+
+### Screen 4 consolidated status (typed table + workspace lifecycle)
+#### Baseline engine phases
+- Typed contract + coordinator boundary established.
+- Semantic type registry and validation dispatch implemented (107-type baseline gate).
+- Rapid-entry config persistence and deterministic row composition implemented.
+- XML field rendering + per-field validation feedback implemented.
+- CSV export path implemented.
+
+#### Workspace lifecycle phases (table selection continuity)
+- **Phase 1 (data model):** workspace entity introduced; rows/columns/cells scoped by `workspaceId`.
+- **Phase 2 (selection context):** persisted active workspace id (`Screen4TableSessionStore`) shared by long/short form.
+- **Phase 3 (UI routing):** long-form actions route to workspace create/select flows.
+- **Phase 4 (archive lifecycle):** archive/restore table flows added with explicit lifecycle vocabulary.
+- **Phase 5 (hardening):** active workspace visibility improved in status copy; lifecycle state-machine unit tests added.
+
+#### Current Screen 4 operator contract
+- Long form and short form must resolve to the same active workspace context.
+- `New Table` creates/selects a workspace (nameable) and initializes workspace columns if missing.
+- `Open Table` switches active workspace (not row-level open semantics).
+- `Archive Active Table` archives current workspace and shifts context to another active workspace (or bootstrap default).
+- `Restore Archived` restores archived workspace and switches context to it.
+- Row/column operations (`commit`, `delete`, `add/prune columns`, table preview) are workspace-scoped.
+
+### Rapid entry review-note consolidation
+- Phase review notes indicate the rapid-entry modal now has:
+  - capped committed-history visualization,
+  - append staging behavior separate from persistence,
+  - commit-loop hardening and in-progress guards,
+  - explicit placeholder region for deferred measurements-included body,
+  - no schema expansion from placeholder-only phase work.
+- Continue treating rapid-entry placeholder behavior as non-persistent unless explicitly changed by a later phase.
+
+### Forward-maintenance checklist for agents
+When modifying scaffold behavior, ensure this file is updated with:
+1. Behavioral contract change (what operators can do now).
+2. State vocabulary or lifecycle transition updates.
+3. Persistence/schema scope changes.
+4. UI control-surface changes and naming semantics.
+5. Validation/testing notes and known environment limitations.
