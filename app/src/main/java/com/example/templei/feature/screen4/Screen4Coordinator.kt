@@ -34,6 +34,9 @@ class Screen4Coordinator(
     suspend fun deleteSelectedMeasurement(rowId: Long, visibleRows: Int): Pair<Boolean, TableViewModel> =
         measurementEngine.deleteSelectedMeasurement(rowId, visibleRows)
 
+    suspend fun startNewTable(visibleRows: Int): TableViewModel =
+        measurementEngine.startNewTable(visibleRows)
+
     suspend fun beginEditFromRow(rowId: Long): DraftRow = measurementEngine.beginEditFromRow(rowId)
 
     suspend fun applyDraftToRow(rowId: Long, visibleRows: Int): Result<TableViewModel> =

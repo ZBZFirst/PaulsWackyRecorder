@@ -51,6 +51,9 @@ interface Screen4Dao {
     @Query("SELECT * FROM rows ORDER BY id DESC LIMIT 1")
     suspend fun getLatestRow(): RowEntity?
 
+    @Query("DELETE FROM rows")
+    suspend fun deleteAllRows()
+
     @Query("SELECT * FROM rows ORDER BY id DESC LIMIT :limit")
     suspend fun getRows(limit: Int): List<RowEntity>
 

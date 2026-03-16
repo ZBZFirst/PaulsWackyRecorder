@@ -132,6 +132,15 @@
     <string name="screen4_rows_visible_default">Rows Visible: 20</string>
     <string name="screen4_rows_visible">Rows Visible: %1$d</string>
     <string name="screen4_commit_measurement">Commit Measurement</string>
+    <string name="screen4_new_table">New Table</string>
+    <string name="screen4_open_table">Open Old Table</string>
+    <string name="screen4_status_new_table_started">Started a new working table. Existing rows cleared.</string>
+    <string name="screen4_status_open_table_none">No existing rows available to open.</string>
+    <string name="screen4_open_table_title">Open Existing Row into Long Form</string>
+    <string name="screen4_status_open_table_loaded">Loaded row %1$d into long form.</string>
+    <string name="screen4_new_table_confirm_title">Start New Table?</string>
+    <string name="screen4_new_table_confirm_message">This clears existing rows so you can test a fresh table definition.</string>
+    <string name="screen4_new_table_confirm_action">Start New</string>
     <string name="screen4_delete_latest">Delete Latest</string>
     <string name="screen4_begin_rapid_entry">Open Short Form Entry</string>
     <string name="screen4_refresh_table">Refresh / Edit Selected</string>
