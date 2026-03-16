@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TableLayout
@@ -141,16 +142,19 @@ class Screen4Activity : ComponentActivity() {
                         statusText.text = getString(R.string.screen4_status_measurement_updated, selectedRowId!!)
                         renderTable(model)
                     }.onFailure {
+                        rapidModalState = RapidModalState.ERROR
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
                 } else {
                     val result = screen4Coordinator.commitMeasurement(visibleRows, useRapidEntryConfig = false)
                     result.onSuccess { model ->
                         val insertedId = model.rows.firstOrNull()?.rowId ?: 0L
+                        rapidModalState = RapidModalState.COMMITTED
                         statusText.text = getString(R.string.screen4_status_measurement_saved, insertedId)
                         renderTable(model)
                         renderEntryForms(screen4Coordinator.currentDraft())
                     }.onFailure {
+                        rapidModalState = RapidModalState.ERROR
                         statusText.text = getString(R.string.screen4_status_measurement_failed, it.message ?: "unknown")
                     }
                 }
