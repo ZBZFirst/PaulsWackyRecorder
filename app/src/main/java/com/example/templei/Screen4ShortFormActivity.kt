@@ -24,6 +24,7 @@ import com.example.templei.feature.screen4.Screen4FieldInputFormatter
 import com.example.templei.feature.screen4.Screen4MeasurementEngine
 import com.example.templei.feature.screen4.Screen4RapidEntryStore
 import com.example.templei.feature.screen4.Screen4Repository
+import com.example.templei.feature.screen4.Screen4TableSessionStore
 import com.example.templei.ui.navigation.TopNavigation
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -106,6 +107,7 @@ class Screen4ShortFormActivity : ComponentActivity() {
                     db,
                     Screen4DraftStore(this),
                     Screen4RapidEntryStore(this),
+                    Screen4TableSessionStore(this),
                 )
             )
         )
