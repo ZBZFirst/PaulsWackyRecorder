@@ -138,6 +138,13 @@ class Screen4Activity : ComponentActivity() {
             showOpenExistingRowDialog()
         }
 
+        findViewById<Button>(R.id.archiveTableButton).setOnClickListener {
+
+            if (!::screen4Coordinator.isInitialized) return@setOnClickListener
+
+            confirmArchiveActiveTable()
+        }
+
         findViewById<Button>(R.id.addColumnButton).setOnClickListener {
 
             if (!::screen4Coordinator.isInitialized) return@setOnClickListener
@@ -328,7 +335,8 @@ class Screen4Activity : ComponentActivity() {
                     Screen4Repository(
                         db,
                         Screen4DraftStore(this),
-                        Screen4RapidEntryStore(this)
+                        Screen4RapidEntryStore(this),
+                        Screen4TableSessionStore(this)
                     )
                 )
             )
@@ -448,17 +456,27 @@ class Screen4Activity : ComponentActivity() {
 
     private fun confirmStartNewTable() {
 
+        val nameInput = EditText(this).apply {
+            hint = getString(R.string.screen4_new_table_name_hint)
+            setText(getString(R.string.screen4_new_table_default_name))
+        }
+
         AlertDialog.Builder(this)
             .setTitle(R.string.screen4_new_table_confirm_title)
             .setMessage(R.string.screen4_new_table_confirm_message)
+            .setView(nameInput)
             .setPositiveButton(R.string.screen4_new_table_confirm_action) { _, _ ->
                 lifecycleScope.launch {
-                    val model = screen4Coordinator.startNewTable(visibleRows)
+                    val tableName = nameInput.text.toString().trim()
+                    val model = screen4Coordinator.createAndSelectWorkspace(tableName, visibleRows)
                     selectedRowId = null
                     editMode = false
                     renderTable(model)
                     renderEntryForms(screen4Coordinator.startNewDraft())
-                    statusText.text = getString(R.string.screen4_status_new_table_started)
+                    statusText.text = getString(
+                        R.string.screen4_status_new_table_workspace_started,
+                        tableName.ifBlank { getString(R.string.screen4_new_table_default_name) }
+                    )
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -468,23 +486,88 @@ class Screen4Activity : ComponentActivity() {
     private fun showOpenExistingRowDialog() {
 
         lifecycleScope.launch {
-            val model = screen4Coordinator.tableModel(100)
-            if (model.rows.isEmpty()) {
+            val workspaces = screen4Coordinator.listActiveWorkspaces()
+            if (workspaces.isEmpty()) {
                 statusText.text = getString(R.string.screen4_status_open_table_none)
                 return@launch
             }
 
-            val labels = model.rows.map { row -> "Row #${row.rowId}" }.toTypedArray()
+            val labels = workspaces.map { workspace -> workspace.name }.toTypedArray()
             AlertDialog.Builder(this@Screen4Activity)
                 .setTitle(R.string.screen4_open_table_title)
                 .setItems(labels) { _, which ->
-                    val row = model.rows[which]
-                    selectedRowId = row.rowId
+                    val workspace = workspaces[which]
                     lifecycleScope.launch {
-                        val draft = screen4Coordinator.beginEditFromRow(row.rowId)
-                        editMode = true
-                        renderEntryForms(draft)
-                        statusText.text = getString(R.string.screen4_status_open_table_loaded, row.rowId)
+                        val switched = screen4Coordinator.selectWorkspace(workspace.id, visibleRows)
+                        if (!switched) {
+                            statusText.text = getString(R.string.screen4_status_open_table_switch_failed)
+                            return@launch
+                        }
+                        selectedRowId = null
+                        editMode = false
+                        val table = screen4Coordinator.tableModel(visibleRows)
+                        renderTable(table)
+                        renderEntryForms(screen4Coordinator.startNewDraft())
+                        statusText.text = getString(R.string.screen4_status_open_table_loaded_workspace, workspace.name)
+                    }
+                }
+                .setNeutralButton(R.string.screen4_restore_archived_table) { _, _ ->
+                    showRestoreArchivedTablesDialog()
+                }
+                .show()
+        }
+    }
+
+    private fun confirmArchiveActiveTable() {
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.screen4_archive_table_confirm_title)
+            .setMessage(R.string.screen4_archive_table_confirm_message)
+            .setPositiveButton(R.string.screen4_archive_table_confirm_action) { _, _ ->
+                lifecycleScope.launch {
+                    val archived = screen4Coordinator.archiveActiveWorkspace(visibleRows)
+                    if (!archived) {
+                        statusText.text = getString(R.string.screen4_status_archive_table_failed)
+                        return@launch
+                    }
+                    selectedRowId = null
+                    editMode = false
+                    val table = screen4Coordinator.tableModel(visibleRows)
+                    renderTable(table)
+                    renderEntryForms(screen4Coordinator.startNewDraft())
+                    statusText.text = getString(R.string.screen4_status_archive_table_success)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showRestoreArchivedTablesDialog() {
+
+        lifecycleScope.launch {
+            val archived = screen4Coordinator.listArchivedWorkspaces()
+            if (archived.isEmpty()) {
+                statusText.text = getString(R.string.screen4_status_restore_table_none)
+                return@launch
+            }
+
+            val labels = archived.map { it.name }.toTypedArray()
+            AlertDialog.Builder(this@Screen4Activity)
+                .setTitle(R.string.screen4_restore_archived_table_title)
+                .setItems(labels) { _, which ->
+                    val workspace = archived[which]
+                    lifecycleScope.launch {
+                        val restored = screen4Coordinator.restoreWorkspace(workspace.id, visibleRows)
+                        if (!restored) {
+                            statusText.text = getString(R.string.screen4_status_restore_table_failed)
+                            return@launch
+                        }
+                        selectedRowId = null
+                        editMode = false
+                        val table = screen4Coordinator.tableModel(visibleRows)
+                        renderTable(table)
+                        renderEntryForms(screen4Coordinator.startNewDraft())
+                        statusText.text = getString(R.string.screen4_status_restore_table_success, workspace.name)
                     }
                 }
                 .show()

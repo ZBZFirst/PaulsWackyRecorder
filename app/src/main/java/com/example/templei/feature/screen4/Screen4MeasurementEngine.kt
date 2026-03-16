@@ -67,6 +67,51 @@ class Screen4MeasurementEngine(
         }
     }
 
+
+    suspend fun listActiveWorkspaces(): List<TableWorkspaceEntity> = repository.listActiveWorkspaces()
+
+    suspend fun createAndSelectWorkspace(name: String, visibleRows: Int): TableViewModel {
+        repository.createAndSelectWorkspace(name)
+        activeColumns = repository.loadActiveColumns()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
+        draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+        repository.saveDraft(draftRow)
+        return repository.loadTable(limit = visibleRows)
+    }
+
+    suspend fun selectWorkspace(workspaceId: Long, visibleRows: Int): Boolean {
+        val selected = repository.selectWorkspace(workspaceId)
+        if (!selected) return false
+        activeColumns = repository.loadActiveColumns()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
+        draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+        repository.saveDraft(draftRow)
+        return true
+    }
+
+
+    suspend fun listArchivedWorkspaces(): List<TableWorkspaceEntity> = repository.listArchivedWorkspaces()
+
+    suspend fun archiveActiveWorkspace(visibleRows: Int): Boolean {
+        val archived = repository.archiveActiveWorkspace()
+        if (!archived) return false
+        activeColumns = repository.loadActiveColumns()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
+        draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+        repository.saveDraft(draftRow)
+        return true
+    }
+
+    suspend fun restoreWorkspace(workspaceId: Long, visibleRows: Int): Boolean {
+        val restored = repository.restoreWorkspace(workspaceId)
+        if (!restored) return false
+        activeColumns = repository.loadActiveColumns()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
+        draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+        repository.saveDraft(draftRow)
+        return true
+    }
+
     suspend fun deleteLatestMeasurement(visibleRows: Int): Pair<Boolean, TableViewModel> {
         val deleted = repository.deleteLatestMeasurement()
         val table = repository.loadTable(limit = visibleRows)

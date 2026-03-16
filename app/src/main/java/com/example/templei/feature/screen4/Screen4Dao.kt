@@ -8,12 +8,32 @@ import androidx.room.Update
 
 @Dao
 interface Screen4Dao {
+    @Query("SELECT * FROM table_workspaces WHERE archivedAtMillis IS NULL ORDER BY id")
+    suspend fun getActiveWorkspaces(): List<TableWorkspaceEntity>
+
+    @Insert
+    suspend fun insertWorkspace(workspace: TableWorkspaceEntity): Long
+
+    @Query("SELECT * FROM table_workspaces WHERE archivedAtMillis IS NULL AND id = :workspaceId LIMIT 1")
+    suspend fun getActiveWorkspaceById(workspaceId: Long): TableWorkspaceEntity?
+
+    @Query("SELECT * FROM table_workspaces WHERE archivedAtMillis IS NOT NULL ORDER BY archivedAtMillis DESC")
+    suspend fun getArchivedWorkspaces(): List<TableWorkspaceEntity>
+
+    @Query("UPDATE table_workspaces SET archivedAtMillis = :archivedAtMillis WHERE id = :workspaceId")
+    suspend fun archiveWorkspace(workspaceId: Long, archivedAtMillis: Long): Int
+
+    @Query("UPDATE table_workspaces SET archivedAtMillis = NULL WHERE id = :workspaceId")
+    suspend fun restoreWorkspace(workspaceId: Long): Int
+
+    @Query("SELECT * FROM table_workspaces WHERE id = :workspaceId LIMIT 1")
+    suspend fun getWorkspaceById(workspaceId: Long): TableWorkspaceEntity?
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTemplates(templates: List<ColumnTemplateEntity>): List<Long>
 
     @Query("SELECT * FROM column_templates ORDER BY id")
     suspend fun getTemplates(): List<ColumnTemplateEntity>
-
 
     @Insert
     suspend fun insertTemplate(template: ColumnTemplateEntity): Long
@@ -30,11 +50,11 @@ interface Screen4Dao {
     @Update
     suspend fun updateColumn(column: ColumnEntity)
 
-    @Query("SELECT * FROM columns WHERE isActive = 1 ORDER BY position")
-    suspend fun getActiveColumns(): List<ColumnEntity>
+    @Query("SELECT * FROM columns WHERE workspaceId = :workspaceId AND isActive = 1 ORDER BY position")
+    suspend fun getActiveColumns(workspaceId: Long): List<ColumnEntity>
 
-    @Query("UPDATE columns SET isActive = 0 WHERE id IN (:columnIds)")
-    suspend fun deactivateColumns(columnIds: List<Long>)
+    @Query("UPDATE columns SET isActive = 0 WHERE workspaceId = :workspaceId AND id IN (:columnIds)")
+    suspend fun deactivateColumns(workspaceId: Long, columnIds: List<Long>)
 
     @Insert
     suspend fun insertRow(row: RowEntity): Long
@@ -45,44 +65,44 @@ interface Screen4Dao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertCells(cells: List<CellEntity>)
 
-    @Query("DELETE FROM rows WHERE id = :rowId")
-    suspend fun deleteRow(rowId: Long)
+    @Query("DELETE FROM rows WHERE workspaceId = :workspaceId AND id = :rowId")
+    suspend fun deleteRow(workspaceId: Long, rowId: Long)
 
-    @Query("SELECT * FROM rows ORDER BY id DESC LIMIT 1")
-    suspend fun getLatestRow(): RowEntity?
+    @Query("SELECT * FROM rows WHERE workspaceId = :workspaceId ORDER BY id DESC LIMIT 1")
+    suspend fun getLatestRow(workspaceId: Long): RowEntity?
 
-    @Query("DELETE FROM rows")
-    suspend fun deleteAllRows()
+    @Query("DELETE FROM rows WHERE workspaceId = :workspaceId")
+    suspend fun deleteAllRows(workspaceId: Long)
 
-    @Query("SELECT * FROM rows ORDER BY id DESC LIMIT :limit")
-    suspend fun getRows(limit: Int): List<RowEntity>
+    @Query("SELECT * FROM rows WHERE workspaceId = :workspaceId ORDER BY id DESC LIMIT :limit")
+    suspend fun getRows(workspaceId: Long, limit: Int): List<RowEntity>
 
-    @Query("SELECT * FROM rows WHERE id = :rowId LIMIT 1")
-    suspend fun getRowById(rowId: Long): RowEntity?
-
-    @Query(
-        """
-        SELECT c.rowId, c.columnId, c.value
-        FROM cells c
-        WHERE c.rowId IN (:rowIds)
-        """
-    )
-    suspend fun getCellsForRows(rowIds: List<Long>): List<RowCellRecord>
+    @Query("SELECT * FROM rows WHERE workspaceId = :workspaceId AND id = :rowId LIMIT 1")
+    suspend fun getRowById(workspaceId: Long, rowId: Long): RowEntity?
 
     @Query(
         """
         SELECT c.rowId, c.columnId, c.value
         FROM cells c
-        WHERE c.rowId = :rowId
+        WHERE c.workspaceId = :workspaceId AND c.rowId IN (:rowIds)
         """
     )
-    suspend fun getCellsForRow(rowId: Long): List<RowCellRecord>
+    suspend fun getCellsForRows(workspaceId: Long, rowIds: List<Long>): List<RowCellRecord>
 
-    @Query("SELECT COALESCE(MAX(position), -1) FROM columns")
-    suspend fun getMaxColumnPosition(): Int
+    @Query(
+        """
+        SELECT c.rowId, c.columnId, c.value
+        FROM cells c
+        WHERE c.workspaceId = :workspaceId AND c.rowId = :rowId
+        """
+    )
+    suspend fun getCellsForRow(workspaceId: Long, rowId: Long): List<RowCellRecord>
 
-    @Query("SELECT * FROM columns WHERE id = :columnId LIMIT 1")
-    suspend fun getColumnById(columnId: Long): ColumnEntity?
+    @Query("SELECT COALESCE(MAX(position), -1) FROM columns WHERE workspaceId = :workspaceId")
+    suspend fun getMaxColumnPosition(workspaceId: Long): Int
+
+    @Query("SELECT * FROM columns WHERE workspaceId = :workspaceId AND id = :columnId LIMIT 1")
+    suspend fun getColumnById(workspaceId: Long, columnId: Long): ColumnEntity?
 }
 
 data class RowCellRecord(

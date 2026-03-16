@@ -31,6 +31,24 @@ class Screen4Coordinator(
     suspend fun deleteLatestMeasurement(visibleRows: Int): Pair<Boolean, TableViewModel> =
         measurementEngine.deleteLatestMeasurement(visibleRows)
 
+    suspend fun listActiveWorkspaces(): List<TableWorkspaceEntity> =
+        measurementEngine.listActiveWorkspaces()
+
+    suspend fun createAndSelectWorkspace(name: String, visibleRows: Int): TableViewModel =
+        measurementEngine.createAndSelectWorkspace(name, visibleRows)
+
+    suspend fun selectWorkspace(workspaceId: Long, visibleRows: Int): Boolean =
+        measurementEngine.selectWorkspace(workspaceId, visibleRows)
+
+    suspend fun listArchivedWorkspaces(): List<TableWorkspaceEntity> =
+        measurementEngine.listArchivedWorkspaces()
+
+    suspend fun archiveActiveWorkspace(visibleRows: Int): Boolean =
+        measurementEngine.archiveActiveWorkspace(visibleRows)
+
+    suspend fun restoreWorkspace(workspaceId: Long, visibleRows: Int): Boolean =
+        measurementEngine.restoreWorkspace(workspaceId, visibleRows)
+
     suspend fun deleteSelectedMeasurement(rowId: Long, visibleRows: Int): Pair<Boolean, TableViewModel> =
         measurementEngine.deleteSelectedMeasurement(rowId, visibleRows)
 
