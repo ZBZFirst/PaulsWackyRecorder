@@ -7,12 +7,13 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
+        TableWorkspaceEntity::class,
         ColumnTemplateEntity::class,
         ColumnEntity::class,
         RowEntity::class,
         CellEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class Screen4Database : RoomDatabase() {
@@ -28,7 +29,7 @@ abstract class Screen4Database : RoomDatabase() {
                     context.applicationContext,
                     Screen4Database::class.java,
                     "screen4_measurements.db",
-                ).build().also { instance = it }
+                ).fallbackToDestructiveMigration().build().also { instance = it }
             }
         }
     }
