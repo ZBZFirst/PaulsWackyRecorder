@@ -180,18 +180,18 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_commit_measurement" />
+                            android:text="@string/screen4_new_table" />
 
                         <Space
                             android:layout_width="12dp"
                             android:layout_height="wrap_content" />
 
                         <Button
-                            android:id="@+id/deleteRowButton"
+                            android:id="@+id/openTableButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_delete_latest" />
+                            android:text="@string/screen4_open_table" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -202,22 +202,22 @@
                         android:orientation="horizontal">
 
                         <Button
-                            android:id="@+id/selectRowButton"
+                            android:id="@+id/addColumnButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_begin_rapid_entry" />
+                            android:text="@string/screen4_column_management_add" />
 
                         <Space
                             android:layout_width="12dp"
                             android:layout_height="wrap_content" />
 
                         <Button
-                            android:id="@+id/editRowButton"
+                            android:id="@+id/pruneColumnsButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_switch_manual_entry" />
+                            android:text="@string/screen4_column_management_prune" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -228,11 +228,11 @@
                         android:orientation="horizontal">
 
                         <Button
-                            android:id="@+id/deleteSelectedRowButton"
+                            android:id="@+id/addRowButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_delete_selected_placeholder" />
+                            android:text="@string/screen4_commit_measurement" />
 
                         <Space
                             android:layout_width="12dp"
