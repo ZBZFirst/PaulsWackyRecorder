@@ -225,11 +225,12 @@
     <string name="screen4_status_columns_unavailable">Columns are still loading. Try again in a moment.</string>
     <string name="screen4_column_management_title">Column Management</string>
     <string name="screen4_column_management_add">Add Column</string>
+    <string name="screen4_column_management_delete">Delete Columns</string>
     <string name="screen4_column_management_prune">Prune Columns</string>
-    <string name="screen4_prune_columns_title">Prune Optional Columns</string>
-    <string name="screen4_prune_columns_confirm">Prune Selected</string>
-    <string name="screen4_status_prune_none_available">No optional columns available to prune.</string>
-    <string name="screen4_status_pruned_columns">Pruned %1$d columns.</string>
+    <string name="screen4_prune_columns_title">Delete Columns</string>
+    <string name="screen4_prune_columns_confirm">Delete Selected</string>
+    <string name="screen4_status_prune_none_available">No columns available to delete.</string>
+    <string name="screen4_status_pruned_columns">Deleted %1$d columns.</string>
     <string name="screen4_status_prune_failed">Prune failed: %1$s</string>
     <string name="screen4_table_header_row_id">Row ID</string>
     <string name="screen4_table_header_created">Created</string>

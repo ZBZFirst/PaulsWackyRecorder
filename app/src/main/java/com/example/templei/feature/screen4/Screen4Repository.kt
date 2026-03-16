@@ -227,13 +227,9 @@ class Screen4Repository(
         return Result.success(columnId)
     }
 
-    suspend fun pruneColumns(columnIds: List<Long>, activeColumns: List<ActiveColumn>): Result<Int> {
+    suspend fun pruneColumns(columnIds: List<Long>, _activeColumns: List<ActiveColumn>): Result<Int> {
         if (columnIds.isEmpty()) return Result.success(0)
-
-        val requiredColumnIds = activeColumns.filter { it.required }.map { it.columnId }.toSet()
-        if (columnIds.any { it in requiredColumnIds }) {
-            return Result.failure(IllegalArgumentException("Required columns cannot be pruned"))
-        }
+        // The delete-columns flow now allows deactivating any active column, including baseline required columns.
 
         dao.deactivateColumns(activeWorkspaceId, columnIds)
         return Result.success(columnIds.size)

@@ -48,10 +48,10 @@
                 android:id="@+id/dataScreenBody"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
                 android:background="@drawable/bg_section_surface"
                 android:orientation="vertical"
-                android:padding="16dp"
-                android:animateLayoutChanges="true">
+                android:padding="16dp">
 
                 <TextView
                     android:id="@+id/dataSectionTitle"
@@ -117,7 +117,6 @@
                         android:progress="20" />
 
                     <LinearLayout
-                        android:id="@+id/rowActionRow1"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -143,7 +142,6 @@
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/rowActionRow2"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
@@ -165,78 +163,39 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_column_management_prune" />
+                            android:text="@string/screen4_column_management_delete" />
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/rowActionRow3"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="horizontal">
 
                         <Button
-                            android:id="@+id/addRowButton"
+                            android:id="@+id/selectRowButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_new_table" />
+                            android:text="@string/screen4_begin_rapid_entry" />
 
                         <Space
                             android:layout_width="12dp"
                             android:layout_height="wrap_content" />
 
                         <Button
-                            android:id="@+id/openTableButton"
+                            android:id="@+id/deleteSelectedRowButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_open_table" />
+                            android:text="@string/screen4_delete_selected_placeholder" />
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/rowActionRow4"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/addColumnButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/screen4_column_management_add" />
-
-                        <Space
-                            android:layout_width="12dp"
-                            android:layout_height="wrap_content" />
-
-                        <Button
-                            android:id="@+id/pruneColumnsButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/screen4_column_management_prune" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/rowActionRow5"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/addRowButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/screen4_new_table" />
-
-                        <Space
-                            android:layout_width="12dp"
-                            android:layout_height="wrap_content" />
 
                         <Button
                             android:id="@+id/exportCsvButton"
@@ -244,124 +203,17 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/screen4_export_csv" />
-                    </LinearLayout>
 
-                    <LinearLayout
-                        android:id="@+id/rowActionRow6"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
+                        <Space
+                            android:layout_width="12dp"
+                            android:layout_height="wrap_content" />
 
                         <Button
                             android:id="@+id/archiveTableButton"
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:text="@string/screen4_archive_table" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/rowActionRow6"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/archiveTableButton"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/screen4_archive_table" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/rowActionRow6"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/archiveTableButton"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/screen4_archive_table" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/entrySectionHeader"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/screen4_entry_mode_title"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/entrySectionToggleButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/screen4_section_collapse" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/entrySectionBody"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:id="@+id/manualEntryCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_card_surface"
-                        android:orientation="vertical"
-                        android:padding="10dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/screen4_manual_entry_card_title"
-                            android:textStyle="bold" />
-
-                        <LinearLayout
-                            android:id="@+id/manualEntryContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="vertical" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/rapidEntryCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_card_surface"
-                        android:orientation="vertical"
-                        android:padding="10dp"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/screen4_rapid_entry_card_title"
-                            android:textStyle="bold" />
-
-                        <LinearLayout
-                            android:id="@+id/rapidEntryContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="vertical" />
                     </LinearLayout>
                 </LinearLayout>
 

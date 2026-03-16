@@ -258,7 +258,9 @@ This section consolidates key intent from repository markdown notes so agents ca
 - `Open Table` switches active workspace (not row-level open semantics).
 - `Archive Active Table` archives current workspace and shifts context to another active workspace (or bootstrap default).
 - `Restore Archived` restores archived workspace and switches context to it.
-- Row/column operations (`commit`, `delete`, `add/prune columns`, table preview) are workspace-scoped.
+- Main Screen 4 actions focus on workspace lifecycle, column management (`Add Column`, `Delete Columns`), short-form launch, CSV export, and selected-row deletion.
+- Measurement commit is short-form driven (`Commit & Next`) and no longer exposed on the main Screen 4 action surface.
+- Column deletion can target any active column in the workspace when operators choose `Delete Columns`.
 
 ### Rapid entry review-note consolidation
 - Phase review notes indicate the rapid-entry modal now has:
