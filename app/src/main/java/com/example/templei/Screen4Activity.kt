@@ -135,7 +135,7 @@ class Screen4Activity : ComponentActivity() {
 
             if (!::screen4Coordinator.isInitialized) return@setOnClickListener
 
-            showOpenExistingRowDialog()
+            showOpenTableDialog()
         }
 
         findViewById<Button>(R.id.archiveTableButton).setOnClickListener {
@@ -345,10 +345,14 @@ class Screen4Activity : ComponentActivity() {
 
             val table = screen4Coordinator.initialize()
 
+            val workspaceName = screen4Coordinator.activeWorkspace()?.name
+                ?: getString(R.string.screen4_unknown_table)
+
             statusText.text =
                 getString(
-                    R.string.screen4_status_ready,
-                    table.columns.size
+                    R.string.screen4_status_ready_workspace,
+                    table.columns.size,
+                    workspaceName
                 )
 
             renderEntryForms(
@@ -483,7 +487,7 @@ class Screen4Activity : ComponentActivity() {
             .show()
     }
 
-    private fun showOpenExistingRowDialog() {
+    private fun showOpenTableDialog() {
 
         lifecycleScope.launch {
             val workspaces = screen4Coordinator.listActiveWorkspaces()

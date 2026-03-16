@@ -34,6 +34,9 @@ class Screen4Coordinator(
     suspend fun listActiveWorkspaces(): List<TableWorkspaceEntity> =
         measurementEngine.listActiveWorkspaces()
 
+    suspend fun activeWorkspace(): TableWorkspaceEntity? =
+        measurementEngine.activeWorkspace()
+
     suspend fun createAndSelectWorkspace(name: String, visibleRows: Int): TableViewModel =
         measurementEngine.createAndSelectWorkspace(name, visibleRows)
 

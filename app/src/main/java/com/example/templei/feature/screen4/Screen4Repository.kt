@@ -54,6 +54,8 @@ class Screen4Repository(
 
     suspend fun listActiveWorkspaces(): List<TableWorkspaceEntity> = dao.getActiveWorkspaces()
 
+    suspend fun activeWorkspace(): TableWorkspaceEntity? = dao.getActiveWorkspaceById(activeWorkspaceId)
+
     suspend fun createAndSelectWorkspace(name: String): TableWorkspaceEntity {
         val trimmedName = name.trim().ifBlank { DEFAULT_WORKSPACE_NAME }
         val workspaceId = dao.insertWorkspace(

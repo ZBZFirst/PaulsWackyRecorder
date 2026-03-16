@@ -70,6 +70,8 @@ class Screen4MeasurementEngine(
 
     suspend fun listActiveWorkspaces(): List<TableWorkspaceEntity> = repository.listActiveWorkspaces()
 
+    suspend fun activeWorkspace(): TableWorkspaceEntity? = repository.activeWorkspace()
+
     suspend fun createAndSelectWorkspace(name: String, visibleRows: Int): TableViewModel {
         repository.createAndSelectWorkspace(name)
         activeColumns = repository.loadActiveColumns()
