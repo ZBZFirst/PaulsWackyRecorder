@@ -75,7 +75,7 @@ class Screen4MeasurementEngine(
 
     suspend fun startNewTable(visibleRows: Int): TableViewModel {
         repository.startNewTable()
-        selectedRapidEntry = repository.loadRapidEntryConfig()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
         draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
         return repository.loadTable(limit = visibleRows)
     }

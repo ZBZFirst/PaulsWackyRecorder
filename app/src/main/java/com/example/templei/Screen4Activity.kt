@@ -520,7 +520,7 @@ class Screen4Activity : ComponentActivity() {
                                     getString(R.string.screen4_default_new_column_label)
                                 }
                                 lifecycleScope.launch {
-                                    val result = screen4Coordinator.addColumn(requestedLabel, chosenFormat.constraintType, visibleRows)
+                                    val result = screen4Coordinator.addColumn(requestedLabel, chosenFormat.typeName, visibleRows)
                                     result.onSuccess { table ->
                                         renderTable(table)
                                         renderEntryForms(screen4Coordinator.startNewDraft())
