@@ -124,6 +124,58 @@
                         android:orientation="horizontal">
 
                         <Button
+                            android:id="@+id/newTableButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_new_table" />
+
+                        <Space
+                            android:layout_width="12dp"
+                            android:layout_height="wrap_content" />
+
+                        <Button
+                            android:id="@+id/openTableButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_open_table" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowActionRow2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/addColumnButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_column_management_add" />
+
+                        <Space
+                            android:layout_width="12dp"
+                            android:layout_height="wrap_content" />
+
+                        <Button
+                            android:id="@+id/pruneColumnsButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_column_management_prune" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/rowActionRow3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <Button
                             android:id="@+id/addRowButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -143,7 +195,7 @@
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/rowActionRow2"
+                        android:id="@+id/rowActionRow4"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
@@ -169,7 +221,7 @@
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/rowActionRow3"
+                        android:id="@+id/rowActionRow5"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
@@ -187,24 +239,10 @@
                             android:layout_height="wrap_content" />
 
                         <Button
-                            android:id="@+id/addColumnButton"
+                            android:id="@+id/exportCsvButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/screen4_add_column_placeholder" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/rowActionRow4"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/exportCsvButton"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
                             android:text="@string/screen4_export_csv" />
                     </LinearLayout>
                 </LinearLayout>
