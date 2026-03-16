@@ -92,6 +92,13 @@ class Screen4Repository(
         return true
     }
 
+    suspend fun startNewTable() {
+        database.withTransaction {
+            dao.deleteAllRows()
+        }
+        draftStore.clearDraft()
+    }
+
     suspend fun deleteMeasurementById(rowId: Long): Boolean {
         val row = dao.getRowById(rowId) ?: return false
         dao.deleteRow(row.id)

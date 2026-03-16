@@ -73,6 +73,13 @@ class Screen4MeasurementEngine(
         return deleted to table
     }
 
+    suspend fun startNewTable(visibleRows: Int): TableViewModel {
+        repository.startNewTable()
+        selectedRapidEntry = repository.loadRapidEntryConfig()
+        draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())
+        return repository.loadTable(limit = visibleRows)
+    }
+
     suspend fun deleteSelectedMeasurement(rowId: Long, visibleRows: Int): Pair<Boolean, TableViewModel> {
         val deleted = repository.deleteMeasurementById(rowId)
         val table = repository.loadTable(limit = visibleRows)
