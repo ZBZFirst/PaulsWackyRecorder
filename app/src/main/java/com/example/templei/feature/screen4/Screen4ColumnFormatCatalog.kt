@@ -71,7 +71,7 @@ object Screen4ColumnFormatCatalog {
 
 
 
-    private fun previewForType(typeName: String): String {
+    fun previewForType(typeName: String): String {
         return when (typeName) {
             "date_mdy_dash_yyyy" -> "12-31-2024"
             "date_mdy_slash_yyyy" -> "12/31/2024"

@@ -8,33 +8,20 @@ class Screen4ValidationEngineTest {
     private val engine = Screen4ValidationEngine(Screen4ColumnTypeRegistry)
 
     @Test
-    fun date_validator_accepts_mm_dd_yyyy_and_mm_dd_yy() {
-        val dateColumn = ActiveColumn(
-            columnId = 1L,
-            templateId = 1L,
-            fakerKey = "screen4.test",
-            constraintType = "date_mdy_dash_yyyy",
-            label = "sample_date",
-            maxLength = 32,
-            required = false,
-        )
+    fun date_validator_respects_selected_date_format() {
+        val yyyyDateColumn = testColumn(constraintType = "date_mdy_dash_yyyy")
+        val yyDateColumn = testColumn(constraintType = "date_mdy_dash_yy")
 
-        assertNull(engine.validate(dateColumn, "12-31-2024"))
-        assertNull(engine.validate(dateColumn, "12-31-24"))
-        assertEquals("must match MM-DD-YYYY or MM-DD-YY", engine.validate(dateColumn, "2024-12-31"))
+        assertNull(engine.validate(yyyyDateColumn, "12-31-2024"))
+        assertEquals("must match MM-DD-YYYY", engine.validate(yyyyDateColumn, "12-31-24"))
+
+        assertNull(engine.validate(yyDateColumn, "12-31-24"))
+        assertEquals("must match MM-DD-YY", engine.validate(yyDateColumn, "12-31-2024"))
     }
 
     @Test
     fun time_validator_accepts_supported_24h_and_12h_variants() {
-        val timeColumn = ActiveColumn(
-            columnId = 2L,
-            templateId = 1L,
-            fakerKey = "screen4.test",
-            constraintType = "time_hh_mm_ss",
-            label = "sample_time",
-            maxLength = 32,
-            required = false,
-        )
+        val timeColumn = testColumn(constraintType = "time_hh_mm_ss")
 
         assertNull(engine.validate(timeColumn, "09:15"))
         assertNull(engine.validate(timeColumn, "09:15:30"))
@@ -44,26 +31,11 @@ class Screen4ValidationEngineTest {
         assertNull(engine.validate(timeColumn, "09:15:30.123 PM"))
         assertEquals("must match a supported time format", engine.validate(timeColumn, "25:99"))
     }
+
     @Test
-    fun temporal_validation_respects_selected_separator_and_timestamp_type() {
-        val slashDateColumn = ActiveColumn(
-            columnId = 3L,
-            templateId = 1L,
-            fakerKey = "screen4.test",
-            constraintType = "date_mdy_slash_yyyy",
-            label = "slash_date",
-            maxLength = 32,
-            required = false,
-        )
-        val timestampColumn = ActiveColumn(
-            columnId = 4L,
-            templateId = 1L,
-            fakerKey = "screen4.test",
-            constraintType = "timestamp_mdy_dash_second",
-            label = "timestamp",
-            maxLength = 32,
-            required = false,
-        )
+    fun temporal_validation_respects_separator_and_timestamp_precision() {
+        val slashDateColumn = testColumn(constraintType = "date_mdy_slash_yyyy")
+        val timestampColumn = testColumn(constraintType = "timestamp_mdy_dash_second")
 
         assertNull(engine.validate(slashDateColumn, "12/31/2024"))
         assertEquals("must match MM/DD/YYYY", engine.validate(slashDateColumn, "12-31-2024"))
@@ -75,19 +47,73 @@ class Screen4ValidationEngineTest {
     }
 
     @Test
-    fun grouped_number_validation_respects_separator_format() {
-        val groupedColumn = ActiveColumn(
-            columnId = 5L,
-            templateId = 1L,
-            fakerKey = "screen4.test",
-            constraintType = "number_grouped",
-            label = "grouped",
-            maxLength = 32,
-            required = false,
-        )
+    fun grouped_and_decimal_number_validation_respects_required_formatting() {
+        val groupedColumn = testColumn(constraintType = "number_grouped")
+        val groupedDecimalColumn = testColumn(constraintType = "decimal_grouped_2")
 
         assertNull(engine.validate(groupedColumn, "1,234,567"))
         assertEquals("must match grouped format like 1,234", engine.validate(groupedColumn, "1234567"))
+
+        assertNull(engine.validate(groupedDecimalColumn, "1,234.56"))
+        assertEquals("must match grouped format like 1,234.56", engine.validate(groupedDecimalColumn, "1234.56"))
     }
 
+    @Test
+    fun semantic_network_and_location_types_are_enforced() {
+        assertNull(engine.validate(testColumn("ipv4"), "192.168.1.1"))
+        assertEquals("must be a valid IPv4 address", engine.validate(testColumn("ipv4"), "300.1.1.1"))
+
+        assertNull(engine.validate(testColumn("mac_address"), "AA:BB:CC:DD:EE:FF"))
+        assertEquals("must be a valid MAC address", engine.validate(testColumn("mac_address"), "GG:BB:CC:DD:EE:FF"))
+
+        assertNull(engine.validate(testColumn("zipcode"), "12345-6789"))
+        assertEquals(
+            "must match ZIP format (12345 or 12345-6789)",
+            engine.validate(testColumn("zipcode"), "ABCDE"),
+        )
+    }
+
+    @Test
+    fun semantic_financial_and_ratio_types_are_enforced() {
+        assertNull(engine.validate(testColumn("currency_usd"), "$1,234.56"))
+        assertEquals(
+            "must match currency format like $1,234.56",
+            engine.validate(testColumn("currency_usd"), "1234.56"),
+        )
+
+        assertNull(engine.validate(testColumn("percent"), "75%"))
+        assertEquals("must be 0-100 (optional % suffix)", engine.validate(testColumn("percent"), "175%"))
+
+        assertNull(engine.validate(testColumn("percent_decimal"), "0.75"))
+        assertEquals("must be a decimal between 0 and 1", engine.validate(testColumn("percent_decimal"), "1.75"))
+    }
+
+    @Test
+    fun seeded_quantity_column_enforces_signed_decimal_range() {
+        val quantityColumn = testColumn(
+            constraintType = "decimal_2",
+            fakerKey = "screen4.default.quantity",
+        )
+
+        assertNull(engine.validate(quantityColumn, "-999.99"))
+        assertNull(engine.validate(quantityColumn, "125.5"))
+        assertEquals(
+            "must be between -999.99 and 999.99",
+            engine.validate(quantityColumn, "1000.00"),
+        )
+        assertEquals(
+            "must be a signed number with up to 2 decimals",
+            engine.validate(quantityColumn, "12.345"),
+        )
+    }
+
+    private fun testColumn(constraintType: String, fakerKey: String = "screen4.test") = ActiveColumn(
+        columnId = 1L,
+        templateId = 1L,
+        fakerKey = fakerKey,
+        constraintType = constraintType,
+        label = "sample",
+        maxLength = 64,
+        required = false,
+    )
 }

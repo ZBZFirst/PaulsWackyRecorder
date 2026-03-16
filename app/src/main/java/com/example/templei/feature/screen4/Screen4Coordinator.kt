@@ -12,6 +12,9 @@ class Screen4Coordinator(
 
     suspend fun initialize(): TableViewModel = measurementEngine.initialize()
 
+    suspend fun initializeColumnsForActiveWorkspace(initializeDefaultColumns: Boolean, visibleRows: Int): TableViewModel =
+        measurementEngine.initializeColumnsForActiveWorkspace(initializeDefaultColumns, visibleRows)
+
     fun beginRapidEntry(): DraftRow = measurementEngine.beginRapidEntry()
 
     fun startNewDraft(): DraftRow = measurementEngine.startNewDraft()
@@ -37,8 +40,8 @@ class Screen4Coordinator(
     suspend fun activeWorkspace(): TableWorkspaceEntity? =
         measurementEngine.activeWorkspace()
 
-    suspend fun createAndSelectWorkspace(name: String, visibleRows: Int): TableViewModel =
-        measurementEngine.createAndSelectWorkspace(name, visibleRows)
+    suspend fun createAndSelectWorkspace(name: String, visibleRows: Int, initializeDefaultColumns: Boolean): TableViewModel =
+        measurementEngine.createAndSelectWorkspace(name, visibleRows, initializeDefaultColumns)
 
     suspend fun selectWorkspace(workspaceId: Long, visibleRows: Int): Boolean =
         measurementEngine.selectWorkspace(workspaceId, visibleRows)
