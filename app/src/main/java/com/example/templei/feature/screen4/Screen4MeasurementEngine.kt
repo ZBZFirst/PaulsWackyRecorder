@@ -15,6 +15,14 @@ class Screen4MeasurementEngine(
         return repository.loadTable(limit = DEFAULT_VISIBLE_ROWS)
     }
 
+    suspend fun initializeColumnsForActiveWorkspace(initializeDefaultColumns: Boolean, visibleRows: Int): TableViewModel {
+        repository.initializeActiveWorkspaceColumns(initializeDefaultColumns)
+        activeColumns = repository.loadActiveColumns()
+        rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
+        draftRow = repository.loadDraft().normalize(activeColumns)
+        return repository.loadTable(limit = visibleRows)
+    }
+
     fun beginRapidEntry(): DraftRow {
         draftRow = draftRow.normalize(activeColumns)
         repository.saveDraft(draftRow)
@@ -72,8 +80,8 @@ class Screen4MeasurementEngine(
 
     suspend fun activeWorkspace(): TableWorkspaceEntity? = repository.activeWorkspace()
 
-    suspend fun createAndSelectWorkspace(name: String, visibleRows: Int): TableViewModel {
-        repository.createAndSelectWorkspace(name)
+    suspend fun createAndSelectWorkspace(name: String, visibleRows: Int, initializeDefaultColumns: Boolean): TableViewModel {
+        repository.createAndSelectWorkspace(name, initializeDefaultColumns)
         activeColumns = repository.loadActiveColumns()
         rapidEntryConfig = hydrateRapidEntryConfig(repository.loadRapidEntryConfig())
         draftRow = DraftRow(activeColumns.associate { it.columnId to "" }.toMutableMap())

@@ -217,6 +217,51 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <LinearLayout
+                    android:id="@+id/longFormSectionHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/screen4_long_form_title"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/longFormSectionToggleButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/screen4_section_collapse" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/longFormSectionBody"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_card_surface"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/longFormHelpText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/screen4_long_form_help" />
+
+                    <GridLayout
+                        android:id="@+id/longFormGrid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="3"
+                        android:layout_marginTop="8dp" />
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/tablePreviewLabel"
                     android:layout_width="match_parent"

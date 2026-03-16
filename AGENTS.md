@@ -261,6 +261,10 @@ This section consolidates key intent from repository markdown notes so agents ca
 - Main Screen 4 actions focus on workspace lifecycle, column management (`Add Column`, `Delete Columns`), short-form launch, CSV export, and selected-row deletion.
 - Measurement commit is short-form driven (`Commit & Next`) and no longer exposed on the main Screen 4 action surface.
 - Column deletion can target any active column in the workspace when operators choose `Delete Columns`.
+- Short-form field hints and validators are semantic-type driven and should present concrete format examples (`e.g.`) so operators can match required per-column formatting.
+- On first launch/new-empty workspace flows, operators are prompted to create a default table seed or keep the workspace empty.
+- Default seed columns are: `ID`, `Date`, `Time`, `Item`, `Quantity`, `Comment` with explicit semantic formatter/validator intent.
+- Main Screen 4 includes a collapsible Long Form card that renders one draft input per active column in a 3-column grid layout.
 
 ### Rapid entry review-note consolidation
 - Phase review notes indicate the rapid-entry modal now has:

@@ -18,6 +18,7 @@ import android.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.example.templei.feature.screen4.ActiveColumn
 import com.example.templei.feature.screen4.Screen4Coordinator
+import com.example.templei.feature.screen4.Screen4ColumnFormatCatalog
 import com.example.templei.feature.screen4.Screen4Database
 import com.example.templei.feature.screen4.Screen4DraftStore
 import com.example.templei.feature.screen4.Screen4FieldInputFormatter
@@ -258,11 +259,13 @@ class Screen4ShortFormActivity : ComponentActivity() {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                 ).also { it.topMargin = 8 }
+                val previewExample = Screen4ColumnFormatCatalog.previewForType(column.constraintType)
                 hint = getString(
-                    R.string.screen4_draft_hint,
+                    R.string.screen4_draft_hint_with_example,
                     column.label,
                     if (column.required) getString(R.string.screen4_required) else getString(R.string.screen4_optional),
                     column.maxLength,
+                    previewExample,
                 )
                 val columnType = screen4Coordinator.resolveColumnType(column)
                 inputType = inputTypeForWidget(columnType.uiWidget)
