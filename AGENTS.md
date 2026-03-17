@@ -29,7 +29,7 @@ Maintain this baseline unless a task explicitly requests changes:
 - Continue using Main screen as the host-readiness dashboard (hardware + permission + gate status).
 - Keep screen-level feature work modular (e.g., `feature/soundboard`, `device/*`) and avoid coupling unrelated page logic.
 - Preserve reproducible page shells so domain-specific variants can be duplicated quickly.
-- Keep docs (`README.md`, map notes, and this file) synchronized whenever scaffold behavior changes.
+- Keep docs (`docs/README.md`, map notes, and this file) synchronized whenever scaffold behavior changes.
 
 ## Working conventions
 - Prefer small, incremental commits with clear messages.
@@ -52,7 +52,7 @@ Maintain this baseline unless a task explicitly requests changes:
 - If Android SDK is unavailable, still perform static validation and report the limitation.
 
 ## Human + machine documentation contract
-- `README.md` is human-facing onboarding.
+- `docs/README.md` is human-facing onboarding.
 - `AGENTS.md` is machine-facing operating guidance.
 - Keep both aligned whenever scaffold conventions change.
 
@@ -62,23 +62,23 @@ Use this index for Obsidian graph/mind-map navigation.
 ## Obsidian map notes
 Use these markdown notes to create richer graph intersections across pages and source files:
 
-- [[MINDMAP.md]]
-- [[MAP_MainMenu.md]]
-- [[MAP_TopNavigation.md]]
-- [[MAP_Screen1.md]]
-- [[MAP_Screen2.md]]
-- [[MAP_Screen3.md]]
-- [[TableManagementScreen.md]]
+- [[docs/MINDMAP.md]]
+- [[docs/MAP_MainMenu.md]]
+- [[docs/MAP_TopNavigation.md]]
+- [[docs/MAP_Screen1.md]]
+- [[docs/MAP_Screen2.md]]
+- [[docs/MAP_Screen3.md]]
+- [[docs/TableManagementScreen.md]]
 
 - [[AGENTS.md]]
-- [[README.md]]
-- [[MINDMAP.md]]
-- [[MAP_MainMenu.md]]
-- [[MAP_TopNavigation.md]]
-- [[MAP_Screen1.md]]
-- [[MAP_Screen2.md]]
-- [[MAP_Screen3.md]]
-- [[TableManagementScreen.md]]
+- [[docs/README.md]]
+- [[docs/MINDMAP.md]]
+- [[docs/MAP_MainMenu.md]]
+- [[docs/MAP_TopNavigation.md]]
+- [[docs/MAP_Screen1.md]]
+- [[docs/MAP_Screen2.md]]
+- [[docs/MAP_Screen3.md]]
+- [[docs/TableManagementScreen.md]]
 - [[build.gradle.kts]]
 - [[settings.gradle.kts]]
 - [[gradle.properties]]
@@ -218,11 +218,11 @@ This section consolidates key intent from repository markdown notes so agents ca
 - Other markdown notes are retained as historical/reference artifacts, but agent behavior should default to this file when conflicts or drift appear.
 - When scaffold behavior changes, update this consolidated digest in the same change.
 
-### Human scaffold recap (from README + map notes)
+### Human scaffold recap (from docs/README + map notes)
 - App remains an XML-first reproducible scaffold with `MainActivity` launcher/menu and shared top navigation.
 - Screen shells should stay lightweight and easy to duplicate for domain-specific variants.
 - Keep user copy in `strings.xml`, keep navigation shared via `view_top_navigation.xml`, and keep package namespace `com.example.templei`.
-- Obsidian map notes (`MINDMAP.md`, `MAP_*`) are conceptual navigation aids; they do not supersede source-of-truth behavior contracts.
+- Obsidian map notes (`docs/MINDMAP.md`, `docs/MAP_*`) are conceptual navigation aids; they do not supersede source-of-truth behavior contracts.
 
 ### Screen 3 consolidated status
 - Screen 3 is the Action Pad/Soundboard surface with folder-scoped discovery from SAF picker.
