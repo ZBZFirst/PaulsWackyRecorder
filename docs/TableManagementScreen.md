@@ -38,9 +38,8 @@ This host screen launches dedicated short-form capture (`Screen4ShortFormActivit
 - Active workspace continuity is shared across long-form and short-form surfaces.
 - Rapid-entry/short-form commit loop is hosted in a dedicated activity.
 
-## Related document
-For short-form/rapid-entry behavior details and completed implementation summary, see:
-- [RapidEntryUI.md](RapidEntryUI.md)
+## Planned Buildout
+- The contracts and specifications are still being ironed out and developed by the DEV, please offer suggestions but make sure DEV INTENT is FOLLOWED AFTER BEING CLARIFIED IF UNCLEAR STATEMENTS REGARDING FUNCTION ARE PRESENT.
 
 ## Intersections
 - Enter from [[MAP_MainMenu]]
