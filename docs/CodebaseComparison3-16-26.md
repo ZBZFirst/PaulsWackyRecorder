@@ -16,8 +16,7 @@
 The codebase is generally aligned with the **high-level Screen 4 architecture** described in `TableManagementScreen.md` (long-form host, short-form host, coordinator/engine/repository layering, workspace lifecycle actions). However, there are still important documentation mismatches and incomplete integrations:
 
 1. **Workbook (`PaulsUSDataset.xlsx`) integration is documented conceptually but not implemented as a direct import/contract pipeline yet.**
-2. **`TableManagementScreen.md` still contains placeholder wiki-style links (`[[MAP_*]]`) and planning language that does not map to real in-repo docs/pages.**
-3. **The docs describe spreadsheet-driven regex/allowed-values orchestration, while the app currently uses an internal type registry + validation engine path.**
+2. **The docs describe spreadsheet-driven regex/allowed-values orchestration, while the app currently uses an internal type registry + validation engine path.**
 
 ---
 
