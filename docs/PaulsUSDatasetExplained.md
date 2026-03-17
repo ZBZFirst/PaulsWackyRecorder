@@ -2,6 +2,13 @@
 
 **File:** `PaulsUSDataset.xlsx`
 
+## Reality of the Situation
+
+We spent a lot of time figuring out all the specifics of how we would validate user input data and also constrain it to prevent erroneous input from even occurring. We made a regex check to make sure values are allowed to be put in, then
+we made a validation loop to see if the values are allowed_values to be used in the dataset. Almost as a precursor to a drop down selection for certain things like DAY OF THE WEEK.
+
+Our logic in the excel file works but now we need to import this logic for validation and regex checking into the app.
+
 ## Purpose of the Workbook
 
 The workbook `PaulsUSDataset.xlsx` operates as a layered validation system in which each sheet has a specific responsibility. The sheets work together to evaluate whether each cell in the dataset matches the rules assigned to its column. The core idea is that the raw data does not validate itself. Instead, the workbook uses metadata, reusable regex patterns, and validation formulas to decide what each value is supposed to look like and whether it passes.
