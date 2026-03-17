@@ -31,3 +31,5 @@ The actual checking occurs in sheets such as `TestMatrix` and `TestMatrixStep2`.
 In the second stage, `TestMatrixStep2` performs allowed-values validation after the first stage passes. Here the value is compared against the explicit permitted list for that column, such as a list of valid state abbreviations or other constrained domain values. This separates structural correctness from semantic correctness. A value may match a regex but still not belong to the allowed set.
 
 ## Overall Validation Flow
+
+Together, the sheets in `PaulsUSDataset.xlsx` form a declarative validation engine. Raw values come from the dataset, rules come from metadata, patterns come from the regex library, normalization comes from validation rules, and results are reported in the test matrices. This allows the workbook to validate data systematically based on the definition and constraints of each column rather than relying on isolated, hardcoded checks.
