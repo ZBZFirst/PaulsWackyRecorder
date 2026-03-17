@@ -10,7 +10,7 @@
 ## Intersections
 - Enter from [[MAP_MainMenu]]
 - Navigate laterally with [[MAP_TopNavigation]]
-- Parallel page with [[MAP_Screen1]], [[MAP_Screen2]], [[MAP_Screen4]]
+- Parallel page with [[MAP_Screen1]], [[MAP_Screen2]], [[TableManagementScreen]]
 
 ## Purpose and contract
 Screen 3 is the scaffold's **Action Pad / Soundboard** surface.

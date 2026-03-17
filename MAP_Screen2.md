@@ -7,7 +7,7 @@
 ## Intersections
 - Enter from [[MAP_MainMenu]]
 - Navigate laterally with [[MAP_TopNavigation]]
-- Parallel page with [[MAP_Screen1]], [[MAP_Screen3]], [[MAP_Screen4]]
+- Parallel page with [[MAP_Screen1]], [[MAP_Screen3]], [[TableManagementScreen]]
 
 ## State note
 This activity is intentionally a scaffold shell (dead-end) for iterative feature build-out.

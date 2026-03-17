@@ -11,7 +11,7 @@ Launcher and routing hub for all screen activities.
 - Routes into [[MAP_Screen1]]
 - Routes into [[MAP_Screen2]]
 - Routes into [[MAP_Screen3]]
-- Routes into [[MAP_Screen4]]
+- Routes into [[TableManagementScreen]]
 - Shares nav behavior with [[MAP_TopNavigation]]
 
 ## State note

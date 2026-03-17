@@ -68,7 +68,7 @@ Use these markdown notes to create richer graph intersections across pages and s
 - [[MAP_Screen1.md]]
 - [[MAP_Screen2.md]]
 - [[MAP_Screen3.md]]
-- [[MAP_Screen4.md]]
+- [[TableManagementScreen.md]]
 
 - [[AGENTS.md]]
 - [[README.md]]
@@ -78,7 +78,7 @@ Use these markdown notes to create richer graph intersections across pages and s
 - [[MAP_Screen1.md]]
 - [[MAP_Screen2.md]]
 - [[MAP_Screen3.md]]
-- [[MAP_Screen4.md]]
+- [[TableManagementScreen.md]]
 - [[build.gradle.kts]]
 - [[settings.gradle.kts]]
 - [[gradle.properties]]
