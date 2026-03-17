@@ -1,15 +1,13 @@
 # Table Management Screen (Screen 4)
 
-This document replaces the older `MAP_Screen4.md` note and is now the canonical page-map for Screen 4.
-
 ## Purpose
 `Screen4Activity` is the **Table Management Screen** for typed measurement workspaces. It is the long-form control surface where operators manage table lifecycle, schema, and row visibility.
 
 ## Primary source files
-- [activity_screen4.xml](../app/src/main/res/layout/activity_screen4.xml)
-- [Screen4Activity.kt](../app/src/main/java/com/example/templei/Screen4Activity.kt)
-- [Screen4ShortFormActivity.kt](../app/src/main/java/com/example/templei/Screen4ShortFormActivity.kt)
-- [activity_screen4_short_form.xml](../app/src/main/res/layout/activity_screen4_short_form.xml)
+- activity_screen4.xml
+- Screen4Activity.kt
+- Screen4ShortFormActivity.kt
+- activity_screen4_short_form.xml
 
 ## How this screen is used
 
