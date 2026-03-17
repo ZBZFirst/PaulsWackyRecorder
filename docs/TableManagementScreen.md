@@ -41,11 +41,6 @@ This host screen launches dedicated short-form capture (`Screen4ShortFormActivit
 ## Planned Buildout
 - The contracts and specifications are still being ironed out and developed by the DEV, please offer suggestions but make sure DEV INTENT is FOLLOWED AFTER BEING CLARIFIED IF UNCLEAR STATEMENTS REGARDING FUNCTION ARE PRESENT.
 
-## Intersections
-- Enter from [[MAP_MainMenu]]
-- Navigate laterally with [[MAP_TopNavigation]]
-- Parallel page with [[MAP_Screen1]], [[MAP_Screen2]], [[MAP_Screen3]]
-
 ## Related Document
 ` PaulsUSDataset.xlsx under the docs folder. This file contains an intro sheet that explains its purpose. The following sheets explain how we can use regex and validation logic in the sheet to verify if sample data is valid for entry.
 How to implement this for easier coding is still being discussed.
