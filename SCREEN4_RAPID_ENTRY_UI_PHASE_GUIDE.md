@@ -13,6 +13,12 @@ Out of scope for this guide iteration:
 
 ---
 
+## Status snapshot
+All phases in this guide are now implemented in the scaffold baseline.
+Use this file as historical implementation guidance, not as an active progress tracker.
+
+---
+
 ## Scope constraints (current request)
 - Include a **placeholder hook** for future "measurements included" support.
 - Do **not** implement the measurements-included feature body yet.
@@ -29,11 +35,11 @@ Rapid Entry should become a custom modal experience with three parallel channels
    - `Append Committed` (stages row context/history movement without final workflow exit).
    - `Commit & Next` (persists row and keeps user in rapid loop).
 
-The modal should support re-selecting active columns and quick exit back to long-form/manual mode.
+The modal should support re-selecting active columns and quick exit back to Long Form mode.
 
 ---
 
-## Phase A (current): Long Form/Short Form architecture alignment
+## Phase A (completed baseline): Long Form/Short Form architecture alignment
 - Treat `Screen4Activity` as the Long Form host surface.
 - Relabel prior rapid-entry UX copy to Short Form Entry before full screen-level promotion.
 - Preserve existing coordinator/engine/repository pipeline unchanged while host surfaces evolve.
@@ -41,21 +47,21 @@ The modal should support re-selecting active columns and quick exit back to long
 ---
 
 
-## Phase B (current): Dedicated short-form host surface
+## Phase B (completed baseline): Dedicated short-form host surface
 - Introduce `Screen4ShortFormActivity` as a permanent host screen for short-form capture loops.
 - Launch short-form from `Screen4Activity` action controls instead of keeping short-form scoped to a transient dialog host.
 - Preserve the existing coordinator/engine/repository/validation pipeline while moving only host orchestration.
 
 ---
 
-## Phase C (current): Long Form host simplification after promotion
+## Phase C (completed baseline): Long Form host simplification after promotion
 - Remove legacy short-form modal orchestration from `Screen4Activity` now that short-form runs on `Screen4ShortFormActivity`.
 - Keep `Screen4Activity` focused on Long Form table operations (edit/commit/delete/add/prune/export) and short-form launch intent only.
 - Preserve schema/validator/repository behavior; this phase is host cleanup and responsibility clarity.
 
 ---
 
-## Phase D (current): Session resilience on dedicated short-form host
+## Phase D (completed baseline): Session resilience on dedicated short-form host
 - Persist transient short-form UI session state (selected columns, modal state, committed preview history) across activity recreation.
 - Rebind `RapidEntryConfig` from restored selected columns and render the short-form surface without forcing column reselection.
 - Keep persistence schema and validator contracts unchanged; this phase hardens host lifecycle resilience only.
@@ -89,7 +95,7 @@ Validation:
 ## Phase 1 — Modal shell + layout scaffolding
 Goal: replace basic rapid input popup with structured modal shell.
 
-Status: implemented as a baseline shell; follow-up review tracked in `SCREEN4_RAPID_ENTRY_PHASE1_REVIEW.md`.
+Status: implemented as a baseline shell.
 
 Deliverables:
 - Create a dedicated Rapid Entry modal layout XML with:
@@ -116,7 +122,7 @@ Validation:
 ## Phase 2 — Committed-value card stack visualization
 Goal: add short-term history context (up to 5 cards) without expanding layout.
 
-Status: implemented as a baseline stack visualization; review tracked in `SCREEN4_RAPID_ENTRY_PHASE2_REVIEW.md`.
+Status: implemented as a baseline stack visualization.
 
 Deliverables:
 - Introduce in-memory/session model for rapid-entry commit history window (`max = 5`).
@@ -137,7 +143,7 @@ Validation:
 ## Phase 3 — Append Committed behavior
 Goal: support staged capture movement separate from final rapid commit loop.
 
-Status: implemented as baseline append staging; review tracked in `SCREEN4_RAPID_ENTRY_PHASE3_REVIEW.md`.
+Status: implemented as baseline append staging.
 
 Deliverables:
 - Define explicit append semantics:
@@ -157,7 +163,7 @@ Validation:
 ## Phase 4 — Commit loop hardening + parity checks
 Goal: ensure new UI keeps deterministic behavior of existing rapid flow.
 
-Status: implemented as baseline hardening; review tracked in `SCREEN4_RAPID_ENTRY_PHASE4_REVIEW.md`.
+Status: implemented as baseline hardening.
 
 Deliverables:
 - `Commit & Next` remains one-tap loop:
@@ -181,7 +187,7 @@ Validation:
 ## Phase 5 — Future measurements-included placeholder (no feature body)
 Goal: reserve UI location and contract for future module without implementing it.
 
-Status: implemented as non-interactive placeholder region; review tracked in `SCREEN4_RAPID_ENTRY_PHASE5_REVIEW.md`.
+Status: implemented as non-interactive placeholder region.
 
 Deliverables:
 - Add clearly labeled placeholder region in modal (non-interactive for now), e.g.:
