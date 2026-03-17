@@ -1,135 +1,125 @@
-<img width="237" height="21" alt="image" src="https://github.com/user-attachments/assets/c2597466-5f42-4a95-aa8c-1024c0f08089" /># CODEBASE COMPARISON TO DOCS - NIGHTLY REVIEW 3-16
+# Codebase Comparison to Docs (3-16-26 Review)
 
 ## Scope Reviewed
 
 - `docs/TableManagementScreen.md`
 - `docs/PaulsUSDatasetExplained.md`
-- Key app surfaces tied to those docs:
-  - Main menu/navigation shell (`MainActivity`, `activity_main.xml`, `view_top_navigation.xml`)
-  - Screen 4 host + short form + Screen 4 feature modules
-  - Screen 3 state contract (for cross-screen contract consistency)
+- App surfaces tied to those docs:
+  - Main shell/navigation (`MainActivity`, `activity_main.xml`, `view_top_navigation.xml`)
+  - Screen 4 hosts + Screen 4 feature modules
+  - Screen 3 state contract (cross-screen consistency check)
 
 ---
 
 ## Executive Summary
 
-The codebase is generally aligned with the **high-level Screen 4 architecture** described in `TableManagementScreen.md` (long-form host, short-form host, coordinator/engine/repository layering, workspace lifecycle actions). However, there are still important documentation mismatches and incomplete integrations:
-
-1. **Workbook (`PaulsUSDataset.xlsx`) integration is documented conceptually but not implemented as a direct import/contract pipeline yet.**
-2. **The docs describe spreadsheet-driven regex/allowed-values orchestration, while the app currently uses an internal type registry + validation engine path.**
+The codebase is aligned with the current high-level architecture docs for Screen 4 and app navigation contracts. The largest remaining gap is workbook-driven validation integration, where documentation describes a contract/target model and code currently uses an internal registry-driven pipeline.
 
 ---
 
 ## Detailed Comparison
 
-## 1) Screen 4 host model and activity boundaries
+### 1) Screen 4 host model and activity boundaries
 
-### Documented
+**Documented**
+
 `TableManagementScreen.md` defines:
-- `Screen4Activity` as long-form/workspace host
-- `Screen4ShortFormActivity` as rapid-entry host
-- Shared workspace/session context between both
 
-### Codebase
-This is implemented and visible in code structure:
-- `Screen4Activity` hosts workspace lifecycle actions, table controls, and long-form input grid.
-- `Screen4ShortFormActivity` hosts dedicated rapid-entry UX and column selection.
-- Both initialize through `Screen4Coordinator -> Screen4MeasurementEngine -> Screen4Repository`.
+- `Screen4Activity` as long-form/workspace host,
+- `Screen4ShortFormActivity` as rapid-entry host,
+- shared workspace/session context between both.
 
-### Status
-✅ **Aligned** at architecture level.
+**Codebase**
 
----
+This is reflected in app structure and role boundaries.
 
-## 2) Screen 4 command/domain/persistence layering
+**Status**
 
-### Documented
-The docs (and agent contract) expect:
-- UI routes through coordinator
-- measurement behavior in engine
-- persistence in repository/Room
-
-### Codebase
-Current implementation follows this separation:
-- Activity code uses `Screen4Coordinator` APIs for workflow operations.
-- `Screen4MeasurementEngine` owns draft/config/commit composition behaviors.
-- `Screen4Repository` and Room entities/DAO/database own persistence.
-
-### Status
-✅ **Aligned** with layered boundaries.
+✅ Aligned at architecture level.
 
 ---
 
-## 3) Workspace lifecycle and table operations
+### 2) Screen 4 command/domain/persistence layering
 
-### Documented and Planned
-`TableManagementScreen.md` expects support for:
-- New/Open/Close table
-- Add/Delete column(s)
-- Add/Delete row(s)
-- Change/Delete/Blank selected cell value
-- Export a single table as a CSV or xlsx file or a group of tables as a xlsx
-- Assign a Column type from the file "PaulsUSDataset.xlsx", under the 'ColumnMetaData' Sheet.
-- Use .xlsx file to assign column meta data and constraints for usage in the app.
+**Documented**
 
-### Codebase
-These actions are present in `Screen4Activity` and delegated via coordinator.
+Expected layering:
 
-### Status
-✅ **Aligned** for listed lifecycle/operation flows.
+- UI routes through coordinator,
+- measurement behavior in engine,
+- persistence in repository/Room.
 
----
+**Codebase**
 
-## 4) Main menu and shared navigation assumptions
+Current implementation follows this separation.
 
-### Documented/Contract expectation
-Main menu remains navigation hub, with shared top navigation partial across screens.
+**Status**
 
-### Codebase
-- `MainActivity` is still launcher + readiness/status console + routing entry.
-- `activity_main.xml` remains the menu surface with buttons for Screens 1-4.
-- `view_top_navigation.xml` exists as shared navigation partial.
-
-### Status
-✅ **Aligned** with repository invariants.
+✅ Aligned with layered boundaries.
 
 ---
 
-## 5) Spreadsheet-driven validation narrative vs implemented validation system
+### 3) Workspace lifecycle and table operations
 
-### Documented
-`PaulsUSDatasetExplained.md` describes a workbook-centered validation flow using:
-- `ColumnMetaData`
-- `RegexPatterns`
-- `ValidationRules`
-- `TestMatrix`/`TestMatrixStep2`
+**Documented**
 
-### Codebase
-Current app validation is app-native and registry-driven:
-- Semantic type catalog + format groups in Screen 4 modules.
-- Validation routed through `Screen4ValidationEngine` and type registry definitions.
-- No explicit parser/import pipeline from `PaulsUSDataset.xlsx` sheets into runtime rules is currently evident.
+Expected capabilities include workspace lifecycle controls, schema operations, row operations, and export behavior.
 
-### Status
-⚠️ **Partially aligned conceptually, not yet aligned implementation-wise.**
-The docs describe a target model; code currently implements a local equivalent path rather than direct workbook contract ingestion.
+**Codebase**
+
+These are implemented on Screen 4 surfaces and coordinated through Screen 4 feature layers.
+
+**Status**
+
+✅ Aligned for listed lifecycle/operation flows.
 
 ---
 
+### 4) Main menu and shared navigation assumptions
 
-## Recommended Next Documentation Actions
+**Documented/Contract expectation**
 
-1. Add a “Current Implementation vs Planned Integration” section to `docs/PaulsUSDatasetExplained.md` clarifying that workbook-sheet import is not yet fully wired.
-2. If workbook integration is intended next, add a short contract doc specifying:
+Main menu remains the navigation hub, with shared top navigation partial across screens.
+
+**Codebase**
+
+`MainActivity` and the shared XML surfaces preserve this behavior.
+
+**Status**
+
+✅ Aligned with repository invariants.
+
+---
+
+### 5) Workbook-driven validation narrative vs implemented validation
+
+**Documented**
+
+`PaulsUSDatasetExplained.md` describes workbook-centered regex + allowed-values orchestration.
+
+**Codebase**
+
+Current validation is app-native and registry-driven, without direct runtime import of workbook sheets.
+
+**Status**
+
+⚠️ Partially aligned conceptually; direct workbook ingestion remains planned.
+
+---
+
+## Recommended Next Actions
+
+1. Keep workbook docs explicit that sheet-driven import is planned work.
+2. Add a dedicated import contract doc if workbook parsing is prioritized next:
    - parsing boundary,
-   - mapping from sheet concepts to internal types,
+   - mapping from sheet concepts to internal typed rules,
    - validation stage ordering,
-   - error/report format expectations.
+   - error/report semantics.
 
 ---
 
 ## Final Assessment
 
-- **Screen 4 architecture docs are directionally accurate** and mostly match current implementation boundaries.
-- **Workbook validation docs are best read as target architecture guidance**, not a fully realized implementation snapshot.
-- **Biggest delta is documentation precision**, not foundational code structure.
+- Screen 4 architecture docs and current implementation are structurally aligned.
+- Main navigation contract remains consistent.
+- Workbook validation docs are accurate as contract intent, with direct integration still pending.
