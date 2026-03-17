@@ -1,16 +1,16 @@
 # MAP: Screen 3 (Action Pad / Soundboard)
 
 ## Source files
-- [activity_screen3.xml](app/src/main/res/layout/activity_screen3.xml)
-- [Screen3Activity.kt](app/src/main/java/com/example/templei/Screen3Activity.kt)
-- [SoundboardAudioEngine.kt](app/src/main/java/com/example/templei/feature/soundboard/SoundboardAudioEngine.kt)
-- [SoundboardStateMachine.kt](app/src/main/java/com/example/templei/feature/soundboard/SoundboardStateMachine.kt)
-- [strings.xml](app/src/main/res/values/strings.xml)
+- [activity_screen3.xml](../app/src/main/res/layout/activity_screen3.xml)
+- [Screen3Activity.kt](../app/src/main/java/com/example/templei/Screen3Activity.kt)
+- [SoundboardAudioEngine.kt](../app/src/main/java/com/example/templei/feature/soundboard/SoundboardAudioEngine.kt)
+- [SoundboardStateMachine.kt](../app/src/main/java/com/example/templei/feature/soundboard/SoundboardStateMachine.kt)
+- [strings.xml](../app/src/main/res/values/strings.xml)
 
 ## Intersections
 - Enter from [[MAP_MainMenu]]
 - Navigate laterally with [[MAP_TopNavigation]]
-- Parallel page with [[MAP_Screen1]], [[MAP_Screen2]], [[MAP_Screen4]]
+- Parallel page with [[MAP_Screen1]], [[MAP_Screen2]], [[TableManagementScreen]]
 
 ## Purpose and contract
 Screen 3 is the scaffold's **Action Pad / Soundboard** surface.
