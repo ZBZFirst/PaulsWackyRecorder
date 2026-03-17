@@ -10,5 +10,5 @@ Reusable navigation bar used for moving across scaffold pages.
 - Included by [[MAP_Screen1]]
 - Included by [[MAP_Screen2]]
 - Included by [[MAP_Screen3]]
-- Included by [[MAP_Screen4]]
+- Included by [[TableManagementScreen]]
 - Complements launcher flow in [[MAP_MainMenu]]

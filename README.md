@@ -91,6 +91,7 @@ Key points for the current `.wav` path:
 - Phase 1 core delivery is complete: Screen 4 routes activity commands through `Screen4Coordinator` and includes typed-contract scaffolding in `feature/screen4/Screen4Contracts.kt`.
 - Screen 4 from-scratch implementation is now organized as a concise 6-phase execution plan with copy/paste prompt pack in `SCREEN4_TYPED_RAPID_ENTRY_PLAN.md`.
 - Screen 4 typed rapid-entry architecture and 107-type rollout checklist are tracked in `SCREEN4_TYPED_RAPID_ENTRY_PLAN.md` (including a dependency-impact section for existing Room/Coroutine/Compose libs).
+- Screen 4 page-map documentation now lives in `TableManagementScreen.md` (replacing older map naming) and links directly to short-form rapid-entry behavior notes in `RapidEntryUI.md`.
 - Screen 4 now boots a Room-backed schema (`ColumnTemplates`, `Columns`, `Rows`, `Cells`) for deterministic measurement storage.
 - Short form entry uses a draft row that is persisted through interruptions and hydrated on reopen.
 - `Commit Measurement` validates the draft and atomically inserts row + cell values in a single transaction.
