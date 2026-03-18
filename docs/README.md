@@ -13,7 +13,7 @@ This folder contains the primary human-facing documentation for the current app 
 - `CodebaseComparison3-16-26.md`
   - Snapshot review comparing documentation claims to implemented behavior.
   - Focuses on Screen 4 boundaries, shared navigation surfaces, and workbook-validation integration status.
-- `PaulsUSDataset.xlsx`
+- `PaulsDataset.xlsx`
   - Spreadsheet contract source for schema, regex, and validation experiments.
 
 ## Consistency Summary
