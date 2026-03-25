@@ -7,9 +7,15 @@ class Screen4Repository(
     private val draftStore: Screen4DraftStore,
     private val rapidEntryStore: Screen4RapidEntryStore,
     private val tableSessionStore: Screen4TableSessionStore,
+    private val workbookCatalog: Screen4WorkbookCatalog,
 ) {
+    private data class DraftValidationResult(
+        val normalizedValuesByColumnId: Map<Long, String>,
+        val errorMessage: String?,
+    )
+
     private val dao = database.screen4Dao()
-    private val validationEngine = Screen4ValidationEngine(Screen4ColumnTypeRegistry)
+    private val validationEngine = Screen4ValidationEngine(Screen4ColumnTypeRegistry, workbookCatalog)
     private val sessionStateMachine = Screen4WorkspaceSessionStateMachine()
     private var activeWorkspaceId: Long = NO_ACTIVE_WORKSPACE
 
@@ -34,6 +40,8 @@ class Screen4Repository(
                 label = column.label,
                 maxLength = template.maxLength,
                 required = template.required,
+                metadata = workbookCatalog.findDefinitionForTemplate(template.fakerKey, template.constraintType),
+                numericPolicy = Screen4NumericFormatPolicy.fromFakerKey(template.fakerKey),
             )
         }
     }
@@ -136,9 +144,9 @@ class Screen4Repository(
             return Result.failure(IllegalStateException("Cannot commit rows for an empty table. Add columns first."))
         }
 
-        val validationError = validateDraft(draftRow, activeColumns)
-        if (validationError != null) {
-            return Result.failure(IllegalArgumentException(validationError))
+        val validation = validateDraft(draftRow, activeColumns)
+        if (validation.errorMessage != null) {
+            return Result.failure(IllegalArgumentException(validation.errorMessage))
         }
 
         val rowId = database.withTransaction {
@@ -156,7 +164,7 @@ class Screen4Repository(
                     rowId = insertedRowId,
                     columnId = column.columnId,
                     templateId = column.templateId,
-                    value = draftRow.valuesByColumnId[column.columnId].orEmpty().trim(),
+                    value = validation.normalizedValuesByColumnId[column.columnId].orEmpty(),
                 )
             }
             dao.insertCells(cells)
@@ -192,9 +200,9 @@ class Screen4Repository(
         activeColumns: List<ActiveColumn>,
     ): Result<Unit> {
         val candidateDraft = DraftRow(valuesByColumnId = updatedValuesByColumnId.toMutableMap())
-        val validationError = validateDraft(candidateDraft, activeColumns)
-        if (validationError != null) {
-            return Result.failure(IllegalArgumentException(validationError))
+        val validation = validateDraft(candidateDraft, activeColumns)
+        if (validation.errorMessage != null) {
+            return Result.failure(IllegalArgumentException(validation.errorMessage))
         }
 
         val row = dao.getRowById(activeWorkspaceId, rowId)
@@ -207,7 +215,7 @@ class Screen4Repository(
                     rowId = row.id,
                     columnId = column.columnId,
                     templateId = column.templateId,
-                    value = updatedValuesByColumnId[column.columnId].orEmpty().trim(),
+                    value = validation.normalizedValuesByColumnId[column.columnId].orEmpty(),
                 )
             }
             dao.upsertCells(cells)
@@ -227,6 +235,67 @@ class Screen4Repository(
                 templateId = template.id,
                 position = nextPosition,
                 label = label.ifBlank { template.defaultLabel },
+                isActive = true,
+            )
+        )
+        return Result.success(columnId)
+    }
+
+    suspend fun addWorkbookColumn(metadataColumnName: String, label: String): Result<Long> {
+        val metadata = workbookCatalog.findColumnDefinition(metadataColumnName)
+            ?: return Result.failure(IllegalArgumentException("Workbook column metadata not found for $metadataColumnName"))
+
+        val fakerKey = "${Screen4WorkbookCatalog.WORKBOOK_TEMPLATE_PREFIX}${metadata.columnName}"
+        val template = dao.getTemplateByFakerKey(fakerKey) ?: run {
+            val templateEntity = ColumnTemplateEntity(
+                fakerKey = fakerKey,
+                defaultLabel = label.ifBlank { metadata.displayName },
+                constraintType = metadata.columnName,
+                maxLength = metadata.maxLength ?: metadata.uiExampleValue.length.coerceAtLeast(32),
+                required = metadata.required,
+            )
+            val id = dao.insertTemplate(templateEntity)
+            templateEntity.copy(id = id)
+        }
+
+        val nextPosition = dao.getMaxColumnPosition(activeWorkspaceId) + 1
+        val columnId = dao.insertColumn(
+            ColumnEntity(
+                workspaceId = activeWorkspaceId,
+                templateId = template.id,
+                position = nextPosition,
+                label = label.ifBlank { metadata.displayName },
+                isActive = true,
+            )
+        )
+        return Result.success(columnId)
+    }
+
+    suspend fun addNumericPolicyColumn(
+        label: String,
+        numericPolicy: Screen4NumericFormatPolicy,
+    ): Result<Long> {
+        val fallbackLabel = label.ifBlank { numericPolicy.displayLabel() }
+        val fakerKey = numericPolicy.toFakerKey()
+        val template = dao.getTemplateByFakerKey(fakerKey) ?: run {
+            val templateEntity = ColumnTemplateEntity(
+                fakerKey = fakerKey,
+                defaultLabel = fallbackLabel,
+                constraintType = numericPolicy.constraintType(),
+                maxLength = numericPolicy.inputMaxLength(),
+                required = false,
+            )
+            val id = dao.insertTemplate(templateEntity)
+            templateEntity.copy(id = id)
+        }
+
+        val nextPosition = dao.getMaxColumnPosition(activeWorkspaceId) + 1
+        val columnId = dao.insertColumn(
+            ColumnEntity(
+                workspaceId = activeWorkspaceId,
+                templateId = template.id,
+                position = nextPosition,
+                label = fallbackLabel,
                 isActive = true,
             )
         )
@@ -365,21 +434,27 @@ class Screen4Repository(
         return template.copy(id = id)
     }
 
-    private fun validateDraft(draftRow: DraftRow, activeColumns: List<ActiveColumn>): String? {
+    private fun validateDraft(draftRow: DraftRow, activeColumns: List<ActiveColumn>): DraftValidationResult {
+        val normalizedValuesByColumnId = mutableMapOf<Long, String>()
         activeColumns.forEach { column ->
-            val value = draftRow.valuesByColumnId[column.columnId].orEmpty().trim()
+            val value = validationEngine.normalizeForCommit(column, draftRow.valuesByColumnId[column.columnId].orEmpty())
+            normalizedValuesByColumnId[column.columnId] = value
+
             if (column.required && value.isBlank()) {
-                return "${column.label} is required"
+                return DraftValidationResult(normalizedValuesByColumnId, "${column.label} is required")
             }
             if (value.length > column.maxLength) {
-                return "${column.label} exceeds max length ${column.maxLength}"
+                return DraftValidationResult(
+                    normalizedValuesByColumnId,
+                    "${column.label} exceeds max length ${column.maxLength}"
+                )
             }
-            val validationError = validationEngine.validate(column, value)
+            val validationError = validationEngine.validate(column, value, Screen4ValidationStage.COMMIT)
             if (validationError != null) {
-                return "${column.label}: $validationError"
+                return DraftValidationResult(normalizedValuesByColumnId, "${column.label}: $validationError")
             }
         }
-        return null
+        return DraftValidationResult(normalizedValuesByColumnId, null)
     }
 
     companion object {

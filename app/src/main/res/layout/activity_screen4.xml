@@ -69,6 +69,23 @@
                     android:text="@string/screen4_status_initializing"
                     android:textSize="14sp" />
 
+                <TextView
+                    android:id="@+id/workspaceSummaryText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/screen4_workspace_summary_placeholder"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tableStatsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/screen4_table_stats_placeholder"
+                    android:textSize="13sp" />
+
                 <LinearLayout
                     android:id="@+id/actionSectionHeader"
                     android:layout_width="match_parent"
@@ -254,12 +271,103 @@
                         android:layout_height="wrap_content"
                         android:text="@string/screen4_long_form_help" />
 
-                    <GridLayout
-                        android:id="@+id/longFormGrid"
+                    <LinearLayout
+                        android:id="@+id/longFormActionRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:columnCount="3"
-                        android:layout_marginTop="8dp" />
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/saveDraftButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_save_new_row" />
+
+                        <Space
+                            android:layout_width="8dp"
+                            android:layout_height="wrap_content" />
+
+                        <Button
+                            android:id="@+id/loadSelectedRowButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_load_selected_row" />
+
+                        <Space
+                            android:layout_width="8dp"
+                            android:layout_height="wrap_content" />
+
+                        <Button
+                            android:id="@+id/clearDraftButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/screen4_clear_draft" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/longFormEditorCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_section_surface"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:id="@+id/longFormEditorTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/screen4_active_field_title"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/longFormEditorLabel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textStyle="bold"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/longFormEditorMeta"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textSize="12sp" />
+
+                        <LinearLayout
+                            android:id="@+id/longFormEditorInputContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="vertical" />
+
+                        <TextView
+                            android:id="@+id/longFormEditorValidation"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/longFormFieldsTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/screen4_long_form_fields_title"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/longFormFieldList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical" />
                 </LinearLayout>
 
                 <TextView

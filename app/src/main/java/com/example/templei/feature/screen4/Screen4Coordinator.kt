@@ -7,8 +7,9 @@ package com.example.templei.feature.screen4
  */
 class Screen4Coordinator(
     private val measurementEngine: Screen4MeasurementEngine,
+    private val workbookCatalog: Screen4WorkbookCatalog,
 ) {
-    private val validationEngine = Screen4ValidationEngine(Screen4ColumnTypeRegistry)
+    private val validationEngine = Screen4ValidationEngine(Screen4ColumnTypeRegistry, workbookCatalog)
 
     suspend fun initialize(): TableViewModel = measurementEngine.initialize()
 
@@ -20,8 +21,10 @@ class Screen4Coordinator(
     fun startNewDraft(): DraftRow = measurementEngine.startNewDraft()
 
 
-    fun configureRapidEntry(activeColumnIds: Set<Long>): RapidEntryConfig =
-        measurementEngine.configureRapidEntry(activeColumnIds)
+    fun configureRapidEntry(
+        activeColumnIds: Set<Long>,
+        fillRulesByColumnId: Map<Long, RapidEntryFillRule> = emptyMap(),
+    ): RapidEntryConfig = measurementEngine.configureRapidEntry(activeColumnIds, fillRulesByColumnId)
 
     fun currentRapidEntryConfig(): RapidEntryConfig = measurementEngine.currentRapidEntryConfig()
 
@@ -69,16 +72,28 @@ class Screen4Coordinator(
     suspend fun addColumn(label: String, constraintType: String, visibleRows: Int): Result<TableViewModel> =
         measurementEngine.addColumn(label, constraintType, visibleRows)
 
+    suspend fun addWorkbookColumn(metadataColumnName: String, label: String, visibleRows: Int): Result<TableViewModel> =
+        measurementEngine.addWorkbookColumn(metadataColumnName, label, visibleRows)
+
+    suspend fun addNumericPolicyColumn(
+        label: String,
+        numericPolicy: Screen4NumericFormatPolicy,
+        visibleRows: Int,
+    ): Result<TableViewModel> = measurementEngine.addNumericPolicyColumn(label, numericPolicy, visibleRows)
+
     suspend fun pruneColumns(columnIds: List<Long>, visibleRows: Int): Result<TableViewModel> =
         measurementEngine.pruneColumns(columnIds, visibleRows)
 
     suspend fun tableModel(visibleRows: Int): TableViewModel = measurementEngine.tableModel(visibleRows)
 
 
-    fun columnFormatGroups(): List<Screen4FormatGroup> = Screen4ColumnFormatCatalog.allGroups()
+    fun workbookColumnGroups(): List<Screen4WorkbookColumnGroup> = workbookCatalog.selectableGroups()
 
-    fun columnFormatOptions(groupKey: String): List<Screen4FormatOption> =
-        Screen4ColumnFormatCatalog.optionsForGroup(groupKey)
+    fun workbookColumnSubgroups(groupKey: String): List<Screen4WorkbookColumnSubgroup> =
+        workbookCatalog.subgroupsForGroup(groupKey)
+
+    fun workbookColumnsForGroup(groupKey: String, subgroupKey: String): List<Screen4WorkbookColumnDefinition> =
+        workbookCatalog.columnsForGroup(groupKey, subgroupKey)
 
     fun activeColumns(): List<ActiveColumn> = measurementEngine.activeColumns()
 
@@ -88,11 +103,14 @@ class Screen4Coordinator(
     fun resolveColumnType(column: ActiveColumn): ColumnTypeDefinition =
         Screen4ColumnTypeRegistry.resolveByConstraintType(column.constraintType)
 
+    fun normalizeField(column: ActiveColumn, value: String): String =
+        validationEngine.normalizeForInput(column, value)
+
     fun validateField(column: ActiveColumn, value: String): String? {
-        val trimmed = value.trim()
+        val trimmed = validationEngine.normalizeForInput(column, value)
         if (column.required && trimmed.isBlank()) return "${column.label} is required"
         if (trimmed.length > column.maxLength) return "${column.label} exceeds max length ${column.maxLength}"
-        return validationEngine.validate(column, trimmed)
+        return validationEngine.validate(column, trimmed, Screen4ValidationStage.INPUT)
     }
 
 }

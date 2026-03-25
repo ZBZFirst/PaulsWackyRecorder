@@ -1,10 +1,19 @@
 package com.example.templei.feature.screen4
 
-enum class AutoValueSource {
-    SYSTEM_TIME_UNIX_MS,
+enum class RapidEntryFillMode {
+    MANUAL,
+    CURRENT_DATE,
+    CURRENT_TIME,
+    CURRENT_TIMESTAMP,
+    FIXED_VALUE,
 }
+
+data class RapidEntryFillRule(
+    val mode: RapidEntryFillMode,
+    val fixedValue: String? = null,
+)
 
 data class RapidEntryConfig(
     val activeColumnIds: Set<Long>,
-    val autoColumns: Map<Long, AutoValueSource>,
+    val fillRulesByColumnId: Map<Long, RapidEntryFillRule>,
 )

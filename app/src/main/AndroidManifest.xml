@@ -38,8 +38,14 @@
         <activity android:name=".Screen1Activity" android:exported="false" />
         <activity android:name=".Screen2Activity" android:exported="false" />
         <activity android:name=".Screen3Activity" android:exported="false" />
-        <activity android:name=".Screen4Activity" android:exported="false" />
-        <activity android:name=".Screen4ShortFormActivity" android:exported="false" />
+        <activity
+            android:name=".Screen4Activity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".Screen4ShortFormActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".MainActivity"

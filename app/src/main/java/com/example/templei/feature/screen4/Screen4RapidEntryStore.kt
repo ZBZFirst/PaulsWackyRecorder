@@ -7,18 +7,18 @@ class Screen4RapidEntryStore(context: Context) {
 
     fun save(config: RapidEntryConfig) {
         val active = config.activeColumnIds.joinToString(",")
-        val auto = config.autoColumns.entries.joinToString("||") { (columnId, source) ->
-            "$columnId::${source.name}"
+        val rules = config.fillRulesByColumnId.entries.joinToString("||") { (columnId, rule) ->
+            "$columnId::${rule.mode.name}::${rule.fixedValue.orEmpty()}"
         }
         prefs.edit()
             .putString(KEY_ACTIVE_COLUMN_IDS, active)
-            .putString(KEY_AUTO_COLUMNS, auto)
+            .putString(KEY_FILL_RULES, rules)
             .apply()
     }
 
     fun load(): RapidEntryConfig {
         val activeRaw = prefs.getString(KEY_ACTIVE_COLUMN_IDS, "").orEmpty()
-        val autoRaw = prefs.getString(KEY_AUTO_COLUMNS, "").orEmpty()
+        val rulesRaw = prefs.getString(KEY_FILL_RULES, "").orEmpty()
 
         val active = if (activeRaw.isBlank()) {
             emptySet()
@@ -28,25 +28,26 @@ class Screen4RapidEntryStore(context: Context) {
                 .toSet()
         }
 
-        val auto = if (autoRaw.isBlank()) {
+        val rules = if (rulesRaw.isBlank()) {
             emptyMap()
         } else {
-            autoRaw.split("||")
+            rulesRaw.split("||")
                 .mapNotNull {
-                    val parts = it.split("::")
-                    if (parts.size != 2) return@mapNotNull null
+                    val parts = it.split("::", limit = 3)
+                    if (parts.size < 2) return@mapNotNull null
                     val columnId = parts[0].toLongOrNull() ?: return@mapNotNull null
-                    val source = runCatching { AutoValueSource.valueOf(parts[1]) }.getOrNull() ?: return@mapNotNull null
-                    columnId to source
+                    val mode = runCatching { RapidEntryFillMode.valueOf(parts[1]) }.getOrNull() ?: return@mapNotNull null
+                    val fixedValue = parts.getOrNull(2)?.ifBlank { null }
+                    columnId to RapidEntryFillRule(mode = mode, fixedValue = fixedValue)
                 }
                 .toMap()
         }
 
-        return RapidEntryConfig(activeColumnIds = active, autoColumns = auto)
+        return RapidEntryConfig(activeColumnIds = active, fillRulesByColumnId = rules)
     }
 
     companion object {
         private const val KEY_ACTIVE_COLUMN_IDS = "active_column_ids"
-        private const val KEY_AUTO_COLUMNS = "auto_columns"
+        private const val KEY_FILL_RULES = "fill_rules"
     }
 }

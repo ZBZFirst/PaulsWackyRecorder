@@ -15,12 +15,14 @@ This folder contains the primary human-facing documentation for the current app 
   - Focuses on Screen 4 boundaries, shared navigation surfaces, and workbook-validation integration status.
 - `PaulsDataset.xlsx`
   - Spreadsheet contract source for schema, regex, and validation experiments.
+- `Screen4InputConstraints.md`
+  - Input constraint matrix for Screen 4 group-level widgets, keyboard behavior, and validation expectations.
 
 ## Consistency Summary
 
 - Screen 4 boundary docs and current code are aligned at the coordinator/engine/repository layering level.
 - Main navigation role assumptions remain aligned with the app shell contracts.
-- Workbook validation docs represent target integration intent; direct runtime import from workbook sheets remains planned, not complete.
+- Workbook validation docs now align with runtime behavior for Screen 4 workbook-backed column metadata, normalization, regex validation, and allowed-value enforcement.
 
 ## Maintenance Rule
 

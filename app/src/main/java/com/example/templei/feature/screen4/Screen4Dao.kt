@@ -38,6 +38,9 @@ interface Screen4Dao {
     @Insert
     suspend fun insertTemplate(template: ColumnTemplateEntity): Long
 
+    @Query("SELECT * FROM column_templates WHERE fakerKey = :fakerKey LIMIT 1")
+    suspend fun getTemplateByFakerKey(fakerKey: String): ColumnTemplateEntity?
+
     @Query("SELECT * FROM column_templates WHERE constraintType = :constraintType LIMIT 1")
     suspend fun getTemplateByConstraintType(constraintType: String): ColumnTemplateEntity?
 

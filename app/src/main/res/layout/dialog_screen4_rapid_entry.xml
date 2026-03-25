@@ -38,10 +38,9 @@
         android:text="@string/screen4_rapid_entry_reselect" />
 
     <LinearLayout
-        android:id="@+id/rapidMeasurementsPlaceholder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:background="@drawable/bg_card_surface"
         android:orientation="vertical"
         android:padding="10dp">
@@ -49,80 +48,64 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/screen4_rapid_entry_measurements_placeholder_title"
+            android:text="@string/screen4_active_field_title"
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/rapidEditorLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="@string/screen4_rapid_entry_measurements_placeholder_body"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/rapidEditorMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:textSize="12sp" />
 
-        <Button
-            android:id="@+id/rapidMeasurementsPlaceholderButton"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/rapidEditorInputContainer"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:enabled="false"
-            android:text="@string/screen4_rapid_entry_measurements_placeholder_action" />
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/rapidEditorValidation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textSize="12sp" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:orientation="horizontal">
+        android:background="@drawable/bg_card_surface"
+        android:orientation="vertical"
+        android:padding="10dp">
 
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_card_surface"
-            android:orientation="vertical"
-            android:padding="10dp">
+            android:text="@string/screen4_rapid_entry_new_values_title"
+            android:textStyle="bold" />
 
-            <TextView
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="8dp">
+
+            <LinearLayout
+                android:id="@+id/rapidNewValuesContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/screen4_rapid_entry_committed_title"
-                android:textStyle="bold" />
-
-            <FrameLayout
-                android:id="@+id/rapidCommittedContainer"
-                android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:layout_marginTop="8dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_card_surface"
-            android:orientation="vertical"
-            android:padding="10dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/screen4_rapid_entry_new_values_title"
-                android:textStyle="bold" />
-
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:layout_marginTop="8dp">
-
-                <LinearLayout
-                    android:id="@+id/rapidNewValuesContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </ScrollView>
-        </LinearLayout>
+                android:orientation="vertical" />
+        </ScrollView>
     </LinearLayout>
 
     <TextView
@@ -132,29 +115,11 @@
         android:layout_marginTop="8dp"
         android:textSize="12sp" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/rapidAppendButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/rapidAppendButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/screen4_rapid_entry_append" />
-
-        <Space
-            android:layout_width="12dp"
-            android:layout_height="wrap_content" />
-
-        <Button
-            android:id="@+id/rapidCommitNextButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/screen4_rapid_entry_commit_next" />
-    </LinearLayout>
+        android:text="@string/screen4_rapid_entry_append" />
 
 </LinearLayout>

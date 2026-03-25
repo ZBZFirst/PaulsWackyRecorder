@@ -41,17 +41,25 @@ class Screen4MeasurementEngine(
         return draftRow
     }
 
-    fun configureRapidEntry(activeColumnIds: Set<Long>): RapidEntryConfig {
+    fun configureRapidEntry(
+        activeColumnIds: Set<Long>,
+        fillRulesByColumnId: Map<Long, RapidEntryFillRule> = emptyMap(),
+    ): RapidEntryConfig {
         val allIds = activeColumns.map { it.columnId }.toSet()
         val sanitizedActive = (if (activeColumnIds.isEmpty()) allIds else activeColumnIds).intersect(allIds)
-        val autoColumns = activeColumns
+        val rules = activeColumns
             .filter { it.columnId in sanitizedActive }
-            .filter { shouldAutoFill(it) }
-            .associate { it.columnId to AutoValueSource.SYSTEM_TIME_UNIX_MS }
+            .associate { column ->
+                column.columnId to (
+                    fillRulesByColumnId[column.columnId]
+                        ?.takeIf { it.isCompatibleWith(column) }
+                        ?: defaultFillRuleFor(column)
+                )
+            }
 
         rapidEntryConfig = RapidEntryConfig(
             activeColumnIds = sanitizedActive,
-            autoColumns = autoColumns,
+            fillRulesByColumnId = rules,
         )
         repository.saveRapidEntryConfig(rapidEntryConfig)
         return rapidEntryConfig
@@ -164,6 +172,32 @@ class Screen4MeasurementEngine(
             }
     }
 
+    suspend fun addWorkbookColumn(metadataColumnName: String, label: String, visibleRows: Int): Result<TableViewModel> {
+        return repository.addWorkbookColumn(metadataColumnName = metadataColumnName, label = label)
+            .mapCatching {
+                activeColumns = repository.loadActiveColumns()
+                rapidEntryConfig = hydrateRapidEntryConfig(rapidEntryConfig)
+                draftRow = draftRow.normalize(activeColumns)
+                repository.saveDraft(draftRow)
+                repository.loadTable(limit = visibleRows)
+            }
+    }
+
+    suspend fun addNumericPolicyColumn(
+        label: String,
+        numericPolicy: Screen4NumericFormatPolicy,
+        visibleRows: Int,
+    ): Result<TableViewModel> {
+        return repository.addNumericPolicyColumn(label = label, numericPolicy = numericPolicy)
+            .mapCatching {
+                activeColumns = repository.loadActiveColumns()
+                rapidEntryConfig = hydrateRapidEntryConfig(rapidEntryConfig)
+                draftRow = draftRow.normalize(activeColumns)
+                repository.saveDraft(draftRow)
+                repository.loadTable(limit = visibleRows)
+            }
+    }
+
     suspend fun pruneColumns(columnIds: List<Long>, visibleRows: Int): Result<TableViewModel> {
         return repository.pruneColumns(columnIds, activeColumns).mapCatching {
             activeColumns = repository.loadActiveColumns()
@@ -191,8 +225,9 @@ class Screen4MeasurementEngine(
         }
 
         val composed = activeColumns.associate { column ->
+            val fillRule = rapidEntryConfig.fillRulesByColumnId[column.columnId]
             val value = when {
-                column.columnId in rapidEntryConfig.autoColumns -> autoValueFor(rapidEntryConfig.autoColumns.getValue(column.columnId))
+                fillRule != null && fillRule.mode != RapidEntryFillMode.MANUAL -> autoValueFor(column, fillRule)
                 column.columnId in activeIds -> base[column.columnId].orEmpty()
                 else -> ""
             }
@@ -204,28 +239,67 @@ class Screen4MeasurementEngine(
 
     private fun nextRapidEntryDraft(): DraftRow {
         val next = activeColumns.associate { column ->
-            val retained = if (column.columnId in rapidEntryConfig.autoColumns) "" else draftRow.valuesByColumnId[column.columnId].orEmpty()
+            val fillRule = rapidEntryConfig.fillRulesByColumnId[column.columnId]
+            val retained = if (fillRule != null && fillRule.mode != RapidEntryFillMode.MANUAL) {
+                ""
+            } else {
+                draftRow.valuesByColumnId[column.columnId].orEmpty()
+            }
             column.columnId to retained
         }.toMutableMap()
         return DraftRow(valuesByColumnId = next)
     }
 
-    private fun shouldAutoFill(column: ActiveColumn): Boolean {
-        val normalized = column.constraintType.trim().uppercase()
-        return normalized == "TIMESTAMP" || normalized == "TIMESTAMP_UNIX_MS"
+    private fun defaultFillRuleFor(column: ActiveColumn): RapidEntryFillRule {
+        val resolvedType = Screen4ColumnTypeRegistry.resolveByConstraintType(column.constraintType)
+        return when {
+            Screen4InputUiPolicy.usesTimestampPicker(column, resolvedType) -> RapidEntryFillRule(RapidEntryFillMode.CURRENT_TIMESTAMP)
+            Screen4InputUiPolicy.usesDatePicker(column, resolvedType) -> RapidEntryFillRule(RapidEntryFillMode.CURRENT_DATE)
+            Screen4InputUiPolicy.usesTimePicker(column, resolvedType) -> RapidEntryFillRule(RapidEntryFillMode.CURRENT_TIME)
+            else -> RapidEntryFillRule(RapidEntryFillMode.MANUAL)
+        }
     }
 
-    private fun autoValueFor(source: AutoValueSource): String {
-        return when (source) {
-            AutoValueSource.SYSTEM_TIME_UNIX_MS -> System.currentTimeMillis().toString()
+    private fun autoValueFor(column: ActiveColumn, rule: RapidEntryFillRule): String {
+        val now = java.util.Calendar.getInstance()
+        return when (rule.mode) {
+            RapidEntryFillMode.MANUAL -> draftRow.valuesByColumnId[column.columnId].orEmpty()
+            RapidEntryFillMode.CURRENT_DATE -> Screen4TemporalInputPolicy.formatDateForColumn(
+                column,
+                now.get(java.util.Calendar.YEAR),
+                now.get(java.util.Calendar.MONTH),
+                now.get(java.util.Calendar.DAY_OF_MONTH),
+            )
+            RapidEntryFillMode.CURRENT_TIME -> Screen4TemporalInputPolicy.formatTime(
+                column.constraintType,
+                now.get(java.util.Calendar.HOUR_OF_DAY),
+                now.get(java.util.Calendar.MINUTE),
+            )
+            RapidEntryFillMode.CURRENT_TIMESTAMP -> Screen4TemporalInputPolicy.formatTimestamp(
+                column.constraintType,
+                now.get(java.util.Calendar.YEAR),
+                now.get(java.util.Calendar.MONTH),
+                now.get(java.util.Calendar.DAY_OF_MONTH),
+                now.get(java.util.Calendar.HOUR_OF_DAY),
+                now.get(java.util.Calendar.MINUTE),
+            )
+            RapidEntryFillMode.FIXED_VALUE -> rule.fixedValue.orEmpty()
         }
     }
 
     private fun hydrateRapidEntryConfig(candidate: RapidEntryConfig): RapidEntryConfig {
         val allIds = activeColumns.map { it.columnId }.toSet()
         val active = if (candidate.activeColumnIds.isEmpty()) allIds else candidate.activeColumnIds.intersect(allIds)
-        val auto = candidate.autoColumns.filterKeys { it in active && it in allIds }
-        val hydrated = RapidEntryConfig(activeColumnIds = active, autoColumns = auto)
+        val hydratedRules = activeColumns
+            .filter { it.columnId in active }
+            .associate { column ->
+                column.columnId to (
+                    candidate.fillRulesByColumnId[column.columnId]
+                        ?.takeIf { it.isCompatibleWith(column) }
+                        ?: defaultFillRuleFor(column)
+                )
+            }
+        val hydrated = RapidEntryConfig(activeColumnIds = active, fillRulesByColumnId = hydratedRules)
         repository.saveRapidEntryConfig(hydrated)
         return hydrated
     }
@@ -239,5 +313,18 @@ class Screen4MeasurementEngine(
 
     companion object {
         const val DEFAULT_VISIBLE_ROWS = 20
+    }
+}
+
+private fun RapidEntryFillRule.isCompatibleWith(
+    column: ActiveColumn,
+): Boolean {
+    val resolvedType = Screen4ColumnTypeRegistry.resolveByConstraintType(column.constraintType)
+    return when (mode) {
+        RapidEntryFillMode.MANUAL,
+        RapidEntryFillMode.FIXED_VALUE -> true
+        RapidEntryFillMode.CURRENT_DATE -> Screen4InputUiPolicy.usesDatePicker(column, resolvedType)
+        RapidEntryFillMode.CURRENT_TIME -> Screen4InputUiPolicy.usesTimePicker(column, resolvedType)
+        RapidEntryFillMode.CURRENT_TIMESTAMP -> Screen4InputUiPolicy.usesTimestampPicker(column, resolvedType)
     }
 }

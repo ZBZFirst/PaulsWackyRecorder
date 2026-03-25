@@ -3,40 +3,231 @@ package com.example.templei.feature.screen4
 import java.util.Locale
 import java.util.UUID
 
+enum class Screen4ValidationStage {
+    INPUT,
+    COMMIT,
+}
+
 /**
- * Phase 2 validator engine.
+ * Workbook-aware validation engine for Screen 4.
  *
- * Validation remains deterministic and explicit: the column's semantic type is
- * resolved by constraint type, then dispatched to a known validator branch.
+ * Validation remains explicit and finite:
+ * 1. Normalize according to workbook procedures.
+ * 2. Enforce semantic/input constraints.
+ * 3. Apply workbook regex validation.
+ * 4. Enforce allowed values at commit boundaries.
  */
 class Screen4ValidationEngine(
     private val registry: Screen4ColumnTypeRegistry,
+    private val workbookCatalog: Screen4WorkbookCatalog,
 ) {
-    fun validate(column: ActiveColumn, value: String): String? {
-        if (value.isBlank()) return null
+    fun normalizeForInput(column: ActiveColumn, value: String): String =
+        applyNormalization(column, value, includeDestructiveOperations = false)
 
-        val seedSpecificValidation = validateSeedSpecific(column, value)
+    fun normalizeForCommit(column: ActiveColumn, value: String): String =
+        applyNormalization(column, value, includeDestructiveOperations = true)
+
+    fun validate(column: ActiveColumn, value: String, stage: Screen4ValidationStage): String? {
+        val candidate = when (stage) {
+            Screen4ValidationStage.INPUT -> normalizeForInput(column, value)
+            Screen4ValidationStage.COMMIT -> normalizeForCommit(column, value)
+        }
+
+        if (candidate.isBlank()) return null
+
+        val metadata = column.metadata ?: workbookCatalog.findColumnDefinition(column.constraintType)
+        val numericPolicyError = validateNumericPolicy(column.numericPolicy, candidate)
+        if (numericPolicyError != null) return numericPolicyError
+        val inputConstraintError = validateInputConstraint(column, metadata, candidate)
+        if (inputConstraintError != null) return inputConstraintError
+
+        val seedSpecificValidation = validateSeedSpecific(column, candidate)
         if (seedSpecificValidation != null) return seedSpecificValidation
 
+        val workbookRegexError = validateWorkbookRegex(metadata, candidate)
+        if (workbookRegexError != null) return workbookRegexError
+
         val resolvedType = registry.resolveByConstraintType(column.constraintType).name
-        val semanticValidation = validateByResolvedType(resolvedType, value)
+        val semanticValidation = validateByResolvedType(resolvedType, candidate)
         if (semanticValidation != null) return semanticValidation
 
-        val temporalValidation = validateTemporalByType(resolvedType, value)
+        val temporalValidation = validateTemporalByType(resolvedType, candidate)
         if (temporalValidation != null) return temporalValidation
 
         val definition = registry.resolveByConstraintType(column.constraintType)
-        return when (definition.validatorKey) {
+        val fallbackValidation = when (definition.validatorKey) {
             "text" -> null
-            "integer" -> if (INTEGER_REGEX.matches(value)) null else "must be an integer"
-            "decimal" -> if (DECIMAL_REGEX.matches(value)) null else "must be a decimal number"
-            "uuid4" -> validateUuid4(value)
-            "email" -> if (EMAIL_REGEX.matches(value)) null else "must be a valid email"
-            "phone" -> if (PHONE_REGEX.matches(value)) null else "must be a valid phone number"
-            "date" -> validateDate(value)
-            "time" -> validateTime(value)
-            "timestamp_unix_ms" -> validateUnixMillis(value)
+            "integer" -> if (INTEGER_REGEX.matches(candidate)) null else "must be an integer"
+            "decimal" -> if (DECIMAL_REGEX.matches(candidate)) null else "must be a decimal number"
+            "uuid4" -> validateUuid4(candidate)
+            "email" -> if (EMAIL_REGEX.matches(candidate)) null else "must be a valid email"
+            "phone" -> if (PHONE_REGEX.matches(candidate)) null else "must be a valid phone number"
+            "date" -> validateDate(candidate)
+            "time" -> validateTime(candidate)
+            "timestamp_unix_ms" -> validateUnixMillis(candidate)
             else -> null
+        }
+        if (fallbackValidation != null) return fallbackValidation
+
+        if (stage == Screen4ValidationStage.COMMIT) {
+            val allowedValuesError = validateAllowedValues(column, metadata, candidate)
+            if (allowedValuesError != null) return allowedValuesError
+        }
+
+        return null
+    }
+
+    private fun applyNormalization(
+        column: ActiveColumn,
+        value: String,
+        includeDestructiveOperations: Boolean,
+    ): String {
+        val metadata = column.metadata ?: workbookCatalog.findColumnDefinition(column.constraintType)
+        var candidate = value
+
+        workbookCatalog.normalizationRulesFor(metadata?.normalizationProcedures.orEmpty()).forEach { rule ->
+            candidate = when (rule.operation) {
+                "TRIM" -> candidate.trim()
+                "CASE_CONVERT" -> when (rule.pattern?.lowercase(Locale.US)) {
+                    "lower" -> candidate.lowercase(Locale.US)
+                    "upper" -> candidate.uppercase(Locale.US)
+                    else -> candidate
+                }
+                "CHAR_REPLACE" -> {
+                    if (includeDestructiveOperations) {
+                        candidate.replace(rule.pattern.orEmpty(), rule.replacement.orEmpty())
+                    } else {
+                        candidate
+                    }
+                }
+                "REGEX_REPLACE" -> {
+                    if (includeDestructiveOperations) {
+                        val pattern = rule.pattern.orEmpty()
+                        if (pattern.isNotEmpty()) {
+                            candidate.replace(Regex(pattern), rule.replacement.orEmpty())
+                        } else {
+                            candidate
+                        }
+                    } else {
+                        candidate
+                    }
+                }
+                else -> candidate
+            }
+        }
+
+        if ("REMOVE_LEADING_DOT" in metadata?.normalizationProcedures.orEmpty()) {
+            candidate = candidate.removePrefix(".")
+        }
+
+        return candidate
+    }
+
+    private fun validateInputConstraint(
+        column: ActiveColumn,
+        metadata: Screen4WorkbookColumnDefinition?,
+        value: String,
+    ): String? {
+        val definition = registry.resolveByConstraintType(column.constraintType)
+        val inputType = metadata?.uiInputType.orEmpty().uppercase(Locale.US)
+        val dataType = metadata?.dataType.orEmpty().uppercase(Locale.US)
+
+        return when {
+            inputType == "NUMPAD" && definition.primitiveType == Screen4PrimitiveType.INTEGER ->
+                if (PARTIAL_INTEGER_REGEX.matches(value)) null else "must contain numbers only"
+
+            inputType == "NUMPAD" && definition.primitiveType == Screen4PrimitiveType.DECIMAL ->
+                if (PARTIAL_DECIMAL_REGEX.matches(value)) null else "must contain numeric decimal input only"
+
+            inputType == "NUMPAD" && column.constraintType.startsWith("date_") ->
+                if (PARTIAL_DATE_COMPACT_REGEX.matches(value)) null else "must use numeric date input only"
+
+            dataType == "INTEGER" ->
+                if (PARTIAL_INTEGER_REGEX.matches(value)) null else "must contain numbers only"
+
+            dataType == "DECIMAL" ->
+                if (PARTIAL_DECIMAL_REGEX.matches(value)) null else "must contain numeric decimal input only"
+
+            else -> null
+        }
+    }
+
+    private fun validateNumericPolicy(
+        numericPolicy: Screen4NumericFormatPolicy?,
+        value: String,
+    ): String? {
+        if (numericPolicy == null) return null
+
+        val signless = value.removePrefix("-")
+        if (!numericPolicy.allowNegative && value.startsWith("-")) {
+            return "negative values are not allowed"
+        }
+
+        val separatorless = signless.replace(",", "")
+        if (!numericPolicy.useSeparators && signless.contains(",")) {
+            return "separators are not allowed"
+        }
+        if (numericPolicy.useSeparators && signless.contains(",") && !GROUPED_NUMBER_REGEX.matches(signless)) {
+            return "must use separators in grouped form"
+        }
+
+        return if (numericPolicy.numericKind == Screen4NumericKind.INTEGER) {
+            if (!INTEGER_WITH_OPTIONAL_SEPARATOR_REGEX.matches(value)) {
+                "must be an integer"
+            } else {
+                val digitCount = separatorless.count(Char::isDigit)
+                if (digitCount > numericPolicy.maxDigits) {
+                    "must be at most ${numericPolicy.maxDigits} digits"
+                } else {
+                    null
+                }
+            }
+        } else {
+            if (!DECIMAL_WITH_OPTIONAL_SEPARATOR_REGEX.matches(value)) {
+                "must be a decimal number"
+            } else {
+                val pieces = separatorless.split(".")
+                val wholeDigits = pieces.firstOrNull().orEmpty().count(Char::isDigit)
+                val fractionDigits = pieces.getOrNull(1).orEmpty().count(Char::isDigit)
+                val totalDigits = wholeDigits + fractionDigits
+                when {
+                    totalDigits > numericPolicy.maxDigits -> "must be at most ${numericPolicy.maxDigits} digits"
+                    fractionDigits > numericPolicy.decimalPlaces -> "must use at most ${numericPolicy.decimalPlaces} decimal places"
+                    else -> null
+                }
+            }
+        }
+    }
+
+    private fun validateWorkbookRegex(
+        metadata: Screen4WorkbookColumnDefinition?,
+        value: String,
+    ): String? {
+        if (metadata == null || !metadata.participatesInValidation) return null
+        val regexPattern = workbookCatalog.findRegexPattern(metadata.regexPatternName) ?: return null
+        return if (Regex(regexPattern.pattern).matches(value) || matchesCompactWorkbookDate(regexPattern.name, value)) {
+            null
+        } else {
+            "must match ${regexPattern.name.lowercase(Locale.US).replace('_', ' ')}"
+        }
+    }
+
+    private fun validateAllowedValues(
+        column: ActiveColumn,
+        metadata: Screen4WorkbookColumnDefinition?,
+        value: String,
+    ): String? {
+        val allowedValues = metadata?.allowedValues.orEmpty()
+        if (allowedValues.isEmpty()) return null
+
+        val normalizedAllowed = allowedValues.map { allowedValue ->
+            normalizeForCommit(column, allowedValue)
+        }.toSet()
+
+        return if (value in normalizedAllowed) {
+            null
+        } else {
+            "must match one of the allowed values"
         }
     }
 
@@ -74,10 +265,10 @@ class Screen4ValidationEngine(
 
     private fun validateTemporalByType(resolvedType: String, value: String): String? {
         return when (resolvedType) {
-            "date_mdy_dash_yyyy" -> if (DATE_MDY_DASH_YYYY_REGEX.matches(value)) null else "must match MM-DD-YYYY"
-            "date_mdy_slash_yyyy" -> if (DATE_MDY_SLASH_YYYY_REGEX.matches(value)) null else "must match MM/DD/YYYY"
-            "date_mdy_dash_yy" -> if (DATE_MDY_DASH_YY_REGEX.matches(value)) null else "must match MM-DD-YY"
-            "date_mdy_slash_yy" -> if (DATE_MDY_SLASH_YY_REGEX.matches(value)) null else "must match MM/DD/YY"
+            "date_mdy_dash_yyyy" -> if (DATE_MDY_DASH_YYYY_REGEX.matches(value) || DATE_MDY_COMPACT_YYYY_REGEX.matches(value)) null else "must match MM-DD-YYYY or MMDDYYYY"
+            "date_mdy_slash_yyyy" -> if (DATE_MDY_SLASH_YYYY_REGEX.matches(value) || DATE_MDY_COMPACT_YYYY_REGEX.matches(value)) null else "must match MM/DD/YYYY or MMDDYYYY"
+            "date_mdy_dash_yy" -> if (DATE_MDY_DASH_YY_REGEX.matches(value) || DATE_MDY_COMPACT_YY_REGEX.matches(value)) null else "must match MM-DD-YY or MMDDYY"
+            "date_mdy_slash_yy" -> if (DATE_MDY_SLASH_YY_REGEX.matches(value) || DATE_MDY_COMPACT_YY_REGEX.matches(value)) null else "must match MM/DD/YY or MMDDYY"
             "timestamp_mdy_dash_minute" -> if (TIMESTAMP_MDY_DASH_MINUTE_REGEX.matches(value)) null else "must match MM-DD-YYYY HH:MM"
             "timestamp_mdy_slash_minute" -> if (TIMESTAMP_MDY_SLASH_MINUTE_REGEX.matches(value)) null else "must match MM/DD/YYYY HH:MM"
             "timestamp_mdy_dash_second" -> if (TIMESTAMP_MDY_DASH_SECOND_REGEX.matches(value)) null else "must match MM-DD-YYYY HH:MM:SS"
@@ -116,10 +307,25 @@ class Screen4ValidationEngine(
     }
 
     private fun validateDate(value: String): String? {
-        return if (DATE_MDY_DASH_YYYY_REGEX.matches(value) || DATE_MDY_DASH_YY_REGEX.matches(value)) {
+        return if (
+            DATE_MDY_DASH_YYYY_REGEX.matches(value) ||
+            DATE_MDY_DASH_YY_REGEX.matches(value) ||
+            DATE_MDY_SLASH_YYYY_REGEX.matches(value) ||
+            DATE_MDY_SLASH_YY_REGEX.matches(value) ||
+            DATE_MDY_COMPACT_YYYY_REGEX.matches(value) ||
+            DATE_MDY_COMPACT_YY_REGEX.matches(value)
+        ) {
             null
         } else {
-            "must match MM-DD-YYYY or MM-DD-YY"
+            "must match MM-DD-YYYY, MM/DD/YYYY, MMDDYYYY, or YY variants"
+        }
+    }
+
+    private fun matchesCompactWorkbookDate(regexName: String, value: String): Boolean {
+        return when (regexName.uppercase(Locale.US)) {
+            "DATE_MMDDYYYY" -> DATE_MDY_COMPACT_YYYY_REGEX.matches(value)
+            "DATE_MMDDYY" -> DATE_MDY_COMPACT_YY_REGEX.matches(value)
+            else -> false
         }
     }
 
@@ -168,6 +374,12 @@ class Screen4ValidationEngine(
     }
 
     companion object {
+        private val PARTIAL_INTEGER_REGEX = Regex("""^-?\d*$""")
+        private val PARTIAL_DECIMAL_REGEX = Regex("""^-?\d*(\.\d*)?$""")
+        private val PARTIAL_DATE_COMPACT_REGEX = Regex("""^\d{0,8}$""")
+        private val INTEGER_WITH_OPTIONAL_SEPARATOR_REGEX = Regex("""^-?\d{1,3}(,\d{3})*$|^-?\d+$""")
+        private val DECIMAL_WITH_OPTIONAL_SEPARATOR_REGEX = Regex("""^-?\d{1,3}(,\d{3})*(\.\d+)?$|^-?\d+(\.\d+)?$""")
+        private val GROUPED_NUMBER_REGEX = Regex("""^\d{1,3}(,\d{3})*(\.\d+)?$""")
         private val INTEGER_REGEX = Regex("""^-?\d+$""")
         private val DECIMAL_REGEX = Regex("""^-?\d+(\.\d+)?$""")
         private val EMAIL_REGEX = Regex("""^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$""")
@@ -195,6 +407,8 @@ class Screen4ValidationEngine(
         private val DATE_MDY_SLASH_YYYY_REGEX = Regex("""^(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/\d{4}$""")
         private val DATE_MDY_DASH_YY_REGEX = Regex("""^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-\d{2}$""")
         private val DATE_MDY_SLASH_YY_REGEX = Regex("""^(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/\d{2}$""")
+        private val DATE_MDY_COMPACT_YYYY_REGEX = Regex("""^(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{4}$""")
+        private val DATE_MDY_COMPACT_YY_REGEX = Regex("""^(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{2}$""")
 
         private val TIME_HH_MM_REGEX = Regex("""^([01]\d|2[0-3]):[0-5]\d$""")
         private val TIME_HH_MM_SS_REGEX = Regex("""^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$""")

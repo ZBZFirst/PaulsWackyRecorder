@@ -8,6 +8,8 @@ data class ActiveColumn(
     val label: String,
     val maxLength: Int,
     val required: Boolean,
+    val metadata: Screen4WorkbookColumnDefinition? = null,
+    val numericPolicy: Screen4NumericFormatPolicy? = null,
 )
 
 data class DraftRow(

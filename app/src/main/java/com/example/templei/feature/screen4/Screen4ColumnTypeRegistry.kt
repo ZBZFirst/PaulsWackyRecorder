@@ -54,6 +54,7 @@ object Screen4ColumnTypeRegistry {
         def("country_code", Screen4ColumnCategory.CONTACT, Screen4PrimitiveType.STRING, "text", "TextInput"),
         def("zipcode", Screen4ColumnCategory.CONTACT, Screen4PrimitiveType.STRING, "text", "TextInput"),
         def("postalcode", Screen4ColumnCategory.CONTACT, Screen4PrimitiveType.STRING, "text", "TextInput"),
+        def("timezone", Screen4ColumnCategory.TIME, Screen4PrimitiveType.STRING, "text", "TextInput"),
 
         // Internet / Network
         def("domain_name", Screen4ColumnCategory.INTERNET, Screen4PrimitiveType.STRING, "text", "TextInput"),

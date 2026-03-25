@@ -20,13 +20,23 @@ Operators use the top actions to manage active table context:
 
 ### 2) Schema + row operations
 Operators perform table maintenance from the same host screen:
-- **Add Column** for semantic-type-bound columns.
+- **Add Column** for workbook-backed column metadata selection.
 - **Delete Columns** for active-column pruning.
 - **Delete Selected Row** after row selection from the preview table.
 - **Export CSV** via SAF create-document flow.
 
 ### 3) Long Form draft entry
-The collapsible Long Form card renders one draft input per active column (3-column grid). Inputs are semantic-type formatted/validated through the Screen 4 registry + validator pipeline.
+The collapsible Long Form card renders one draft input per active column (3-column grid). Inputs now resolve workbook column metadata for:
+- input keyboard mode and option-list affordances,
+- normalization steps,
+- named regex validation,
+- allowed-value validation on commit/update.
+
+Long Form also exposes explicit actions for:
+- **Save Row** when creating a new measurement,
+- **Load Selected Row** when editing an existing row,
+- **Update Selected** after a row is loaded into the draft,
+- **Clear Draft** to reset the long-form editor without changing the table.
 
 ### 4) Short Form launch
 This host screen launches dedicated short-form capture (`Screen4ShortFormActivity`) while both surfaces share the same active workspace/session context.
@@ -35,6 +45,7 @@ This host screen launches dedicated short-form capture (`Screen4ShortFormActivit
 - Typed/validated Room-backed table editing is active and deterministic.
 - Active workspace continuity is shared across long-form and short-form surfaces.
 - Rapid-entry/short-form commit loop is hosted in a dedicated activity.
+- Workbook-backed column metadata is packaged with the app and consumed through Screen 4 repository/validation layers.
 
 ## Planned Buildout
 - The contracts and specifications are still being ironed out and developed by the DEV, please offer suggestions but make sure DEV INTENT is FOLLOWED AFTER BEING CLARIFIED IF UNCLEAR STATEMENTS REGARDING FUNCTION ARE PRESENT.
