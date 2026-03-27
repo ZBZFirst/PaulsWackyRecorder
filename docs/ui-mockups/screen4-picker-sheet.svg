@@ -1,0 +1,35 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#F6F2EA"/>
+  <rect x="48" y="34" width="1104" height="74" rx="20" fill="#E9E2D4"/>
+  <text x="600" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#22324D">Picker Sheet Concept</text>
+
+  <rect x="74" y="146" width="1052" height="634" rx="30" fill="#22324D"/>
+  <text x="114" y="198" font-family="Arial, sans-serif" font-size="30" fill="#FAF7EF">Row stays visible while a picker opens</text>
+
+  <rect x="114" y="230" width="998" height="224" rx="24" fill="#FFFDF8"/>
+  <text x="144" y="276" font-family="Arial, sans-serif" font-size="24" fill="#22324D">Visible row summary</text>
+  <text x="144" y="322" font-family="Arial, sans-serif" font-size="21" fill="#22324D">Date: 03/25/26</text>
+  <text x="144" y="360" font-family="Arial, sans-serif" font-size="21" fill="#22324D">Time: 02:40 AM</text>
+  <text x="144" y="398" font-family="Arial, sans-serif" font-size="21" fill="#22324D">State Abbr: CA</text>
+  <text x="474" y="322" font-family="Arial, sans-serif" font-size="21" fill="#22324D">Item: ggg</text>
+  <text x="474" y="360" font-family="Arial, sans-serif" font-size="21" fill="#22324D">Quantity: 22</text>
+  <text x="474" y="398" font-family="Arial, sans-serif" font-size="21" fill="#22324D">Comment: But</text>
+
+  <rect x="114" y="484" width="998" height="256" rx="28" fill="#F4F1E8"/>
+  <rect x="442" y="500" width="340" height="10" rx="5" fill="#B0A48D"/>
+  <text x="144" y="548" font-family="Arial, sans-serif" font-size="30" fill="#22324D">State Abbr</text>
+  <text x="144" y="584" font-family="Arial, sans-serif" font-size="18" fill="#62708D">Bottom sheet picker keeps context above it</text>
+
+  <rect x="144" y="612" width="170" height="72" rx="18" fill="#FFFDF8"/>
+  <text x="229" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#22324D">CA</text>
+  <rect x="334" y="612" width="170" height="72" rx="18" fill="#FFFDF8"/>
+  <text x="419" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#22324D">NY</text>
+  <rect x="524" y="612" width="170" height="72" rx="18" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="609" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#22324D">TX</text>
+  <rect x="714" y="612" width="170" height="72" rx="18" fill="#FFFDF8"/>
+  <text x="799" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#22324D">WA</text>
+  <rect x="904" y="612" width="170" height="72" rx="18" fill="#FFFDF8"/>
+  <text x="989" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#22324D">FL</text>
+
+  <text x="144" y="718" font-family="Arial, sans-serif" font-size="18" fill="#62708D">Use the same sheet model for lists, date pickers, and time pickers.</text>
+</svg>

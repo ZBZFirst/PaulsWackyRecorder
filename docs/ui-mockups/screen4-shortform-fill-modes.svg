@@ -1,0 +1,55 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#F6F2EA"/>
+  <rect x="48" y="34" width="1104" height="74" rx="20" fill="#E9E2D4"/>
+  <text x="600" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#22324D">Short Form Fill Mode Concept</text>
+
+  <rect x="76" y="136" width="460" height="698" rx="30" fill="#22324D"/>
+  <text x="114" y="188" font-family="Arial, sans-serif" font-size="30" fill="#FAF7EF">Configure Short Form</text>
+  <text x="114" y="222" font-family="Arial, sans-serif" font-size="18" fill="#BFD0F2">Each selected column gets a fill rule, not just visible/hidden</text>
+
+  <rect x="112" y="256" width="388" height="104" rx="22" fill="#FFFDF8"/>
+  <text x="140" y="298" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Date</text>
+  <rect x="306" y="274" width="170" height="54" rx="16" fill="#D9E6C3"/>
+  <text x="391" y="308" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#22324D">Current Date</text>
+  <text x="140" y="336" font-family="Arial, sans-serif" font-size="16" fill="#62708D">Auto-filled on append. Not shown in manual entry list.</text>
+
+  <rect x="112" y="376" width="388" height="104" rx="22" fill="#FFFDF8"/>
+  <text x="140" y="418" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Time</text>
+  <rect x="306" y="394" width="170" height="54" rx="16" fill="#D9E6C3"/>
+  <text x="391" y="428" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#22324D">Current Time</text>
+  <text x="140" y="456" font-family="Arial, sans-serif" font-size="16" fill="#62708D">Uses device time when the row is appended.</text>
+
+  <rect x="112" y="496" width="388" height="104" rx="22" fill="#FFFDF8"/>
+  <text x="140" y="538" font-family="Arial, sans-serif" font-size="22" fill="#22324D">State Abbr</text>
+  <rect x="306" y="514" width="170" height="54" rx="16" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="391" y="548" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#22324D">Fixed: CA</text>
+  <text x="140" y="576" font-family="Arial, sans-serif" font-size="16" fill="#62708D">Good for location or repeated context values.</text>
+
+  <rect x="112" y="616" width="388" height="104" rx="22" fill="#FFFDF8"/>
+  <text x="140" y="658" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Item</text>
+  <rect x="306" y="634" width="170" height="54" rx="16" fill="#E8E1D4"/>
+  <text x="391" y="668" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#22324D">Manual</text>
+  <text x="140" y="696" font-family="Arial, sans-serif" font-size="16" fill="#62708D">Shown in the entry screen every time.</text>
+
+  <rect x="112" y="736" width="388" height="72" rx="20" fill="#C97131"/>
+  <text x="306" y="782" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#FFFDF8">Start Entry</text>
+
+  <rect x="574" y="136" width="550" height="698" rx="30" fill="#FFFDF8"/>
+  <text x="610" y="188" font-family="Arial, sans-serif" font-size="30" fill="#22324D">Entry Screen</text>
+  <text x="610" y="222" font-family="Arial, sans-serif" font-size="18" fill="#62708D">Only manual fields stay on-screen. Auto fields remain visible in the summary.</text>
+
+  <rect x="610" y="256" width="478" height="126" rx="22" fill="#22324D"/>
+  <text x="640" y="302" font-family="Arial, sans-serif" font-size="24" fill="#FAF7EF">Auto-filled this row</text>
+  <text x="640" y="340" font-family="Arial, sans-serif" font-size="21" fill="#FAF7EF">Date: 03/25/26   Time: 02:40 AM   State: CA</text>
+
+  <rect x="610" y="416" width="478" height="120" rx="22" fill="#F4F1E8"/>
+  <text x="640" y="458" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Item</text>
+  <rect x="640" y="478" width="418" height="36" rx="10" fill="#FFFDF8"/>
+
+  <rect x="610" y="556" width="478" height="120" rx="22" fill="#F4F1E8"/>
+  <text x="640" y="598" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Quantity</text>
+  <rect x="640" y="618" width="418" height="36" rx="10" fill="#FFFDF8"/>
+
+  <rect x="610" y="706" width="478" height="84" rx="24" fill="#C97131"/>
+  <text x="849" y="760" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#FFFDF8">Append Row</text>
+</svg>

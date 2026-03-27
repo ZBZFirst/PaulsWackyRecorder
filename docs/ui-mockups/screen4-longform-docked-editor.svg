@@ -1,0 +1,60 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#F4F1E8"/>
+  <rect x="40" y="28" width="1120" height="72" rx="18" fill="#E8E1D4"/>
+  <text x="600" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#2E3557">Screen 4 Long Form Concept</text>
+
+  <rect x="40" y="124" width="410" height="700" rx="28" fill="#20304F"/>
+  <text x="76" y="174" font-family="Arial, sans-serif" font-size="30" fill="#F7F4EB">Row Review</text>
+  <text x="76" y="206" font-family="Arial, sans-serif" font-size="17" fill="#BFD0F2">Tap any field to edit it in the dock below</text>
+
+  <rect x="70" y="232" width="350" height="92" rx="18" fill="#F7F4EB"/>
+  <text x="94" y="268" font-family="Arial, sans-serif" font-size="18" fill="#20304F">Date</text>
+  <text x="94" y="302" font-family="Arial, sans-serif" font-size="28" fill="#20304F">03/25/26</text>
+  <text x="344" y="302" font-family="Arial, sans-serif" font-size="16" fill="#4D648D">picker</text>
+
+  <rect x="70" y="338" width="350" height="92" rx="18" fill="#F7F4EB"/>
+  <text x="94" y="374" font-family="Arial, sans-serif" font-size="18" fill="#20304F">Time</text>
+  <text x="94" y="408" font-family="Arial, sans-serif" font-size="28" fill="#20304F">02:40 AM</text>
+  <text x="336" y="408" font-family="Arial, sans-serif" font-size="16" fill="#4D648D">picker</text>
+
+  <rect x="70" y="444" width="350" height="92" rx="18" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="94" y="480" font-family="Arial, sans-serif" font-size="18" fill="#20304F">State Abbr</text>
+  <text x="94" y="514" font-family="Arial, sans-serif" font-size="28" fill="#20304F">CA</text>
+  <text x="318" y="514" font-family="Arial, sans-serif" font-size="16" fill="#A05B0C">active field</text>
+
+  <rect x="70" y="550" width="350" height="92" rx="18" fill="#F7F4EB"/>
+  <text x="94" y="586" font-family="Arial, sans-serif" font-size="18" fill="#20304F">Quantity</text>
+  <text x="94" y="620" font-family="Arial, sans-serif" font-size="28" fill="#20304F">22</text>
+  <text x="336" y="620" font-family="Arial, sans-serif" font-size="16" fill="#4D648D">numeric</text>
+
+  <rect x="70" y="656" width="350" height="92" rx="18" fill="#F7F4EB"/>
+  <text x="94" y="692" font-family="Arial, sans-serif" font-size="18" fill="#20304F">Comment</text>
+  <text x="94" y="726" font-family="Arial, sans-serif" font-size="28" fill="#20304F">But</text>
+  <text x="324" y="726" font-family="Arial, sans-serif" font-size="16" fill="#4D648D">multiline</text>
+
+  <rect x="480" y="124" width="680" height="450" rx="28" fill="#FFFDF8"/>
+  <text x="520" y="174" font-family="Arial, sans-serif" font-size="30" fill="#20304F">Active Field Editor</text>
+  <text x="520" y="210" font-family="Arial, sans-serif" font-size="22" fill="#20304F">State Abbr</text>
+  <text x="520" y="240" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">List selection • Required • Allowed values from workbook</text>
+
+  <rect x="520" y="276" width="600" height="84" rx="18" fill="#F4F1E8" stroke="#D4872A" stroke-width="3"/>
+  <text x="548" y="326" font-family="Arial, sans-serif" font-size="28" fill="#20304F">CA</text>
+  <path d="M1078 309 L1100 309 L1089 326 Z" fill="#20304F"/>
+
+  <rect x="520" y="382" width="184" height="56" rx="16" fill="#E8E1D4"/>
+  <text x="612" y="417" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#20304F">Allowed Values</text>
+  <rect x="724" y="382" width="396" height="136" rx="18" fill="#F4F1E8"/>
+  <text x="750" y="420" font-family="Arial, sans-serif" font-size="22" fill="#20304F">CA   NY   TX   WA   FL</text>
+  <text x="750" y="458" font-family="Arial, sans-serif" font-size="22" fill="#20304F">AZ   OR   NV   CO   IL</text>
+  <text x="750" y="496" font-family="Arial, sans-serif" font-size="18" fill="#6C7390">Selection is visible away from the keyboard</text>
+
+  <rect x="480" y="600" width="680" height="224" rx="28" fill="#20304F"/>
+  <text x="520" y="648" font-family="Arial, sans-serif" font-size="30" fill="#F7F4EB">Action Bar</text>
+  <rect x="520" y="680" width="180" height="68" rx="18" fill="#F7F4EB"/>
+  <text x="610" y="722" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">Save Row</text>
+  <rect x="718" y="680" width="180" height="68" rx="18" fill="#D9E6C3"/>
+  <text x="808" y="722" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">Next Field</text>
+  <rect x="916" y="680" width="204" height="68" rx="18" fill="#E8E1D4"/>
+  <text x="1018" y="722" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">Clear Draft</text>
+  <text x="520" y="786" font-family="Arial, sans-serif" font-size="18" fill="#BFD0F2">Keyboard or picker lives below the editor, not on top of the field list.</text>
+</svg>

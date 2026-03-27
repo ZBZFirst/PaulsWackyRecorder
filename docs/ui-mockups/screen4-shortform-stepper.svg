@@ -1,0 +1,40 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#F6F2EA"/>
+  <rect x="52" y="36" width="1096" height="74" rx="20" fill="#E9E2D4"/>
+  <text x="600" y="81" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#22324D">Screen 4 Short Form Concept</text>
+
+  <rect x="90" y="150" width="1020" height="108" rx="28" fill="#22324D"/>
+  <text x="130" y="200" font-family="Arial, sans-serif" font-size="32" fill="#FAF7EF">Row 14 of New Table</text>
+  <text x="130" y="234" font-family="Arial, sans-serif" font-size="18" fill="#BFD0F2">Rapid entry should feel like a guided sequence, not a mini spreadsheet</text>
+
+  <rect x="90" y="292" width="1020" height="360" rx="30" fill="#FFFDF8"/>
+  <text x="132" y="344" font-family="Arial, sans-serif" font-size="30" fill="#22324D">Current Field</text>
+  <text x="132" y="392" font-family="Arial, sans-serif" font-size="24" fill="#22324D">Quantity</text>
+  <text x="132" y="424" font-family="Arial, sans-serif" font-size="17" fill="#62708D">Numeric input • Integer only • Max 3 digits</text>
+
+  <rect x="132" y="456" width="936" height="94" rx="22" fill="#F4F1E8" stroke="#D4872A" stroke-width="3"/>
+  <text x="170" y="514" font-family="Arial, sans-serif" font-size="42" fill="#22324D">22</text>
+
+  <rect x="132" y="572" width="220" height="54" rx="16" fill="#E8E1D4"/>
+  <text x="242" y="606" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Previous Field</text>
+  <rect x="374" y="572" width="220" height="54" rx="16" fill="#D9E6C3"/>
+  <text x="484" y="606" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Next Field</text>
+  <rect x="616" y="572" width="220" height="54" rx="16" fill="#E1E7F5"/>
+  <text x="726" y="606" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#22324D">Open List</text>
+
+  <rect x="90" y="686" width="662" height="140" rx="28" fill="#22324D"/>
+  <text x="130" y="732" font-family="Arial, sans-serif" font-size="28" fill="#FAF7EF">Row Preview</text>
+  <text x="130" y="770" font-family="Arial, sans-serif" font-size="22" fill="#FAF7EF">Date: 03/25/26   Time: 02:40 AM   Item: ggg   Qty: 22</text>
+  <text x="130" y="804" font-family="Arial, sans-serif" font-size="17" fill="#BFD0F2">Always visible while entering the next value</text>
+
+  <rect x="778" y="686" width="332" height="140" rx="28" fill="#C97131"/>
+  <text x="944" y="768" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#FFFDF8">Append Row</text>
+
+  <rect x="870" y="332" width="198" height="262" rx="24" fill="#FFF1D6" stroke="#D4872A" stroke-width="2"/>
+  <text x="894" y="374" font-family="Arial, sans-serif" font-size="20" fill="#22324D">Optional Field Queue</text>
+  <text x="894" y="420" font-family="Arial, sans-serif" font-size="18" fill="#22324D">1. Date</text>
+  <text x="894" y="454" font-family="Arial, sans-serif" font-size="18" fill="#22324D">2. Time</text>
+  <text x="894" y="488" font-family="Arial, sans-serif" font-size="18" fill="#22324D">3. Item</text>
+  <text x="894" y="522" font-family="Arial, sans-serif" font-size="18" fill="#22324D">4. Quantity</text>
+  <text x="894" y="560" font-family="Arial, sans-serif" font-size="16" fill="#8A5B1B">Single active field.</text>
+</svg>
