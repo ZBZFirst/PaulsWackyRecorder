@@ -26,6 +26,12 @@ interface Screen4Dao {
     @Query("UPDATE table_workspaces SET archivedAtMillis = NULL WHERE id = :workspaceId")
     suspend fun restoreWorkspace(workspaceId: Long): Int
 
+    @Query("DELETE FROM table_workspaces WHERE id = :workspaceId")
+    suspend fun deleteWorkspace(workspaceId: Long): Int
+
+    @Query("UPDATE table_workspaces SET name = :name WHERE id = :workspaceId")
+    suspend fun renameWorkspace(workspaceId: Long, name: String): Int
+
     @Query("SELECT * FROM table_workspaces WHERE id = :workspaceId LIMIT 1")
     suspend fun getWorkspaceById(workspaceId: Long): TableWorkspaceEntity?
 

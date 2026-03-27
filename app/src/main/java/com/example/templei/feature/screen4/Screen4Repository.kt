@@ -62,7 +62,7 @@ class Screen4Repository(
 
     suspend fun activeWorkspace(): TableWorkspaceEntity? = dao.getActiveWorkspaceById(activeWorkspaceId)
 
-    suspend fun createAndSelectWorkspace(name: String, initializeDefaultColumns: Boolean): TableWorkspaceEntity {
+    suspend fun createAndSelectWorkspace(name: String, templateKey: String?): TableWorkspaceEntity {
         val trimmedName = name.trim().ifBlank { DEFAULT_WORKSPACE_NAME }
         val workspaceId = dao.insertWorkspace(
             TableWorkspaceEntity(
@@ -73,18 +73,18 @@ class Screen4Repository(
         activeWorkspaceId = workspaceId
         tableSessionStore.saveActiveWorkspaceId(workspaceId)
         sessionStateMachine.onWorkspaceSelectedActive()
-        if (initializeDefaultColumns) {
-            seedDefaultColumns(workspaceId)
+        if (templateKey != null) {
+            seedTemplateColumns(workspaceId, templateKey)
         }
         draftStore.clearDraft()
         return dao.getActiveWorkspaceById(workspaceId)
             ?: TableWorkspaceEntity(id = workspaceId, name = trimmedName, createdAtMillis = System.currentTimeMillis())
     }
 
-    suspend fun initializeActiveWorkspaceColumns(initializeDefaultColumns: Boolean) {
+    suspend fun initializeActiveWorkspaceColumns(templateKey: String?) {
         if (dao.getActiveColumns(activeWorkspaceId).isNotEmpty()) return
-        if (!initializeDefaultColumns) return
-        seedDefaultColumns(activeWorkspaceId)
+        if (templateKey == null) return
+        seedTemplateColumns(activeWorkspaceId, templateKey)
     }
 
     suspend fun selectWorkspace(workspaceId: Long): Boolean {
@@ -135,6 +135,42 @@ class Screen4Repository(
         activeWorkspaceId = workspaceId
         tableSessionStore.saveActiveWorkspaceId(workspaceId)
         sessionStateMachine.onWorkspaceSelectedActive()
+        draftStore.clearDraft()
+        return true
+    }
+
+    suspend fun renameActiveWorkspace(name: String): TableWorkspaceEntity? {
+        val current = dao.getActiveWorkspaceById(activeWorkspaceId) ?: return null
+        val trimmed = name.trim().ifBlank { current.name }
+        val renamed = dao.renameWorkspace(current.id, trimmed) > 0
+        if (!renamed) return null
+        return dao.getActiveWorkspaceById(current.id)
+    }
+
+    suspend fun deleteActiveWorkspace(): Boolean {
+        val current = dao.getActiveWorkspaceById(activeWorkspaceId) ?: return false
+        val deleted = database.withTransaction {
+            dao.deleteWorkspace(current.id) > 0
+        }
+        if (!deleted) return false
+
+        val fallback = dao.getActiveWorkspaces().firstOrNull()
+        if (fallback != null) {
+            activeWorkspaceId = fallback.id
+            tableSessionStore.saveActiveWorkspaceId(fallback.id)
+            sessionStateMachine.onWorkspaceSelectedActive()
+        } else {
+            val newWorkspaceId = dao.insertWorkspace(
+                TableWorkspaceEntity(
+                    name = DEFAULT_WORKSPACE_NAME,
+                    createdAtMillis = System.currentTimeMillis(),
+                )
+            )
+            activeWorkspaceId = newWorkspaceId
+            tableSessionStore.saveActiveWorkspaceId(newWorkspaceId)
+            sessionStateMachine.onWorkspaceSelectedActive()
+        }
+
         draftStore.clearDraft()
         return true
     }
@@ -302,6 +338,48 @@ class Screen4Repository(
         return Result.success(columnId)
     }
 
+    suspend fun configureColumn(configuration: Screen4ColumnConfiguration): Result<Unit> {
+        val column = dao.getColumnById(activeWorkspaceId, configuration.columnId)
+            ?: return Result.failure(IllegalArgumentException("Column ${configuration.columnId} not found"))
+        val templatesById = dao.getTemplates().associateBy { it.id }
+        val currentTemplate = templatesById[column.templateId]
+            ?: return Result.failure(IllegalStateException("Template ${column.templateId} not found"))
+
+        val normalizedLabel = configuration.label.trim().ifBlank { column.label.ifBlank { currentTemplate.defaultLabel } }
+        val numericPolicy = configuration.numericPolicy
+        val resolvedConstraintType = numericPolicy?.constraintType() ?: currentTemplate.constraintType
+        val resolvedMaxLength = (numericPolicy?.inputMaxLength() ?: configuration.maxLength).coerceAtLeast(1)
+        val required = configuration.required
+        val baseFakerKey = numericPolicy?.toFakerKey()
+            ?: Screen4NumericFormatPolicy.normalizedTemplateFakerKey(currentTemplate.fakerKey)
+        val configuredFakerKey = buildConfiguredTemplateFakerKey(baseFakerKey, resolvedMaxLength, required)
+
+        val template = dao.getTemplates().firstOrNull { existing ->
+            existing.fakerKey == configuredFakerKey &&
+                existing.constraintType.equals(resolvedConstraintType, ignoreCase = true) &&
+                existing.maxLength == resolvedMaxLength &&
+                existing.required == required
+        } ?: run {
+            val newTemplate = ColumnTemplateEntity(
+                fakerKey = configuredFakerKey,
+                defaultLabel = normalizedLabel,
+                constraintType = resolvedConstraintType,
+                maxLength = resolvedMaxLength,
+                required = required,
+            )
+            val id = dao.insertTemplate(newTemplate)
+            newTemplate.copy(id = id)
+        }
+
+        dao.updateColumn(
+            column.copy(
+                templateId = template.id,
+                label = normalizedLabel,
+            )
+        )
+        return Result.success(Unit)
+    }
+
     suspend fun pruneColumns(columnIds: List<Long>, _activeColumns: List<ActiveColumn>): Result<Int> {
         if (columnIds.isEmpty()) return Result.success(0)
         // The delete-columns flow now allows deactivating any active column, including baseline required columns.
@@ -335,17 +413,15 @@ class Screen4Repository(
         return TableViewModel(columns = columns, rows = viewRows)
     }
 
-    private suspend fun seedDefaultColumns(workspaceId: Long) {
+    fun availableTableTemplates(): List<Screen4TableTemplateDefinition> =
+        Screen4TemplateCatalog.tableTemplates()
+
+    private suspend fun seedTemplateColumns(workspaceId: Long, templateKey: String) {
         if (dao.getActiveColumns(workspaceId).isNotEmpty()) return
 
-        val seeded = listOf(
-            DefaultColumnSeed("screen4.default.id", "ID", "number_plain", 16, true),
-            DefaultColumnSeed("screen4.default.date", "Date", "date_mdy_slash_yyyy", 10, true),
-            DefaultColumnSeed("screen4.default.time", "Time", "time_hh_mm_am_pm", 11, true),
-            DefaultColumnSeed("screen4.default.item", "Item", "text", 64, true),
-            DefaultColumnSeed("screen4.default.quantity", "Quantity", "decimal_2", 8, true),
-            DefaultColumnSeed("screen4.default.comment", "Comment", "text", 256, false),
-        )
+        val seeded = Screen4TemplateCatalog.templateByKey(templateKey)?.seeds
+            ?: Screen4TemplateCatalog.templateByKey(Screen4TemplateCatalog.DEFAULT_TEMPLATE_KEY)?.seeds
+            ?: emptyList()
 
         val templates = dao.getTemplates()
         val templatesByFakerKey = templates.associateBy { it.fakerKey }
@@ -434,6 +510,14 @@ class Screen4Repository(
         return template.copy(id = id)
     }
 
+    private fun buildConfiguredTemplateFakerKey(
+        baseFakerKey: String,
+        maxLength: Int,
+        required: Boolean,
+    ): String {
+        return "${Screen4NumericFormatPolicy.normalizedTemplateFakerKey(baseFakerKey)}::config|max=$maxLength|required=$required"
+    }
+
     private fun validateDraft(draftRow: DraftRow, activeColumns: List<ActiveColumn>): DraftValidationResult {
         val normalizedValuesByColumnId = mutableMapOf<Long, String>()
         activeColumns.forEach { column ->
@@ -458,14 +542,6 @@ class Screen4Repository(
     }
 
     companion object {
-        private data class DefaultColumnSeed(
-            val fakerKey: String,
-            val label: String,
-            val constraintType: String,
-            val maxLength: Int,
-            val required: Boolean,
-        )
-
         private const val DEFAULT_WORKSPACE_NAME = "Default Table"
         private const val NO_ACTIVE_WORKSPACE = -1L
     }

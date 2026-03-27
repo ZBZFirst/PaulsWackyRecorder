@@ -9,14 +9,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import com.example.templei.device.CoordinateSample
 import com.example.templei.device.DeviceCapabilityProbe
 import com.example.templei.device.DeviceCapabilityRegistry
 import com.example.templei.device.DeviceCapabilitySnapshot
 import com.example.templei.device.PermissionState
 import com.example.templei.device.StorageModel
 import com.example.templei.ui.navigation.TopNavigation
-import java.util.Locale
 
 /**
  * Entry screen shell that routes to Screens 1-4 and observes host-device readiness.
@@ -77,42 +75,39 @@ class MainActivity : ComponentActivity() {
         val missingRequestable = collectRequestableMissingPermissions(snapshot)
             .joinToString(separator = ", ") { permissionLabel(it) }
             .ifEmpty { getString(R.string.permission_request_none_missing_label) }
+        val cameraCaptureReady = snapshot.hasCamera &&
+            snapshot.cameraPermission == PermissionState.GRANTED
+        val audioRecorderReady = snapshot.hasMicrophone &&
+            snapshot.microphonePermission == PermissionState.GRANTED
 
         return buildString {
             appendLine(getString(R.string.device_status_header, snapshot.sdkInt))
-            appendLine(getString(R.string.device_status_camera, yesNo(snapshot.hasCamera), permission(snapshot.cameraPermission)))
-            appendLine(getString(R.string.device_status_microphone, yesNo(snapshot.hasMicrophone), permission(snapshot.microphonePermission)))
-            appendLine(getString(R.string.device_status_gps, yesNo(snapshot.hasGps), yesNo(snapshot.hasNetworkLocation), permission(snapshot.fineLocationPermission), permission(snapshot.coarseLocationPermission)))
-            appendLine(getString(
-                R.string.device_status_sensor_accel,
-                yesNo(snapshot.hasAccelerometer),
-                yesNo(snapshot.regularSensorRateUsable),
-                yesNo(snapshot.highSensorRateUsable),
-                permission(snapshot.highSamplingRateSensorsPermission)
-            ))
-            appendLine(getString(
-                R.string.device_status_files,
-                storageModel(snapshot.storageModel),
-                permission(snapshot.readExternalStoragePermission),
-                permission(snapshot.mediaAudioPermission)
-            ))
-            appendLine(getString(R.string.device_status_fine_coordinate, formatCoordinate(snapshot.fineLocationSample)))
-            appendLine(getString(R.string.device_status_coarse_coordinate, formatCoordinate(snapshot.coarseLocationSample)))
-            appendLine(getString(R.string.device_status_gate_recorder, yesNo(snapshot.recorderUsable)))
-            appendLine(getString(R.string.device_status_gate_logger, yesNo(snapshot.gpsLoggerUsable)))
+            appendLine(
+                getString(
+                    R.string.device_status_camera,
+                    yesNo(snapshot.hasCamera),
+                    permission(snapshot.cameraPermission),
+                )
+            )
+            appendLine(
+                getString(
+                    R.string.device_status_microphone,
+                    yesNo(snapshot.hasMicrophone),
+                    permission(snapshot.microphonePermission),
+                )
+            )
+            appendLine(
+                getString(
+                    R.string.device_status_files,
+                    storageModel(snapshot.storageModel),
+                    permission(snapshot.readExternalStoragePermission),
+                    permission(snapshot.mediaAudioPermission),
+                )
+            )
+            appendLine(getString(R.string.device_status_gate_recorder, yesNo(cameraCaptureReady)))
+            appendLine(getString(R.string.device_status_gate_logger, yesNo(audioRecorderReady)))
             appendLine(getString(R.string.device_status_missing_permissions, missingRequestable))
         }
-    }
-
-    private fun formatCoordinate(sample: CoordinateSample?): String {
-        return sample?.let {
-            val lat = String.format(Locale.US, "%.6f", it.latitude)
-            val lon = String.format(Locale.US, "%.6f", it.longitude)
-            val accuracy = it.accuracyMeters?.let { meters ->
-                String.format(Locale.US, " ±%.1fm", meters)
-            }.orEmpty()
-            "$lat, $lon$accuracy"
-        } ?: getString(R.string.coordinate_unavailable)
     }
 
     private fun collectRequestableMissingPermissions(snapshot: DeviceCapabilitySnapshot): List<String> {
@@ -123,12 +118,6 @@ class MainActivity : ComponentActivity() {
         }
         if (snapshot.hasMicrophone && snapshot.microphonePermission == PermissionState.DENIED) {
             requestables += Manifest.permission.RECORD_AUDIO
-        }
-        if ((snapshot.hasGps || snapshot.hasNetworkLocation) && snapshot.fineLocationPermission == PermissionState.DENIED) {
-            requestables += Manifest.permission.ACCESS_FINE_LOCATION
-        }
-        if ((snapshot.hasGps || snapshot.hasNetworkLocation) && snapshot.coarseLocationPermission == PermissionState.DENIED) {
-            requestables += Manifest.permission.ACCESS_COARSE_LOCATION
         }
         if (snapshot.readExternalStoragePermission == PermissionState.DENIED) {
             requestables += Manifest.permission.READ_EXTERNAL_STORAGE
@@ -143,8 +132,6 @@ class MainActivity : ComponentActivity() {
     private fun permissionLabel(permission: String): String = when (permission) {
         Manifest.permission.CAMERA -> getString(R.string.permission_camera)
         Manifest.permission.RECORD_AUDIO -> getString(R.string.permission_microphone)
-        Manifest.permission.ACCESS_FINE_LOCATION -> getString(R.string.permission_location_fine)
-        Manifest.permission.ACCESS_COARSE_LOCATION -> getString(R.string.permission_location_coarse)
         Manifest.permission.READ_EXTERNAL_STORAGE -> getString(R.string.permission_read_external_storage)
         Manifest.permission.READ_MEDIA_AUDIO -> getString(R.string.permission_read_media_audio)
         else -> permission

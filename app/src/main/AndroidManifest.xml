@@ -4,12 +4,9 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
 
     <uses-feature
         android:name="android.hardware.camera.any"
@@ -17,13 +14,6 @@
     <uses-feature
         android:name="android.hardware.microphone"
         android:required="false" />
-    <uses-feature
-        android:name="android.hardware.location.gps"
-        android:required="false" />
-    <uses-feature
-        android:name="android.hardware.sensor.accelerometer"
-        android:required="false" />
-
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -32,7 +22,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.TempleI">
+        android:theme="@style/Theme.FourPanelApp">
 
         <!-- Shell activities for UI scaffolding screens. -->
         <activity android:name=".Screen1Activity" android:exported="false" />
@@ -46,12 +36,16 @@
             android:name=".Screen4ShortFormActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".Screen4LongFormActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.TempleI">
+            android:theme="@style/Theme.FourPanelApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

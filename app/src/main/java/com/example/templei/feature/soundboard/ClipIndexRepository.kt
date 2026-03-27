@@ -34,6 +34,16 @@ class ClipIndexRepository(private val context: Context) {
         prefs().edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
     }
 
+    fun getPersistedSelectedFolderName(): String? {
+        return prefs().getString(KEY_SELECTED_FOLDER_NAME, null)?.takeIf { it.isNotBlank() }
+    }
+
+    fun setPersistedSelectedFolderName(folderName: String?) {
+        prefs().edit()
+            .putString(KEY_SELECTED_FOLDER_NAME, folderName)
+            .apply()
+    }
+
     fun rebuildIndex(rootUri: Uri): RebuildSummary {
         val root = DocumentFile.fromTreeUri(context, rootUri)
             ?.takeIf { it.canRead() }
@@ -82,6 +92,16 @@ class ClipIndexRepository(private val context: Context) {
         )
     }
 
+    fun refreshFolder(rootUri: Uri, folderName: String): RebuildSummary {
+        val root = DocumentFile.fromTreeUri(context, rootUri)
+            ?.takeIf { it.canRead() }
+            ?: return RebuildSummary(0, 0, 0)
+        val folderDocument = resolveFolderDocument(root, folderName)
+            ?: return replaceFolderRows(folderName, emptyList())
+        val refreshedRows = buildFolderRows(folderName, folderDocument, System.currentTimeMillis())
+        return replaceFolderRows(folderName, refreshedRows)
+    }
+
     fun getIndexedFolders(): List<String> {
         return loadRows()
             .map { it.folderName }
@@ -89,12 +109,57 @@ class ClipIndexRepository(private val context: Context) {
             .sorted()
     }
 
+    fun getAllIndexedClips(): List<IndexedClip> = loadRows()
+
     fun getIndexedClipsForFolder(folderName: String): List<IndexedClip> {
         return loadRows()
             .asSequence()
             .filter { it.folderName == folderName }
             .sortedBy { it.fileName.lowercase() }
             .toList()
+    }
+
+    private fun replaceFolderRows(folderName: String, refreshedRows: List<IndexedClip>): RebuildSummary {
+        val mergedRows = loadRows()
+            .filterNot { it.folderName == folderName } +
+            refreshedRows
+        persistRows(mergedRows)
+        return RebuildSummary(
+            folderCount = mergedRows.map { it.folderName }.toSet().size,
+            clipCount = refreshedRows.size,
+            playableCount = refreshedRows.count { it.playable }
+        )
+    }
+
+    private fun resolveFolderDocument(root: DocumentFile, folderName: String): DocumentFile? {
+        return when (folderName) {
+            CURRENT_FOLDER_NAME -> root.takeIf { it.canRead() }
+            else -> root.listFiles()
+                .firstOrNull { it.isDirectory && it.canRead() && (it.name ?: UNKNOWN_FOLDER_NAME) == folderName }
+        }
+    }
+
+    private fun buildFolderRows(
+        folderName: String,
+        folderDocument: DocumentFile,
+        now: Long,
+    ): List<IndexedClip> {
+        return folderDocument.listFiles()
+            .filter { it.isFile && isSupportedExtension(it.name ?: "") }
+            .mapNotNull { file ->
+                val fileName = file.name ?: return@mapNotNull null
+                val durationMs = readDurationMs(file.uri) ?: 0L
+                val playable = durationMs in 1..MAX_SOUND_DURATION_MS
+                IndexedClip(
+                    clipId = file.uri.toString(),
+                    clipUri = file.uri.toString(),
+                    folderName = folderName,
+                    fileName = fileName,
+                    durationMs = durationMs,
+                    playable = playable,
+                    lastSeenTimestampMs = now
+                )
+            }
     }
 
     private fun persistRows(rows: List<IndexedClip>) {
@@ -162,6 +227,7 @@ class ClipIndexRepository(private val context: Context) {
         private const val PREFS_NAME = "screen3_soundboard"
         private const val KEY_ROOT_FOLDER_URI = "root_folder_uri"
         private const val KEY_INDEX_ROWS = "clip_index_rows"
+        private const val KEY_SELECTED_FOLDER_NAME = "selected_folder_name"
         private const val MAX_SOUND_DURATION_MS = 6_000L
         private const val CURRENT_FOLDER_NAME = "current-folder"
         private const val UNKNOWN_FOLDER_NAME = "unknown"

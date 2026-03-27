@@ -28,8 +28,14 @@ object Screen4ColumnFormatCatalog {
             it.startsWith("time_") || it.startsWith("timestamp_")
         },
         "number" to Screen4ColumnTypeRegistry.allDefinitions().map { it.name }.filter {
-            it.startsWith("decimal") || it.startsWith("number_") || it in setOf(
-                "ones", "tens", "hundreds", "thousands", "ten_thousands", "hundred_thousands", "millions", "percent", "percent_decimal"
+            it in setOf(
+                "integer",
+                "decimal",
+                "currency_usd",
+                "currency_usd_plain",
+                "percent",
+                "percent_decimal",
+                "number_scientific",
             )
         },
         "contact" to Screen4ColumnTypeRegistry.allDefinitions().filter {
@@ -77,6 +83,8 @@ object Screen4ColumnFormatCatalog {
             "date_mdy_slash_yyyy" -> "12/31/2024"
             "date_mdy_dash_yy" -> "12-31-24"
             "date_mdy_slash_yy" -> "12/31/24"
+            "integer" -> "12345"
+            "decimal" -> "12345.67"
             "timestamp_mdy_dash_minute" -> "12-31-2024 09:15"
             "timestamp_mdy_slash_minute" -> "12/31/2024 09:15"
             "timestamp_mdy_dash_second" -> "12-31-2024 09:15:30"

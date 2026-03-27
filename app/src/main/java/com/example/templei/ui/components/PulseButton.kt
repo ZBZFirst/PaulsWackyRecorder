@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.templei.ui.theme.TempleITheme
+import com.example.templei.ui.theme.FourPanelAppTheme
 
 @Composable
 fun PulseButton(
@@ -62,7 +62,7 @@ fun PulseButton(
 @Preview(showBackground = true)
 @Composable
 private fun PulseButtonPreview() {
-    TempleITheme {
+        FourPanelAppTheme {
         PulseButton(isFlashing = true, onClick = {})
     }
 }

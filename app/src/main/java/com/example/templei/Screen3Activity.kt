@@ -34,6 +34,7 @@ import com.example.templei.feature.soundboard.Screen3PlaybackPolicy
 import com.example.templei.feature.soundboard.Screen3ClipCacheManager
 import com.example.templei.feature.soundboard.Screen3FavoritesManager
 import com.example.templei.feature.soundboard.Screen3FolderBrowserCoordinator
+import com.example.templei.feature.soundboard.Screen3LibraryRefreshSignal
 import com.example.templei.feature.soundboard.Screen3Coordinator
 import com.example.templei.feature.soundboard.Screen3Intent
 import com.example.templei.ui.navigation.TopNavigation
@@ -58,6 +59,12 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var clearSelectedSlotButton: Button
     private lateinit var assignmentTargetText: TextView
     private lateinit var assignmentRow: LinearLayout
+    private lateinit var favoritePageRow: LinearLayout
+    private lateinit var favoritePagePrevButton: Button
+    private lateinit var favoritePageNextButton: Button
+    private lateinit var favoritePageAddButton: Button
+    private lateinit var favoritePageRemoveButton: Button
+    private lateinit var favoritePageStatusText: TextView
     private lateinit var clipBrowserContainer: LinearLayout
     private lateinit var clipBrowserScroll: ScrollView
     private lateinit var favoritesPad: android.widget.GridLayout
@@ -87,6 +94,7 @@ class Screen3Activity : ComponentActivity() {
     private var lastRejectionEvent: SoundboardStateMachine.LastRejection? = null
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
+    private val libraryRefreshSignal by lazy { Screen3LibraryRefreshSignal(this) }
     private lateinit var uiRenderer: Screen3UiRenderer
     private val settingsStore by lazy { Screen3SettingsStore(this) }
     private val settingsDialogHelper by lazy { Screen3SettingsDialogHelper(this) }
@@ -102,6 +110,8 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var controlsToggleButton: Button
     private lateinit var folderSpinnerAdapter: ArrayAdapter<String>
     private var suppressFolderSpinnerSelection: Boolean = false
+    private var lastObservedLibraryChangeMs: Long = 0L
+    private var hasCompletedInitialResume: Boolean = false
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -136,6 +146,12 @@ class Screen3Activity : ComponentActivity() {
             clearSelectedSlotButton = findViewById(R.id.soundboardClearSelectedSlotButton)
             assignmentTargetText = findViewById(R.id.soundboardAssignmentTargetText)
             assignmentRow = findViewById(R.id.soundboardAssignmentRow)
+            favoritePageRow = findViewById(R.id.soundboardFavoritePageRow)
+            favoritePagePrevButton = findViewById(R.id.soundboardFavoritePagePrevButton)
+            favoritePageNextButton = findViewById(R.id.soundboardFavoritePageNextButton)
+            favoritePageAddButton = findViewById(R.id.soundboardFavoritePageAddButton)
+            favoritePageRemoveButton = findViewById(R.id.soundboardFavoritePageRemoveButton)
+            favoritePageStatusText = findViewById(R.id.soundboardFavoritePageStatusText)
             clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
             clipBrowserScroll = findViewById(R.id.soundboardClipBrowserScroll)
             favoritesPad = findViewById(R.id.soundboardFavoritesPad)
@@ -155,6 +171,7 @@ class Screen3Activity : ComponentActivity() {
                 nextFolderButton = nextFolderButton,
                 assignmentTargetText = assignmentTargetText,
                 assignmentRow = assignmentRow,
+                favoritePageRow = favoritePageRow,
                 clipBrowserScroll = clipBrowserScroll,
                 favoritesPad = favoritesPad,
                 browserToggleButton = browserToggleButton,
@@ -197,6 +214,7 @@ class Screen3Activity : ComponentActivity() {
                 if (folderEntries.isNotEmpty()) {
                     screen3Coordinator.dispatch(Screen3Intent.PreviousFolder)
                     applyIndexedState(folderBrowserCoordinator.movePreviousFolder())
+                    refreshSelectedFolderFromDisk()
                 }
             }
 
@@ -204,6 +222,7 @@ class Screen3Activity : ComponentActivity() {
                 if (folderEntries.isNotEmpty()) {
                     screen3Coordinator.dispatch(Screen3Intent.NextFolder)
                     applyIndexedState(folderBrowserCoordinator.moveNextFolder())
+                    refreshSelectedFolderFromDisk()
                 }
             }
 
@@ -213,6 +232,7 @@ class Screen3Activity : ComponentActivity() {
                     if (position == currentFolderIndex) return
                     screen3Coordinator.dispatch(Screen3Intent.SelectFolderIndex(position))
                     applyIndexedState(folderBrowserCoordinator.selectFolder(position))
+                    refreshSelectedFolderFromDisk()
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) = Unit
@@ -229,6 +249,45 @@ class Screen3Activity : ComponentActivity() {
                 }
             }
             clearSelectedSlotButton.setOnClickListener { showClearSlotDialog() }
+            favoritePagePrevButton.setOnClickListener {
+                if (favoritesManager.moveToPreviousPage()) {
+                    syncFavoritesFromManager()
+                    renderFavoritePadState()
+                }
+            }
+            favoritePageNextButton.setOnClickListener {
+                if (favoritesManager.moveToNextPage()) {
+                    syncFavoritesFromManager()
+                    renderFavoritePadState()
+                }
+            }
+            favoritePageAddButton.setOnClickListener {
+                favoritesManager.addPage()
+                syncFavoritesFromManager()
+                renderFavoritePadState()
+                Toast.makeText(
+                    this,
+                    getString(R.string.soundboard_favorite_page_added, favoritesManager.currentPageIndex() + 1),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            favoritePageRemoveButton.setOnClickListener {
+                if (favoritesManager.removeCurrentPage()) {
+                    syncFavoritesFromManager()
+                    renderFavoritePadState()
+                    Toast.makeText(
+                        this,
+                        getString(R.string.soundboard_favorite_page_removed, favoritesManager.currentPageIndex() + 1),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        getString(R.string.soundboard_favorite_page_remove_blocked),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
             browserToggleButton.setOnClickListener {
                 val next = !screen3Coordinator.currentViewState().isBrowserCollapsed
                 screen3Coordinator.dispatch(Screen3Intent.SetBrowserCollapsed(next))
@@ -253,6 +312,14 @@ class Screen3Activity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (hasCompletedInitialResume) {
+            if (!maybeRefreshIndexedLibrary()) {
+                refreshSelectedFolderFromDisk()
+            }
+        } else {
+            hasCompletedInitialResume = true
+            maybeRefreshIndexedLibrary()
+        }
         updateSectionVisibility()
     }
 
@@ -303,13 +370,73 @@ class Screen3Activity : ComponentActivity() {
 
     private fun initializeFromPersistedIndexOrNoRoot() {
         val indexedState = folderBrowserCoordinator.initializeFromPersistedRoot()
+        lastObservedLibraryChangeMs = libraryRefreshSignal.lastChangedAtMs()
         if (!indexedState.hasRootSelection) {
             screen3Coordinator.dispatch(Screen3Intent.FolderPicked(uri = null))
             renderNoRootSelected()
             return
         }
         screen3Coordinator.dispatch(Screen3Intent.FolderPicked(indexedState.rootUri))
+        if (indexedState.folderNames.isEmpty()) {
+            val rootUri = indexedState.rootUri
+            if (rootUri == null) {
+                renderNoRootSelected()
+            } else {
+                runCatching { rebuildIndexAndBind(rootUri) }.onFailure(::failToMainMenu)
+            }
+            return
+        }
         applyIndexedState(indexedState)
+    }
+
+    private fun maybeRefreshIndexedLibrary(): Boolean {
+        val latestChangeMs = libraryRefreshSignal.lastChangedAtMs()
+        if (latestChangeMs <= lastObservedLibraryChangeMs) return false
+        lastObservedLibraryChangeMs = latestChangeMs
+        refreshSelectedFolderFromDisk()
+        return true
+    }
+
+    private fun refreshSelectedFolderFromDisk(showLoading: Boolean = false) {
+        val indexedState = folderBrowserCoordinator.initializeFromPersistedRoot()
+        if (!indexedState.hasRootSelection) return
+
+        if (showLoading) {
+            stateMachine.onLoading()
+            renderState(stateMachine.currentState())
+            loadingProgressBar.isIndeterminate = true
+            loadingProgressBar.progress = 0
+            loadingDetailText.text = getString(R.string.soundboard_loading_detail_loading)
+        }
+
+        Thread {
+            runCatching { folderBrowserCoordinator.refreshCurrentFolder() }
+                .onSuccess { summary ->
+                    lastObservedLibraryChangeMs = libraryRefreshSignal.lastChangedAtMs()
+                    mainHandler.post {
+                        if (showLoading) {
+                            loadingProgressBar.isIndeterminate = false
+                            loadingProgressBar.max = 100
+                            loadingProgressBar.progress = 100
+                            loadingDetailText.text = getString(
+                                R.string.soundboard_loading_detail_index_ready,
+                                summary.playableCount,
+                                summary.clipCount,
+                                summary.folderCount
+                            )
+                        }
+                        applyIndexedState(folderBrowserCoordinator.currentState())
+                    }
+                }
+                .onFailure {
+                    mainHandler.post {
+                        Log.w(TAG, "Screen3 library refresh failed", it)
+                        if (showLoading) {
+                            renderState(stateMachine.currentState())
+                        }
+                    }
+                }
+        }.start()
     }
 
     private fun rebuildIndexAndBind(rootUri: Uri) {
@@ -363,6 +490,7 @@ class Screen3Activity : ComponentActivity() {
         }
 
         activeFolderClips = clips
+        syncKnownClipsFromIndex()
         activeFolderClips.forEach { clipById[it.id] = it }
         screen3Coordinator.setClipItems(
             clips = activeFolderClips.map {
@@ -376,7 +504,7 @@ class Screen3Activity : ComponentActivity() {
         renderClipBrowser(activeFolderClips)
         trimClipCache(activeFolderClips.map { it.id }.toSet(), Screen3ClipCacheManager.TrimReason.FOLDER_SWITCH)
         refreshReadyState()
-        renderFavoritePadButtons()
+        renderFavoritePadState()
     }
 
     private fun renderNoRootSelected() {
@@ -453,8 +581,7 @@ class Screen3Activity : ComponentActivity() {
                 renderAssignmentTarget()
             }
         )
-        renderFavoritePadButtons()
-        renderAssignmentTarget()
+        renderFavoritePadState()
     }
 
     private fun renderFavoritePadButtons() {
@@ -464,8 +591,30 @@ class Screen3Activity : ComponentActivity() {
         favoritePadHelper.renderLabels(favoritePadButtons, labels)
     }
 
+    private fun renderFavoritePadState() {
+        renderFavoritePadButtons()
+        renderAssignmentTarget()
+        renderFavoritePageControls()
+        refreshReadyState()
+    }
+
     private fun renderAssignmentTarget() {
-        uiRenderer.renderAssignmentTarget(selectedAssignmentSlotIndex)
+        uiRenderer.renderAssignmentTarget(
+            currentPageNumber = favoritesManager.currentPageIndex() + 1,
+            pageCount = favoritesManager.pageCount(),
+            selectedAssignmentSlotIndex = selectedAssignmentSlotIndex,
+        )
+    }
+
+    private fun renderFavoritePageControls() {
+        favoritePageStatusText.text = getString(
+            R.string.soundboard_favorite_page_status_value,
+            favoritesManager.currentPageIndex() + 1,
+            favoritesManager.pageCount(),
+        )
+        favoritePagePrevButton.isEnabled = favoritesManager.currentPageIndex() > 0
+        favoritePageNextButton.isEnabled = favoritesManager.currentPageIndex() < favoritesManager.pageCount() - 1
+        favoritePageRemoveButton.isEnabled = favoritesManager.pageCount() > 1
     }
 
     private fun renderClipBrowser(clips: List<ClipMetadata>) {
@@ -508,9 +657,7 @@ class Screen3Activity : ComponentActivity() {
         syncFavoritesFromManager()
         clipCacheManager.pinClip(clip.id)
         trimClipCache(activeFolderClips.map { it.id }.toSet(), Screen3ClipCacheManager.TrimReason.SETTINGS_APPLY)
-        renderFavoritePadButtons()
-        renderAssignmentTarget()
-        refreshReadyState()
+        renderFavoritePadState()
     }
 
     private fun clearSelectedAssignmentSlot() {
@@ -523,8 +670,7 @@ class Screen3Activity : ComponentActivity() {
             getString(R.string.soundboard_assignment_cleared, selectedAssignmentSlotIndex + 1),
             Toast.LENGTH_SHORT
         ).show()
-        renderFavoritePadButtons()
-        refreshReadyState()
+        renderFavoritePadState()
     }
 
     private fun showClearSlotDialog() {
@@ -668,7 +814,7 @@ class Screen3Activity : ComponentActivity() {
         }
     }
 
-    private fun pinnedClipIds(): Set<String> = favoriteSlotClipIds.values.toSet()
+    private fun pinnedClipIds(): Set<String> = favoritesManager.assignedClipIds()
 
     private fun refreshReadyState() {
         val currentFolderName = folderEntries.getOrNull(currentFolderIndex)?.name
@@ -707,6 +853,19 @@ class Screen3Activity : ComponentActivity() {
     private fun syncFavoritesFromManager() {
         favoriteSlotClipIds.clear()
         favoriteSlotClipIds.putAll(favoritesManager.exportAssignments())
+    }
+
+    private fun syncKnownClipsFromIndex() {
+        clipIndexRepository.getAllIndexedClips().forEach { indexed ->
+            clipById[indexed.clipId] = ClipMetadata(
+                id = indexed.clipId,
+                displayName = indexed.fileName,
+                uri = Uri.parse(indexed.clipUri),
+                folderName = indexed.folderName,
+                durationMs = indexed.durationMs,
+                isPlayable = indexed.playable
+            )
+        }
     }
 
     private fun constraintSnapshot(): SoundboardStateMachine.ConstraintSnapshot {

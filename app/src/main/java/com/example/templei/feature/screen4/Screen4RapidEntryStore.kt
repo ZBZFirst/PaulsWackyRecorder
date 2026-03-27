@@ -8,7 +8,14 @@ class Screen4RapidEntryStore(context: Context) {
     fun save(config: RapidEntryConfig) {
         val active = config.activeColumnIds.joinToString(",")
         val rules = config.fillRulesByColumnId.entries.joinToString("||") { (columnId, rule) ->
-            "$columnId::${rule.mode.name}::${rule.fixedValue.orEmpty()}"
+            listOf(
+                columnId.toString(),
+                rule.mode.name,
+                rule.fixedValue.orEmpty(),
+                rule.sequenceSeedValue.orEmpty(),
+                rule.stepAmount.toString(),
+                rule.stepUnit?.name.orEmpty(),
+            ).joinToString("::")
         }
         prefs.edit()
             .putString(KEY_ACTIVE_COLUMN_IDS, active)
@@ -33,12 +40,23 @@ class Screen4RapidEntryStore(context: Context) {
         } else {
             rulesRaw.split("||")
                 .mapNotNull {
-                    val parts = it.split("::", limit = 3)
+                    val parts = it.split("::", limit = 6)
                     if (parts.size < 2) return@mapNotNull null
                     val columnId = parts[0].toLongOrNull() ?: return@mapNotNull null
                     val mode = runCatching { RapidEntryFillMode.valueOf(parts[1]) }.getOrNull() ?: return@mapNotNull null
                     val fixedValue = parts.getOrNull(2)?.ifBlank { null }
-                    columnId to RapidEntryFillRule(mode = mode, fixedValue = fixedValue)
+                    val sequenceSeedValue = parts.getOrNull(3)?.ifBlank { null }
+                    val stepAmount = parts.getOrNull(4)?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                    val stepUnit = parts.getOrNull(5)
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { runCatching { RapidEntryStepUnit.valueOf(it) }.getOrNull() }
+                    columnId to RapidEntryFillRule(
+                        mode = mode,
+                        fixedValue = fixedValue,
+                        sequenceSeedValue = sequenceSeedValue,
+                        stepAmount = stepAmount,
+                        stepUnit = stepUnit,
+                    )
                 }
                 .toMap()
         }

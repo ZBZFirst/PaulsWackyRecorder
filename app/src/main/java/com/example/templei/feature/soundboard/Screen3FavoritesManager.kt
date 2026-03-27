@@ -14,51 +14,106 @@ class Screen3FavoritesManager(
     private val savedUnknownLabelForSlot: (slotNumber: Int) -> String
 ) {
 
-    private val slotToClipId = mutableMapOf<Int, String>()
+    private val pages = mutableListOf<FavoritePageModel>()
     private var selectedSlotIndex: Int = 0
+    private var currentPageId: String = Screen3SettingsStore.DEFAULT_FAVORITE_PAGE_ID
 
     fun initialize() {
+        val favoritePagesState = settingsStore.loadFavoritePagesState(favoriteSlotCount)
         selectedSlotIndex = settingsStore.loadSelectedAssignmentSlotIndex(favoriteSlotCount)
-        slotToClipId.clear()
-        slotToClipId.putAll(settingsStore.loadFavoriteAssignments(favoriteSlotCount))
+        pages.clear()
+        favoritePagesState.pages.forEach { page ->
+            pages += FavoritePageModel(
+                pageId = page.pageId,
+                assignments = page.assignments.toMutableMap(),
+            )
+        }
+        if (pages.isEmpty()) {
+            pages += FavoritePageModel(
+                pageId = Screen3SettingsStore.DEFAULT_FAVORITE_PAGE_ID,
+                assignments = mutableMapOf(),
+            )
+        }
+        currentPageId = favoritePagesState.selectedPageId
+            ?.takeIf { selectedId -> pages.any { it.pageId == selectedId } }
+            ?: pages.first().pageId
+        settingsStore.saveSelectedFavoritePageId(currentPageId)
     }
 
     fun selectedSlotIndex(): Int = selectedSlotIndex
+    fun currentPageIndex(): Int = currentPageIndexInternal()
+    fun pageCount(): Int = pages.size
+    fun currentPageId(): String = currentPageId
 
     fun selectSlot(slotIndex: Int) {
         selectedSlotIndex = slotIndex.coerceIn(0, favoriteSlotCount - 1)
         settingsStore.saveSelectedAssignmentSlotIndex(selectedSlotIndex, favoriteSlotCount)
     }
 
+    fun moveToPreviousPage(): Boolean {
+        val currentIndex = currentPageIndexInternal()
+        if (currentIndex <= 0) return false
+        currentPageId = pages[currentIndex - 1].pageId
+        persist()
+        return true
+    }
+
+    fun moveToNextPage(): Boolean {
+        val currentIndex = currentPageIndexInternal()
+        if (currentIndex >= pages.lastIndex) return false
+        currentPageId = pages[currentIndex + 1].pageId
+        persist()
+        return true
+    }
+
+    fun addPage() {
+        val newPage = FavoritePageModel(
+            pageId = buildPageId(),
+            assignments = mutableMapOf(),
+        )
+        pages += newPage
+        currentPageId = newPage.pageId
+        persist()
+    }
+
+    fun removeCurrentPage(): Boolean {
+        if (pages.size <= 1) return false
+        val currentIndex = currentPageIndexInternal()
+        pages.removeAt(currentIndex)
+        currentPageId = pages[currentIndex.coerceAtMost(pages.lastIndex)].pageId
+        persist()
+        return true
+    }
+
     fun assignClip(slotIndex: Int, clipId: String) {
         val clamped = slotIndex.coerceIn(0, favoriteSlotCount - 1)
-        slotToClipId[clamped] = clipId
+        currentPageAssignments()[clamped] = clipId
         selectedSlotIndex = clamped
         persist()
     }
 
     fun assignClipToSelectedSlot(clipId: String) {
-        slotToClipId[selectedSlotIndex] = clipId
+        currentPageAssignments()[selectedSlotIndex] = clipId
         persist()
     }
 
     fun clearSelectedSlot() {
-        slotToClipId.remove(selectedSlotIndex)
+        currentPageAssignments().remove(selectedSlotIndex)
         persist()
     }
 
     fun clipIdForSlot(slotIndex: Int): String? {
         val clamped = slotIndex.coerceIn(0, favoriteSlotCount - 1)
-        return slotToClipId[clamped]
+        return currentPageAssignments()[clamped]
     }
 
-    fun assignedClipIds(): Set<String> = slotToClipId.values.toSet()
+    fun assignedClipIds(): Set<String> = pages.flatMap { it.assignments.values }.toSet()
 
-    fun exportAssignments(): Map<Int, String> = slotToClipId.toMap()
+    fun exportAssignments(): Map<Int, String> = currentPageAssignments().toMap()
 
     fun buildSlotItems(clipNameById: Map<String, String>): List<Screen3FavoriteSlotItem> {
         return (0 until favoriteSlotCount).map { slotIndex ->
-            val clipId = slotToClipId[slotIndex]
+            val clipId = currentPageAssignments()[slotIndex]
             val slotNumber = slotIndex + 1
             val label = when {
                 clipId == null -> emptyLabelForSlot(slotNumber)
@@ -74,7 +129,38 @@ class Screen3FavoritesManager(
     }
 
     private fun persist() {
-        settingsStore.saveFavoriteAssignments(slotToClipId)
+        settingsStore.saveFavoritePagesState(
+            state = Screen3SettingsStore.FavoritePagesState(
+                pages = pages.map { page ->
+                    Screen3SettingsStore.FavoritePage(
+                        pageId = page.pageId,
+                        assignments = page.assignments.toMap(),
+                    )
+                },
+                selectedPageId = currentPageId,
+            ),
+            favoriteSlotCount = favoriteSlotCount,
+        )
         settingsStore.saveSelectedAssignmentSlotIndex(selectedSlotIndex, favoriteSlotCount)
+        settingsStore.saveSelectedFavoritePageId(currentPageId)
     }
+
+    private fun currentPageAssignments(): MutableMap<Int, String> {
+        return pages[currentPageIndexInternal()].assignments
+    }
+
+    private fun currentPageIndexInternal(): Int {
+        return pages.indexOfFirst { it.pageId == currentPageId }
+            .takeIf { it >= 0 }
+            ?: 0
+    }
+
+    private fun buildPageId(): String {
+        return "favorite_page_${System.currentTimeMillis()}_${pages.size + 1}"
+    }
+
+    private data class FavoritePageModel(
+        val pageId: String,
+        val assignments: MutableMap<Int, String>,
+    )
 }

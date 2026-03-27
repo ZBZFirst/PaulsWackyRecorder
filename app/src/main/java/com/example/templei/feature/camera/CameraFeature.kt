@@ -1,6 +1,11 @@
 package com.example.templei.feature.camera
 
 /**
- * Placeholder for future camera capture pipeline.
+ * Shared Screen 1 camera feature constants.
  */
-object CameraFeature
+object CameraFeature {
+    const val photoDirectoryName = "screen1_photos"
+    const val videoDirectoryName = "screen1_videos"
+    const val photoFilePrefix = "screen1_photo_"
+    const val videoFilePrefix = "screen1_video_"
+}

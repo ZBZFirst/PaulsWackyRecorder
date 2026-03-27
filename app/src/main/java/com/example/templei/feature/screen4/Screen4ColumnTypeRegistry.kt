@@ -135,6 +135,8 @@ object Screen4ColumnTypeRegistry {
         def("day_of_week", Screen4ColumnCategory.DATE, Screen4PrimitiveType.STRING, "text", "TextInput"),
 
         // Numeric Formats
+        def("integer", Screen4ColumnCategory.NUMBER, Screen4PrimitiveType.INTEGER, "integer", "NumericInput"),
+        def("decimal", Screen4ColumnCategory.NUMBER, Screen4PrimitiveType.DECIMAL, "decimal", "DecimalInput"),
         def("decimal_1", Screen4ColumnCategory.NUMBER, Screen4PrimitiveType.DECIMAL, "decimal", "DecimalInput"),
         def("decimal_2", Screen4ColumnCategory.NUMBER, Screen4PrimitiveType.DECIMAL, "decimal", "DecimalInput"),
         def("decimal_3", Screen4ColumnCategory.NUMBER, Screen4PrimitiveType.DECIMAL, "decimal", "DecimalInput"),

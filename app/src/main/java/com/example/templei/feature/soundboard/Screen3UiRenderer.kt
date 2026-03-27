@@ -6,7 +6,6 @@ import android.widget.Button
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
-import android.widget.SeekBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
@@ -22,6 +21,7 @@ class Screen3UiRenderer(
     private val nextFolderButton: Button,
     private val assignmentTargetText: TextView,
     private val assignmentRow: LinearLayout,
+    private val favoritePageRow: LinearLayout,
     private val clipBrowserScroll: ScrollView,
     private val favoritesPad: GridLayout,
     private val browserToggleButton: Button,
@@ -103,12 +103,18 @@ class Screen3UiRenderer(
         nextFolderButton.isEnabled = hasMultipleFolders
     }
 
-    fun renderAssignmentTarget(selectedAssignmentSlotIndex: Int) {
-        assignmentTargetText.text = context.getString(R.string.soundboard_assignment_target, selectedAssignmentSlotIndex + 1)
+    fun renderAssignmentTarget(currentPageNumber: Int, pageCount: Int, selectedAssignmentSlotIndex: Int) {
+        assignmentTargetText.text = context.getString(
+            R.string.soundboard_assignment_target,
+            currentPageNumber,
+            pageCount,
+            selectedAssignmentSlotIndex + 1,
+        )
     }
 
     fun renderSectionVisibility(isBrowserCollapsed: Boolean, isFavoritesCollapsed: Boolean) {
         clipBrowserScroll.visibility = if (isBrowserCollapsed) View.GONE else View.VISIBLE
+        favoritePageRow.visibility = if (isFavoritesCollapsed) View.GONE else View.VISIBLE
         favoritesPad.visibility = if (isFavoritesCollapsed) View.GONE else View.VISIBLE
         assignmentRow.visibility = if (isFavoritesCollapsed) View.GONE else View.VISIBLE
 

@@ -80,9 +80,27 @@ class Screen3FolderBrowserCoordinator(
         )
     }
 
+    fun refreshCurrentFolder(): RebuildSummary {
+        val currentRoot = rootUri ?: clipIndexRepository.getPersistedRootUri().also { rootUri = it }
+        val folderName = folderNames.getOrNull(selectedFolderIndex)
+            ?: clipIndexRepository.getPersistedSelectedFolderName()
+            ?: return RebuildSummary(folderCount = 0, clipCount = 0, playableCount = 0)
+        if (currentRoot == null) {
+            return RebuildSummary(folderCount = 0, clipCount = 0, playableCount = 0)
+        }
+        val summary = clipIndexRepository.refreshFolder(currentRoot, folderName)
+        hydrateFoldersFromIndex()
+        return RebuildSummary(
+            folderCount = summary.folderCount,
+            clipCount = summary.clipCount,
+            playableCount = summary.playableCount
+        )
+    }
+
     fun movePreviousFolder(): IndexedFolderState {
         if (folderNames.isNotEmpty()) {
             selectedFolderIndex = (selectedFolderIndex - 1 + folderNames.size) % folderNames.size
+            persistSelectedFolder()
         }
         return buildState(currentFolderClips())
     }
@@ -90,12 +108,14 @@ class Screen3FolderBrowserCoordinator(
     fun moveNextFolder(): IndexedFolderState {
         if (folderNames.isNotEmpty()) {
             selectedFolderIndex = (selectedFolderIndex + 1) % folderNames.size
+            persistSelectedFolder()
         }
         return buildState(currentFolderClips())
     }
 
     fun selectFolder(index: Int): IndexedFolderState {
         selectedFolderIndex = index.coerceIn(0, max(0, folderNames.size - 1))
+        persistSelectedFolder()
         return buildState(currentFolderClips())
     }
 
@@ -103,7 +123,14 @@ class Screen3FolderBrowserCoordinator(
 
     private fun hydrateFoldersFromIndex() {
         folderNames = clipIndexRepository.getIndexedFolders()
-        selectedFolderIndex = selectedFolderIndex.coerceIn(0, max(0, folderNames.size - 1))
+        val persistedFolderName = clipIndexRepository.getPersistedSelectedFolderName()
+        selectedFolderIndex = when {
+            folderNames.isEmpty() -> 0
+            persistedFolderName != null && folderNames.contains(persistedFolderName) ->
+                folderNames.indexOf(persistedFolderName)
+            else -> selectedFolderIndex.coerceIn(0, max(0, folderNames.size - 1))
+        }
+        persistSelectedFolder()
     }
 
     private fun currentFolderClips(): List<IndexedClip> {
@@ -129,5 +156,9 @@ class Screen3FolderBrowserCoordinator(
             clips = clips,
             hasRootSelection = rootUri != null
         )
+    }
+
+    private fun persistSelectedFolder() {
+        clipIndexRepository.setPersistedSelectedFolderName(folderNames.getOrNull(selectedFolderIndex))
     }
 }

@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.templei.ui.theme.TempleITheme
+import com.example.templei.ui.theme.FourPanelAppTheme
 
 @Composable
 fun UiPaletteBar(
@@ -43,7 +43,7 @@ fun UiPaletteBar(
 @Preview(showBackground = true)
 @Composable
 private fun UiPaletteBarPreview() {
-    TempleITheme {
+        FourPanelAppTheme {
         UiPaletteBar(
             items = listOf("Button", "Text", "Card", "Image"),
             onItemClick = {},
