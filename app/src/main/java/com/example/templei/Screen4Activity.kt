@@ -357,11 +357,34 @@ class Screen4Activity : ComponentActivity() {
                 text = sequenceBar.label
                 textSize = 16f
             }
+            val titleRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
             val titleParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f,
             )
-            barColumn.addView(title, titleParams)
+            val removeBarButton = Button(this).apply {
+                text = getString(R.string.screen4_music_remove_play_bar_inline)
+                setOnClickListener { screen4Coordinator.removePlayBarAt(sequenceBar.barIndex) }
+            }
+            val removeBarParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                marginStart = dp(8)
+            }
+            titleRow.addView(title, titleParams)
+            titleRow.addView(removeBarButton, removeBarParams)
+            barColumn.addView(
+                titleRow,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+            )
 
             val actionsRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL

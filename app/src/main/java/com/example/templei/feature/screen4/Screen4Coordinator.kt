@@ -185,6 +185,10 @@ class Screen4Coordinator(
     }
 
     fun removePlayBar() {
+        removePlayBarAt(playBars.lastIndex)
+    }
+
+    fun removePlayBarAt(barIndex: Int) {
         if (playBars.size <= MIN_PLAY_BAR_COUNT) {
             mutableUiState.value = mutableUiState.value.copy(
                 runtimeStatus = "At least one play bar must remain.",
@@ -192,10 +196,11 @@ class Screen4Coordinator(
             )
             return
         }
-        playBars.removeAt(playBars.lastIndex)
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        playBars.removeAt(normalizedBarIndex)
         persistWorkingState()
         applyUiRefresh(
-            runtimeStatus = "Removed the last play bar. ${playBars.size} bar(s) remain.",
+            runtimeStatus = "Removed bar ${normalizedBarIndex + 1}. ${playBars.size} bar(s) remain.",
             lastError = null,
         )
         if (mutableUiState.value.isPlaying) {

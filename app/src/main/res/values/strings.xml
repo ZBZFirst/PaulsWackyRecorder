@@ -469,6 +469,7 @@
     <string name="screen4_music_play_bar_count">Play bars: %1$d</string>
     <string name="screen4_music_add_play_bar">Add Bar</string>
     <string name="screen4_music_remove_play_bar">Remove Bar</string>
+    <string name="screen4_music_remove_play_bar_inline">X</string>
     <string name="screen4_music_save_song">Save Song</string>
     <string name="screen4_music_load_song">Load Song</string>
     <string name="screen4_music_save_bar">Save Bar</string>
