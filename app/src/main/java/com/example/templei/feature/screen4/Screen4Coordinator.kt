@@ -948,7 +948,9 @@ class Screen4Coordinator(
                 val stepIndex = indexedStep.first
                 val favoriteReference = indexedStep.second
                 val effectState = barEffectStates.getOrElse(barIndex) { Screen4BarEffectState() }
-                val clipId = resolveFavoriteReferenceClipId(favoriteReference)
+                val clipId = favoriteReference.clipId
+                    ?: favoritePages.firstOrNull { it.pageId == favoriteReference.pageId }
+                        ?.clipIds?.getOrNull(favoriteReference.slotIndex)
                     ?: throw IllegalArgumentException(
                         "Page ${displayPageNumber(favoriteReference.pageId)} pad ${favoriteReference.slotIndex + 1} is empty."
                     )
@@ -1088,7 +1090,10 @@ class Screen4Coordinator(
         steps: List<Screen4FavoritePadReference?>,
     ): List<Screen4VisualSlot> {
         return steps.mapIndexed { stepIndex, favoriteReference ->
-            val clipId = favoriteReference?.let(::resolveFavoriteReferenceClipId)
+            val clipId = favoriteReference?.let { reference ->
+                reference.clipId ?: favoritePages.firstOrNull { it.pageId == reference.pageId }
+                    ?.clipIds?.getOrNull(reference.slotIndex)
+            }
             val label = when {
                 favoriteReference == null -> "${stepIndex + 1}: ~"
                 clipId == null -> "${stepIndex + 1}: Pg${displayPageNumber(favoriteReference.pageId)} Pad${favoriteReference.slotIndex + 1} empty"
@@ -1107,13 +1112,6 @@ class Screen4Coordinator(
 
     private fun displayLabelForClipId(clipId: String): String {
         return resolveDescriptorByClipId(clipId)?.baseName ?: "saved assignment"
-    }
-
-    private fun resolveFavoriteReferenceClipId(reference: Screen4FavoritePadReference): String? {
-        return favoritePages.firstOrNull { it.pageId == reference.pageId }
-            ?.clipIds
-            ?.getOrNull(reference.slotIndex)
-            ?: reference.clipId
     }
 
     private fun synchronizeSharedFavorites() {
