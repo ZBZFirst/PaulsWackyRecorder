@@ -116,7 +116,7 @@ class Screen3UiRenderer(
         clipBrowserScroll.visibility = if (isBrowserCollapsed) View.GONE else View.VISIBLE
         favoritePageRow.visibility = if (isFavoritesCollapsed) View.GONE else View.VISIBLE
         favoritesPad.visibility = if (isFavoritesCollapsed) View.GONE else View.VISIBLE
-        assignmentRow.visibility = if (isFavoritesCollapsed) View.GONE else View.VISIBLE
+        assignmentRow.visibility = View.GONE
 
         browserToggleButton.text = context.getString(
             if (isBrowserCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse

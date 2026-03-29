@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import java.util.Locale
 
 /**
@@ -28,6 +30,9 @@ class Screen4Coordinator(
     private val playBars = MutableList(DEFAULT_PLAY_BAR_COUNT) {
         MutableList(STEP_COUNT) { null as Screen4FavoritePadReference? }
     }
+    private val barEffectStates = MutableList(DEFAULT_PLAY_BAR_COUNT) { Screen4BarEffectState() }
+    private val barSelectionStates = MutableList(DEFAULT_PLAY_BAR_COUNT) { BarSelectionState() }
+    private val barNames = MutableList(DEFAULT_PLAY_BAR_COUNT) { barIndex -> defaultBarDisplayName(barIndex) }
     private var favoritePages: List<SharedFavoritePage> = listOf(emptyFavoritePage(DEFAULT_FAVORITE_PAGE_ID))
     private var displayedFavoritePageId: String = DEFAULT_FAVORITE_PAGE_ID
 
@@ -35,7 +40,7 @@ class Screen4Coordinator(
         Screen4UiState(
             currentFavoritePageId = DEFAULT_FAVORITE_PAGE_ID,
             favoriteSlots = buildFavoriteSlots(),
-            sequenceBars = buildSequenceBars(activeStepIndex = 0, isPlaying = false),
+            sequenceBars = buildSequenceBars(),
         )
     )
 
@@ -49,7 +54,7 @@ class Screen4Coordinator(
         restoreWorkingState(sequenceStore.loadWorkingState())
         mutableUiState.value = mutableUiState.value.copy(
             bpm = mutableUiState.value.bpm.coerceIn(MIN_BPM, MAX_BPM),
-            sequenceBars = buildSequenceBars(activeStepIndex = 0, isPlaying = false),
+            sequenceBars = buildSequenceBars(),
             runtimeStatus = "Loading sample library...",
             lastError = null,
         )
@@ -163,6 +168,58 @@ class Screen4Coordinator(
         )
     }
 
+    fun addFavoritePage() {
+        val state = sharedFavoritesStore.loadFavoritePagesState(FAVORITE_SLOT_COUNT)
+        val newPageId = "favorite_page_${System.currentTimeMillis()}_${state.pages.size + 1}"
+        val updatedPages = state.pages + Screen3SettingsStore.FavoritePage(
+            pageId = newPageId,
+            assignments = emptyMap(),
+        )
+        sharedFavoritesStore.saveFavoritePagesState(
+            state = Screen3SettingsStore.FavoritePagesState(
+                pages = updatedPages,
+                selectedPageId = newPageId,
+            ),
+            favoriteSlotCount = FAVORITE_SLOT_COUNT,
+        )
+        displayedFavoritePageId = newPageId
+        synchronizeSharedFavorites()
+        applyUiRefresh(
+            runtimeStatus = "Created favorite page ${currentFavoritePageIndex() + 1}.",
+            lastError = null,
+        )
+    }
+
+    fun removeCurrentFavoritePage(): Boolean {
+        val state = sharedFavoritesStore.loadFavoritePagesState(FAVORITE_SLOT_COUNT)
+        if (state.pages.size <= 1) {
+            mutableUiState.value = mutableUiState.value.copy(
+                runtimeStatus = "At least one favorite page must remain.",
+                lastError = null,
+            )
+            return false
+        }
+        val currentIndex = state.pages.indexOfFirst { it.pageId == displayedFavoritePageId }
+            .takeIf { it >= 0 }
+            ?: 0
+        val updatedPages = state.pages.toMutableList().apply { removeAt(currentIndex) }
+        val nextPageId = updatedPages[currentIndex.coerceAtMost(updatedPages.lastIndex)].pageId
+        sharedFavoritesStore.saveFavoritePagesState(
+            state = Screen3SettingsStore.FavoritePagesState(
+                pages = updatedPages,
+                selectedPageId = nextPageId,
+            ),
+            favoriteSlotCount = FAVORITE_SLOT_COUNT,
+        )
+        displayedFavoritePageId = nextPageId
+        synchronizeSharedFavorites()
+        applyUiRefresh(
+            runtimeStatus = "Removed favorite page. Now viewing page ${currentFavoritePageIndex() + 1}.",
+            lastError = null,
+        )
+        return true
+    }
+
     fun addPlayBar() {
         if (playBars.size >= MAX_PLAY_BAR_COUNT) {
             mutableUiState.value = mutableUiState.value.copy(
@@ -172,6 +229,9 @@ class Screen4Coordinator(
             return
         }
         playBars += MutableList(STEP_COUNT) { null as Screen4FavoritePadReference? }
+        barEffectStates += Screen4BarEffectState()
+        barSelectionStates += BarSelectionState()
+        barNames += defaultBarDisplayName(playBars.lastIndex)
         persistWorkingState()
         applyUiRefresh(
             runtimeStatus = "Added play bar ${playBars.size}.",
@@ -198,6 +258,9 @@ class Screen4Coordinator(
         }
         val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
         playBars.removeAt(normalizedBarIndex)
+        barEffectStates.removeAt(normalizedBarIndex)
+        barSelectionStates.removeAt(normalizedBarIndex)
+        barNames.removeAt(normalizedBarIndex)
         persistWorkingState()
         applyUiRefresh(
             runtimeStatus = "Removed bar ${normalizedBarIndex + 1}. ${playBars.size} bar(s) remain.",
@@ -218,6 +281,168 @@ class Screen4Coordinator(
             queueCurrentLoopForNextCycle()
         } else {
             updateCompileStatusFromVisualLoop()
+        }
+    }
+
+    fun updateBarGain(barIndex: Int, gain: Float) {
+        val normalized = gain.coerceIn(0f, 1f)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                gain = normalized,
+                gainEnabled = normalized < 0.999f,
+                gainLevel = effectLevelForSend(normalized),
+            )
+        }
+    }
+
+    fun updateBarPitchSemitones(barIndex: Int, pitchSemitones: Float) {
+        val normalized = pitchSemitones.coerceIn(-12f, 12f)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                pitchSemitones = normalized,
+                pitchEnabled = kotlin.math.abs(normalized) > 0.05f,
+                pitchLevel = effectLevelForPitch(normalized),
+            )
+        }
+    }
+
+    fun updateBarPan(barIndex: Int, pan: Float) {
+        val normalized = pan.coerceIn(-1f, 1f)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                pan = normalized,
+                panEnabled = kotlin.math.abs(normalized) > 0.05f,
+                panLevel = effectLevelForPan(normalized),
+            )
+        }
+    }
+
+    fun updateBarDelaySend(barIndex: Int, delaySend: Float) {
+        val normalized = delaySend.coerceIn(0f, 1f)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                delaySend = normalized,
+            )
+        }
+    }
+
+    fun updateBarReverbSend(barIndex: Int, reverbSend: Float) {
+        val normalized = reverbSend.coerceIn(0f, 1f)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                reverbSend = normalized,
+                reverbEnabled = normalized > 0f,
+                reverbLevel = effectLevelForSend(normalized),
+            )
+        }
+    }
+
+    fun ensurePlayBarCount(targetCount: Int) {
+        val normalizedTarget = targetCount.coerceIn(MIN_PLAY_BAR_COUNT, MAX_PLAY_BAR_COUNT)
+        var changed = false
+        while (playBars.size < normalizedTarget) {
+            playBars += MutableList(STEP_COUNT) { null as Screen4FavoritePadReference? }
+            barEffectStates += Screen4BarEffectState()
+            barSelectionStates += BarSelectionState()
+            barNames += defaultBarDisplayName(playBars.lastIndex)
+            changed = true
+        }
+        while (playBars.size > normalizedTarget) {
+            playBars.removeAt(playBars.lastIndex)
+            barEffectStates.removeAt(barEffectStates.lastIndex)
+            barSelectionStates.removeAt(barSelectionStates.lastIndex)
+            barNames.removeAt(barNames.lastIndex)
+            changed = true
+        }
+        if (!changed) return
+        persistWorkingState()
+        applyUiRefresh(
+            runtimeStatus = "Channel roster synced to $normalizedTarget channels.",
+            lastError = null,
+        )
+    }
+
+    fun toggleGainEnabled(barIndex: Int) {
+        updateBarEffectState(barIndex) {
+            val enabled = !it.gainEnabled
+            it.copy(
+                gainEnabled = enabled,
+                gain = if (enabled) sendForEffectLevel(it.gainLevel) else 1f,
+            )
+        }
+    }
+
+    fun updateGainLevel(barIndex: Int, level: Int) {
+        val normalizedLevel = level.coerceIn(1, 10)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                gainEnabled = true,
+                gainLevel = normalizedLevel,
+                gain = sendForEffectLevel(normalizedLevel),
+            )
+        }
+    }
+
+    fun togglePitchEnabled(barIndex: Int) {
+        updateBarEffectState(barIndex) {
+            val enabled = !it.pitchEnabled
+            it.copy(
+                pitchEnabled = enabled,
+                pitchSemitones = if (enabled) pitchForEffectLevel(it.pitchLevel) else 0f,
+            )
+        }
+    }
+
+    fun updatePitchLevel(barIndex: Int, level: Int) {
+        val normalizedLevel = level.coerceIn(1, 10)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                pitchEnabled = true,
+                pitchLevel = normalizedLevel,
+                pitchSemitones = pitchForEffectLevel(normalizedLevel),
+            )
+        }
+    }
+
+    fun toggleReverbEnabled(barIndex: Int) {
+        updateBarEffectState(barIndex) {
+            val enabled = !it.reverbEnabled
+            it.copy(
+                reverbEnabled = enabled,
+                reverbSend = if (enabled) sendForEffectLevel(it.reverbLevel) else 0f,
+            )
+        }
+    }
+
+    fun updateReverbLevel(barIndex: Int, level: Int) {
+        val normalizedLevel = level.coerceIn(1, 10)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                reverbEnabled = true,
+                reverbLevel = normalizedLevel,
+                reverbSend = sendForEffectLevel(normalizedLevel),
+            )
+        }
+    }
+
+    fun togglePanEnabled(barIndex: Int) {
+        updateBarEffectState(barIndex) {
+            val enabled = !it.panEnabled
+            it.copy(
+                panEnabled = enabled,
+                pan = if (enabled) panForEffectLevel(it.panLevel) else 0f,
+            )
+        }
+    }
+
+    fun updatePanLevel(barIndex: Int, level: Int) {
+        val normalizedLevel = level.coerceIn(1, 10)
+        updateBarEffectState(barIndex) {
+            it.copy(
+                panEnabled = true,
+                panLevel = normalizedLevel,
+                pan = panForEffectLevel(normalizedLevel),
+            )
         }
     }
 
@@ -256,6 +481,61 @@ class Screen4Coordinator(
         }
     }
 
+    fun assignFavoriteToBar(
+        barIndex: Int,
+        favoritePageId: String,
+        favoriteSlotIndex: Int,
+        target: Screen4BatchAssignTarget,
+    ) {
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        val normalizedFavoriteSlotIndex = favoriteSlotIndex.coerceIn(0, FAVORITE_SLOT_COUNT - 1)
+        val favoritePage = favoritePages.firstOrNull { it.pageId == favoritePageId }
+        val clipId = favoritePage?.clipIds?.getOrNull(normalizedFavoriteSlotIndex)
+        if (clipId == null) {
+            mutableUiState.value = mutableUiState.value.copy(
+                runtimeStatus = "Pad ${normalizedFavoriteSlotIndex + 1} is empty. Assign it in Screen 3 first.",
+                lastError = "Favorite pad ${normalizedFavoriteSlotIndex + 1} is empty.",
+            )
+            return
+        }
+
+        val targetStepIndices = stepIndicesForBatchTarget(normalizedBarIndex, target)
+        if (targetStepIndices.isEmpty()) {
+            mutableUiState.value = mutableUiState.value.copy(
+                runtimeStatus = "Select one or more steps before assigning a sound.",
+                lastError = "No steps selected.",
+            )
+            return
+        }
+
+        targetStepIndices.forEach { stepIndex ->
+            playBars[normalizedBarIndex][stepIndex] = Screen4FavoritePadReference(
+                pageId = favoritePageId,
+                slotIndex = normalizedFavoriteSlotIndex,
+                clipId = clipId,
+            )
+        }
+        if (target == Screen4BatchAssignTarget.SELECTED_SLOTS) {
+            barSelectionStates[normalizedBarIndex] = BarSelectionState()
+        }
+        persistWorkingState()
+        applyUiRefresh(
+            runtimeStatus = batchAssignmentStatus(
+                barIndex = normalizedBarIndex,
+                stepCount = targetStepIndices.size,
+                favoritePageId = favoritePageId,
+                favoriteSlotIndex = normalizedFavoriteSlotIndex,
+                target = target,
+            ),
+            lastError = null,
+        )
+        if (mutableUiState.value.isPlaying) {
+            queueCurrentLoopForNextCycle()
+        } else {
+            updateCompileStatusFromVisualLoop()
+        }
+    }
+
     fun clearStep(
         barIndex: Int,
         stepIndex: Int,
@@ -275,6 +555,111 @@ class Screen4Coordinator(
         }
     }
 
+    fun toggleBarSelectionMode(barIndex: Int) {
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        val currentState = barSelectionStates[normalizedBarIndex]
+        barSelectionStates[normalizedBarIndex] = if (currentState.isSelectionModeEnabled) {
+            BarSelectionState()
+        } else {
+            currentState.copy(isSelectionModeEnabled = true)
+        }
+        applyUiRefresh(
+            runtimeStatus = if (barSelectionStates[normalizedBarIndex].isSelectionModeEnabled) {
+                "Bar ${normalizedBarIndex + 1} selection mode is on."
+            } else {
+                "Bar ${normalizedBarIndex + 1} selection mode is off."
+            },
+            lastError = null,
+        )
+    }
+
+    fun setBarSelectionMode(
+        barIndex: Int,
+        enabled: Boolean,
+    ) {
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        val currentState = barSelectionStates[normalizedBarIndex]
+        val updatedState = if (enabled) {
+            currentState.copy(isSelectionModeEnabled = true)
+        } else {
+            BarSelectionState()
+        }
+        if (updatedState == currentState) return
+        barSelectionStates[normalizedBarIndex] = updatedState
+        applyUiRefresh(
+            runtimeStatus = if (enabled) {
+                "Bar ${normalizedBarIndex + 1} selection mode is on."
+            } else {
+                "Bar ${normalizedBarIndex + 1} selection mode is off."
+            },
+            lastError = null,
+        )
+    }
+
+    fun selectBatchTarget(
+        barIndex: Int,
+        target: Screen4BatchAssignTarget,
+    ) {
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        val selectedIndices = stepIndicesForBatchTarget(normalizedBarIndex, target)
+        barSelectionStates[normalizedBarIndex] = barSelectionStates[normalizedBarIndex].copy(
+            isSelectionModeEnabled = true,
+            selectedStepIndices = selectedIndices,
+        )
+        applyUiRefresh(
+            runtimeStatus = "Bar ${normalizedBarIndex + 1} selected ${selectedIndices.size} step(s).",
+            lastError = null,
+        )
+    }
+
+    fun clearSelectedAssignments(barIndex: Int) {
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        val selectedIndices = barSelectionStates[normalizedBarIndex].selectedStepIndices
+        if (selectedIndices.isEmpty()) {
+            mutableUiState.value = mutableUiState.value.copy(
+                runtimeStatus = "Select one or more steps before clearing them.",
+                lastError = null,
+            )
+            return
+        }
+        selectedIndices.forEach { stepIndex ->
+            playBars[normalizedBarIndex][stepIndex] = null
+        }
+        persistWorkingState()
+        applyUiRefresh(
+            runtimeStatus = "Cleared ${selectedIndices.size} selected step(s) in bar ${normalizedBarIndex + 1}.",
+            lastError = null,
+        )
+        if (mutableUiState.value.isPlaying) {
+            queueCurrentLoopForNextCycle()
+        } else {
+            updateCompileStatusFromVisualLoop()
+        }
+    }
+
+    fun toggleSelectedStep(
+        barIndex: Int,
+        stepIndex: Int,
+    ) {
+        val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
+        val normalizedStepIndex = stepIndex.coerceIn(0, STEP_COUNT - 1)
+        val currentState = barSelectionStates[normalizedBarIndex]
+        if (!currentState.isSelectionModeEnabled) return
+
+        val updatedSelection = currentState.selectedStepIndices.toMutableSet().apply {
+            if (!add(normalizedStepIndex)) {
+                remove(normalizedStepIndex)
+            }
+        }
+        barSelectionStates[normalizedBarIndex] = currentState.copy(
+            selectedStepIndices = updatedSelection.toList().sorted(),
+        )
+        applyUiRefresh(
+            runtimeStatus = "Bar ${normalizedBarIndex + 1} has ${updatedSelection.size} selected step(s).",
+            lastError = null,
+        )
+    }
+
     fun savedBarSnapshots(): List<Screen4SavedBarSnapshot> {
         return sequenceStore.loadSavedBars()
     }
@@ -285,14 +670,17 @@ class Screen4Coordinator(
     ) {
         val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
         val normalizedName = requestedName.trim().ifBlank { nextDefaultBarName(normalizedBarIndex) }
+        barNames[normalizedBarIndex] = normalizedName
         val replacedExisting = sequenceStore.saveBar(
             Screen4SavedBarSnapshot(
                 name = normalizedName,
                 savedAtMs = System.currentTimeMillis(),
                 steps = snapshotPlayBar(normalizedBarIndex),
+                effectState = barEffectStates[normalizedBarIndex],
             )
         )
-        mutableUiState.value = mutableUiState.value.copy(
+        persistWorkingState()
+        applyUiRefresh(
             runtimeStatus = if (replacedExisting) {
                 "Replaced saved bar \"$normalizedName\"."
             } else {
@@ -317,6 +705,8 @@ class Screen4Coordinator(
             return
         }
         playBars[normalizedBarIndex] = normalizeStepSnapshot(snapshot.steps).toMutableList()
+        barEffectStates[normalizedBarIndex] = snapshot.effectState
+        barNames[normalizedBarIndex] = snapshot.name
         persistWorkingState()
         applyUiRefresh(
             runtimeStatus = "Loaded \"$savedName\" into bar ${normalizedBarIndex + 1}.",
@@ -342,6 +732,8 @@ class Screen4Coordinator(
                 bpm = mutableUiState.value.bpm,
                 displayedFavoritePageId = displayedFavoritePageId,
                 playBars = snapshotPlayBars(),
+                barEffects = snapshotBarEffects(),
+                barNames = snapshotBarNames(),
             )
         )
         mutableUiState.value = mutableUiState.value.copy(
@@ -370,6 +762,8 @@ class Screen4Coordinator(
         displayedFavoritePageId = snapshot.displayedFavoritePageId ?: displayedFavoritePageId
         sharedFavoritesStore.saveSelectedFavoritePageId(displayedFavoritePageId)
         replacePlayBars(snapshot.playBars)
+        replaceBarEffects(snapshot.barEffects)
+        replaceBarNames(snapshot.barNames)
         persistWorkingState()
         applyUiRefresh(
             runtimeStatus = "Loaded song \"$savedName\".",
@@ -443,7 +837,6 @@ class Screen4Coordinator(
                 activeStepIndex = 0,
                 pendingPatternSummary = "No queued next-cycle update.",
                 runtimeStatus = "Loop transport stopped.",
-                sequenceBars = buildSequenceBars(activeStepIndex = 0, isPlaying = false),
             )
         }
     }
@@ -468,14 +861,12 @@ class Screen4Coordinator(
             pendingPatternSummary = pendingCompiledPattern?.let { "Queued next cycle: ${it.summaryLabel()}" }
                 ?: "No queued next-cycle update.",
             runtimeStatus = "Loop cycle ${cycleWindow.cycleIndex + 1} running at ${cycleWindow.bpm} BPM.",
-            sequenceBars = buildSequenceBars(activeStepIndex = 0, isPlaying = true),
         )
     }
 
     fun onStepTick(stepIndex: Int) {
         mutableUiState.value = mutableUiState.value.copy(
             activeStepIndex = stepIndex,
-            sequenceBars = buildSequenceBars(activeStepIndex = stepIndex, isPlaying = true),
         )
     }
 
@@ -553,12 +944,11 @@ class Screen4Coordinator(
 
             val cycleDurationMs = (4 * 60_000L) / mutableUiState.value.bpm.coerceAtLeast(1)
             val resolvedSamples = mutableMapOf<String, Screen4SampleDescriptor>()
-            val scheduledEvents = populatedSteps.map { (_, indexedStep) ->
+            val scheduledEvents = populatedSteps.flatMap { (barIndex, indexedStep) ->
                 val stepIndex = indexedStep.first
                 val favoriteReference = indexedStep.second
-                val favoritePage = favoritePages.firstOrNull { it.pageId == favoriteReference.pageId }
-                val clipId = favoriteReference.clipId
-                    ?: favoritePage?.clipIds?.getOrNull(favoriteReference.slotIndex)
+                val effectState = barEffectStates.getOrElse(barIndex) { Screen4BarEffectState() }
+                val clipId = resolveFavoriteReferenceClipId(favoriteReference)
                     ?: throw IllegalArgumentException(
                         "Page ${displayPageNumber(favoriteReference.pageId)} pad ${favoriteReference.slotIndex + 1} is empty."
                     )
@@ -567,13 +957,11 @@ class Screen4Coordinator(
                         "Saved clip for page ${displayPageNumber(favoriteReference.pageId)} pad ${favoriteReference.slotIndex + 1} is no longer available."
                     )
                 resolvedSamples[descriptor.sampleId.lowercase(Locale.US)] = descriptor
-                Screen4ScheduledEvent(
-                    sampleId = descriptor.sampleId,
+                buildScheduledEventsForBarStep(
+                    descriptor = descriptor,
                     stepIndex = stepIndex,
-                    offsetMs = (stepIndex * cycleDurationMs.toDouble() / STEP_COUNT).toLong(),
-                    gain = 1f,
-                    pan = 0f,
-                    speed = 1f,
+                    cycleDurationMs = cycleDurationMs,
+                    effectState = effectState,
                 )
             }
 
@@ -584,6 +972,67 @@ class Screen4Coordinator(
                 resolvedSamples = resolvedSamples,
             )
         }
+    }
+
+    private fun buildScheduledEventsForBarStep(
+        descriptor: Screen4SampleDescriptor,
+        stepIndex: Int,
+        cycleDurationMs: Long,
+        effectState: Screen4BarEffectState,
+    ): List<Screen4ScheduledEvent> {
+        val baseOffsetMs = (stepIndex * cycleDurationMs.toDouble() / STEP_COUNT).toLong()
+        val stepDurationMs = cycleDurationMs / STEP_COUNT.toLong().coerceAtLeast(1L)
+        val speed = pitchSemitonesToSpeed(effectState.pitchSemitones)
+        val events = mutableListOf(
+            Screen4ScheduledEvent(
+                sampleId = descriptor.sampleId,
+                stepIndex = stepIndex,
+                offsetMs = baseOffsetMs,
+                gain = effectState.gain,
+                pan = effectState.pan,
+                speed = speed,
+            )
+        )
+
+        val delayGain = effectState.gain * effectState.delaySend * 0.6f
+        if (delayGain > 0.02f) {
+            events += Screen4ScheduledEvent(
+                sampleId = descriptor.sampleId,
+                stepIndex = stepIndex,
+                offsetMs = baseOffsetMs + (stepDurationMs * 2L),
+                gain = delayGain.coerceIn(0f, 1f),
+                pan = effectState.pan,
+                speed = speed,
+            )
+        }
+
+        val reverbFirstGain = effectState.gain * effectState.reverbSend * 0.25f
+        val reverbSecondGain = effectState.gain * effectState.reverbSend * 0.12f
+        if (reverbFirstGain > 0.02f) {
+            events += Screen4ScheduledEvent(
+                sampleId = descriptor.sampleId,
+                stepIndex = stepIndex,
+                offsetMs = baseOffsetMs + (stepDurationMs / 2L),
+                gain = reverbFirstGain.coerceIn(0f, 1f),
+                pan = effectState.pan * 0.7f,
+                speed = speed,
+            )
+        }
+        if (reverbSecondGain > 0.02f) {
+            events += Screen4ScheduledEvent(
+                sampleId = descriptor.sampleId,
+                stepIndex = stepIndex,
+                offsetMs = baseOffsetMs + stepDurationMs,
+                gain = reverbSecondGain.coerceIn(0f, 1f),
+                pan = effectState.pan * 0.5f,
+                speed = speed,
+            )
+        }
+        return events
+    }
+
+    private fun pitchSemitonesToSpeed(pitchSemitones: Float): Float {
+        return 2.0.pow((pitchSemitones / 12f).toDouble()).toFloat().coerceIn(0.5f, 2f)
     }
 
     private fun resolveDescriptorByClipId(clipId: String): Screen4SampleDescriptor? {
@@ -601,10 +1050,7 @@ class Screen4Coordinator(
             selectedRootLabel = samplePackIndex.rootUri?.toString() ?: "No sample folder selected.",
             sampleLibrarySummary = samplePackIndex.summaryLabel(),
             favoriteSlots = buildFavoriteSlots(),
-            sequenceBars = buildSequenceBars(
-                activeStepIndex = mutableUiState.value.activeStepIndex,
-                isPlaying = mutableUiState.value.isPlaying,
-            ),
+            sequenceBars = buildSequenceBars(),
             runtimeStatus = runtimeStatus,
             lastError = lastError,
         )
@@ -612,29 +1058,27 @@ class Screen4Coordinator(
 
     private fun buildFavoriteSlots(): List<Screen4VisualSlot> {
         return currentFavoritePage().clipIds.mapIndexed { index, sampleId ->
+            val slotLabel = String.format(Locale.US, "PAD %02d", index + 1)
             Screen4VisualSlot(
                 index = index,
                 sampleId = sampleId,
-                label = sampleId?.let { "Pad ${index + 1}\n${displayLabelForClipId(it)}" }
-                    ?: "Pad ${index + 1}\n(set in Screen 3)",
+                label = sampleId?.let { "$slotLabel\n${displayLabelForClipId(it)}" }
+                    ?: slotLabel,
             )
         }
     }
 
-    private fun buildSequenceBars(
-        activeStepIndex: Int,
-        isPlaying: Boolean,
-    ): List<Screen4SequenceBarUi> {
+    private fun buildSequenceBars(): List<Screen4SequenceBarUi> {
         return playBars.mapIndexed { barIndex, steps ->
+            val selectionState = barSelectionStates.getOrElse(barIndex) { BarSelectionState() }
             Screen4SequenceBarUi(
                 barIndex = barIndex,
-                label = "Bar ${barIndex + 1}",
-                steps = buildSequenceStepsForBar(
-                    barIndex = barIndex,
-                    steps = steps,
-                    activeStepIndex = activeStepIndex,
-                    isPlaying = isPlaying,
-                ),
+                label = "Ch ${barIndex + 1}",
+                displayName = barNames.getOrElse(barIndex) { defaultBarDisplayName(barIndex) },
+                steps = buildSequenceStepsForBar(barIndex = barIndex, steps = steps),
+                effectState = barEffectStates.getOrElse(barIndex) { Screen4BarEffectState() },
+                isSelectionModeEnabled = selectionState.isSelectionModeEnabled,
+                selectedStepIndices = selectionState.selectedStepIndices.sorted(),
             )
         }
     }
@@ -642,19 +1086,13 @@ class Screen4Coordinator(
     private fun buildSequenceStepsForBar(
         barIndex: Int,
         steps: List<Screen4FavoritePadReference?>,
-        activeStepIndex: Int,
-        isPlaying: Boolean,
     ): List<Screen4VisualSlot> {
         return steps.mapIndexed { stepIndex, favoriteReference ->
-            val prefix = if (stepIndex == activeStepIndex && isPlaying) ">" else ""
-            val clipId = favoriteReference?.let { reference ->
-                reference.clipId ?: favoritePages.firstOrNull { it.pageId == reference.pageId }
-                    ?.clipIds?.getOrNull(reference.slotIndex)
-            }
+            val clipId = favoriteReference?.let(::resolveFavoriteReferenceClipId)
             val label = when {
-                favoriteReference == null -> "$prefix${stepIndex + 1}: ~"
-                clipId == null -> "$prefix${stepIndex + 1}: Pg${displayPageNumber(favoriteReference.pageId)} Pad${favoriteReference.slotIndex + 1} empty"
-                else -> "$prefix${stepIndex + 1}: Pg${displayPageNumber(favoriteReference.pageId)} Pad${favoriteReference.slotIndex + 1} ${displayLabelForClipId(clipId)}"
+                favoriteReference == null -> "${stepIndex + 1}: ~"
+                clipId == null -> "${stepIndex + 1}: Pg${displayPageNumber(favoriteReference.pageId)} Pad${favoriteReference.slotIndex + 1} empty"
+                else -> "${stepIndex + 1}: Pg${displayPageNumber(favoriteReference.pageId)} Pad${favoriteReference.slotIndex + 1} ${displayLabelForClipId(clipId)}"
             }
             Screen4VisualSlot(
                 index = stepIndex,
@@ -669,6 +1107,13 @@ class Screen4Coordinator(
 
     private fun displayLabelForClipId(clipId: String): String {
         return resolveDescriptorByClipId(clipId)?.baseName ?: "saved assignment"
+    }
+
+    private fun resolveFavoriteReferenceClipId(reference: Screen4FavoritePadReference): String? {
+        return favoritePages.firstOrNull { it.pageId == reference.pageId }
+            ?.clipIds
+            ?.getOrNull(reference.slotIndex)
+            ?: reference.clipId
     }
 
     private fun synchronizeSharedFavorites() {
@@ -714,12 +1159,33 @@ class Screen4Coordinator(
         displayedFavoritePageId = state.displayedFavoritePageId ?: displayedFavoritePageId
         sharedFavoritesStore.saveSelectedFavoritePageId(displayedFavoritePageId)
         replacePlayBars(state.playBars)
+        replaceBarEffects(state.barEffects)
+        replaceBarNames(state.barNames)
     }
 
     private fun replacePlayBars(snapshotBars: List<List<Screen4FavoritePadReference?>>) {
         playBars.clear()
+        barSelectionStates.clear()
         normalizePlayBarsSnapshot(snapshotBars).forEach { normalizedSteps ->
             playBars += normalizedSteps.toMutableList()
+            barSelectionStates += BarSelectionState()
+        }
+    }
+
+    private fun replaceBarEffects(effectStates: List<Screen4BarEffectState>) {
+        barEffectStates.clear()
+        repeat(playBars.size) { barIndex ->
+            barEffectStates += effectStates.getOrNull(barIndex) ?: Screen4BarEffectState()
+        }
+    }
+
+    private fun replaceBarNames(names: List<String>) {
+        barNames.clear()
+        repeat(playBars.size) { barIndex ->
+            barNames += names.getOrNull(barIndex)
+                ?.trim()
+                ?.ifBlank { defaultBarDisplayName(barIndex) }
+                ?: defaultBarDisplayName(barIndex)
         }
     }
 
@@ -766,18 +1232,52 @@ class Screen4Coordinator(
         return playBars.indices.map(::snapshotPlayBar)
     }
 
+    private fun snapshotBarEffects(): List<Screen4BarEffectState> {
+        return barEffectStates.toList()
+    }
+
+    private fun snapshotBarNames(): List<String> {
+        return barNames.toList()
+    }
+
     private fun persistWorkingState() {
         sequenceStore.saveWorkingState(
             Screen4WorkingSequenceState(
                 bpm = mutableUiState.value.bpm,
                 displayedFavoritePageId = displayedFavoritePageId,
                 playBars = snapshotPlayBars(),
+                barEffects = snapshotBarEffects(),
+                barNames = snapshotBarNames(),
             )
         )
     }
 
+    private fun updateBarEffectState(
+        barIndex: Int,
+        transform: (Screen4BarEffectState) -> Screen4BarEffectState,
+    ) {
+        val normalizedBarIndex = barIndex.coerceIn(0, barEffectStates.lastIndex)
+        val updated = transform(barEffectStates[normalizedBarIndex])
+        if (updated == barEffectStates[normalizedBarIndex]) return
+        barEffectStates[normalizedBarIndex] = updated
+        persistWorkingState()
+        applyUiRefresh(
+            runtimeStatus = "Updated FX for bar ${normalizedBarIndex + 1}.",
+            lastError = null,
+        )
+        if (mutableUiState.value.isPlaying) {
+            queueCurrentLoopForNextCycle()
+        } else {
+            updateCompileStatusFromVisualLoop()
+        }
+    }
+
     private fun nextDefaultBarName(barIndex: Int): String {
         return "Bar ${barIndex + 1} Pattern ${sequenceStore.loadSavedBars().size + 1}"
+    }
+
+    private fun defaultBarDisplayName(barIndex: Int): String {
+        return "Name${barIndex + 1}"
     }
 
     private fun nextDefaultSongName(): String {
@@ -807,6 +1307,35 @@ class Screen4Coordinator(
             ?: 1
     }
 
+    private fun stepIndicesForBatchTarget(
+        barIndex: Int,
+        target: Screen4BatchAssignTarget,
+    ): List<Int> {
+        return when (target) {
+            Screen4BatchAssignTarget.ALL_SLOTS -> (0 until STEP_COUNT).toList()
+            Screen4BatchAssignTarget.ODD_SLOTS -> (0 until STEP_COUNT).filter { it % 2 == 0 }
+            Screen4BatchAssignTarget.EVEN_SLOTS -> (0 until STEP_COUNT).filter { it % 2 == 1 }
+            Screen4BatchAssignTarget.SELECTED_SLOTS ->
+                barSelectionStates.getOrElse(barIndex) { BarSelectionState() }.selectedStepIndices.sorted()
+        }
+    }
+
+    private fun batchAssignmentStatus(
+        barIndex: Int,
+        stepCount: Int,
+        favoritePageId: String,
+        favoriteSlotIndex: Int,
+        target: Screen4BatchAssignTarget,
+    ): String {
+        val targetLabel = when (target) {
+            Screen4BatchAssignTarget.ALL_SLOTS -> "all slots"
+            Screen4BatchAssignTarget.ODD_SLOTS -> "odd slots"
+            Screen4BatchAssignTarget.EVEN_SLOTS -> "even slots"
+            Screen4BatchAssignTarget.SELECTED_SLOTS -> "selected slots"
+        }
+        return "Assigned $stepCount $targetLabel in bar ${barIndex + 1} from page ${displayPageNumber(favoritePageId)} pad ${favoriteSlotIndex + 1}."
+    }
+
     private fun emptyFavoritePage(pageId: String): SharedFavoritePage {
         return SharedFavoritePage(
             pageId = pageId,
@@ -824,11 +1353,40 @@ class Screen4Coordinator(
         const val STEP_COUNT: Int = 16
         const val MIN_PLAY_BAR_COUNT: Int = 1
         const val MAX_PLAY_BAR_COUNT: Int = 5
-        const val DEFAULT_PLAY_BAR_COUNT: Int = 1
+        const val DEFAULT_PLAY_BAR_COUNT: Int = 5
     }
 
     private data class SharedFavoritePage(
         val pageId: String,
         val clipIds: List<String?>,
     )
+
+    private data class BarSelectionState(
+        val isSelectionModeEnabled: Boolean = false,
+        val selectedStepIndices: List<Int> = emptyList(),
+    )
+
+    private fun sendForEffectLevel(level: Int): Float {
+        return (level.coerceIn(1, 10) / 10f).coerceIn(0f, 1f)
+    }
+
+    private fun effectLevelForSend(send: Float): Int {
+        return (send.coerceIn(0f, 1f) * 10f).roundToInt().coerceIn(1, 10)
+    }
+
+    private fun pitchForEffectLevel(level: Int): Float {
+        return (((level.coerceIn(1, 10) - 5.5f) / 4.5f) * 12f).coerceIn(-12f, 12f)
+    }
+
+    private fun effectLevelForPitch(pitchSemitones: Float): Int {
+        return (((pitchSemitones.coerceIn(-12f, 12f) / 12f) * 4.5f) + 5.5f).roundToInt().coerceIn(1, 10)
+    }
+
+    private fun panForEffectLevel(level: Int): Float {
+        return (((level.coerceIn(1, 10) - 5.5f) / 4.5f)).coerceIn(-1f, 1f)
+    }
+
+    private fun effectLevelForPan(pan: Float): Int {
+        return ((pan.coerceIn(-1f, 1f) * 4.5f) + 5.5f).roundToInt().coerceIn(1, 10)
+    }
 }

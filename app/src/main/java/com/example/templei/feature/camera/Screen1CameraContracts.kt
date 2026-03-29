@@ -1,7 +1,6 @@
 package com.example.templei.feature.camera
 
 import android.net.Uri
-import java.io.File
 
 /**
  * Screen 1 camera state and media definitions.
@@ -23,8 +22,19 @@ enum class Screen1MediaType {
     Video
 }
 
+enum class Screen1StorageMode {
+    Shared,
+    Separate
+}
+
+enum class Screen1FolderTarget {
+    Shared,
+    Photo,
+    Video
+}
+
 data class Screen1MediaEntry(
-    val file: File,
+    val stableId: String,
     val type: Screen1MediaType,
     val displayName: String,
     val lastModifiedMillis: Long,

@@ -1,0 +1,73 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#F4F1E8"/>
+  <rect x="40" y="28" width="1320" height="72" rx="18" fill="#E8E1D4"/>
+  <text x="700" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#20304F">Screen 3 Concept D   Sketch Aligned Single Balloon</text>
+
+  <text x="88" y="142" font-family="Arial, sans-serif" font-size="22" fill="#20304F">Narrow play bars stay fixed at the top and the selected one opens its own hanging bubble editor.</text>
+
+  <g>
+    <rect x="84" y="168" width="120" height="426" fill="#FFFDF8" stroke="#111111" stroke-width="8"/>
+    <circle cx="144" cy="256" r="34" stroke="#111111" stroke-width="8"/>
+    <circle cx="144" cy="364" r="30" stroke="#111111" stroke-width="8"/>
+    <circle cx="144" cy="474" r="30" stroke="#111111" stroke-width="8"/>
+    <circle cx="144" cy="572" r="40" stroke="#111111" stroke-width="8"/>
+    <rect x="76" y="594" width="136" height="40" fill="#E51C23"/>
+    <text x="144" y="666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar A</text>
+  </g>
+
+  <g>
+    <rect x="284" y="168" width="120" height="426" fill="#FFFDF8" stroke="#111111" stroke-width="8"/>
+    <circle cx="344" cy="248" r="34" stroke="#111111" stroke-width="8"/>
+    <circle cx="344" cy="364" r="42" stroke="#111111" stroke-width="8"/>
+    <circle cx="344" cy="474" r="32" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="344" cy="574" rx="30" ry="42" stroke="#111111" stroke-width="8"/>
+    <rect x="276" y="594" width="136" height="40" fill="#E51C23"/>
+    <text x="344" y="666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar B</text>
+  </g>
+
+  <g>
+    <rect x="484" y="168" width="120" height="426" fill="#FFF1D6" stroke="#111111" stroke-width="8"/>
+    <circle cx="544" cy="256" r="34" stroke="#111111" stroke-width="8"/>
+    <circle cx="544" cy="364" r="28" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="544" cy="474" rx="28" ry="34" stroke="#111111" stroke-width="8"/>
+    <circle cx="544" cy="572" r="38" stroke="#111111" stroke-width="8"/>
+    <rect x="476" y="594" width="136" height="40" fill="#E51C23"/>
+    <text x="544" y="666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#A05B0C">Bar C active</text>
+  </g>
+
+  <g>
+    <rect x="684" y="168" width="120" height="426" fill="#FFFDF8" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="744" cy="248" rx="40" ry="34" stroke="#111111" stroke-width="8"/>
+    <circle cx="744" cy="364" r="24" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="744" cy="474" rx="30" ry="44" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="744" cy="572" rx="24" ry="46" stroke="#111111" stroke-width="8"/>
+    <rect x="676" y="594" width="136" height="40" fill="#E51C23"/>
+    <text x="744" y="666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar D</text>
+  </g>
+
+  <g>
+    <rect x="884" y="168" width="120" height="426" fill="#FFFDF8" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="944" cy="230" rx="28" ry="40" stroke="#111111" stroke-width="8"/>
+    <ellipse cx="944" cy="350" rx="24" ry="36" stroke="#111111" stroke-width="8"/>
+    <circle cx="944" cy="472" r="26" stroke="#111111" stroke-width="8"/>
+    <circle cx="944" cy="550" r="22" stroke="#E51C23" stroke-width="8"/>
+    <rect x="876" y="594" width="136" height="40" fill="#E51C23"/>
+    <text x="944" y="666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar E</text>
+  </g>
+
+  <path d="M544 634 L544 716 L596 758" stroke="#E51C23" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="704" cy="788" r="140" fill="#FFFDF8" stroke="#E51C23" stroke-width="8"/>
+  <text x="704" y="742" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#20304F">Balloon C</text>
+  <text x="704" y="776" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">Quick FX pod</text>
+  <circle cx="640" cy="840" r="30" fill="#20304F"/>
+  <circle cx="704" cy="840" r="30" fill="#20304F"/>
+  <circle cx="768" cy="840" r="30" fill="#20304F"/>
+  <text x="640" y="846" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#FFFDF8">Gain</text>
+  <text x="704" y="846" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#FFFDF8">Pitch</text>
+  <text x="768" y="846" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#FFFDF8">Rev</text>
+
+  <text x="1100" y="286" font-family="Arial, sans-serif" font-size="26" fill="#20304F">Why this feels right</text>
+  <text x="1100" y="332" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">The bubble is owned by one strip.</text>
+  <text x="1100" y="366" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">You always know where expanded controls came from.</text>
+  <text x="1100" y="400" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">It can hold only the most important knobs first.</text>
+</svg>

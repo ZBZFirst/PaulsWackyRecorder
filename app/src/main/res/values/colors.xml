@@ -23,4 +23,38 @@
     <color name="sb_accent_dark">#2EA4CE</color>
     <color name="sb_text_primary">#F2F7FF</color>
     <color name="sb_text_secondary">#C0D4F4</color>
+
+    <!-- Screen 4 sequencer prototype palette -->
+    <color name="screen4_bg">#0E0E0E</color>
+    <color name="screen4_top_bar">#121212</color>
+    <color name="screen4_surface">#1A1A1A</color>
+    <color name="screen4_surface_high">#20201F</color>
+    <color name="screen4_surface_highest">#262626</color>
+    <color name="screen4_surface_lowest">#000000</color>
+    <color name="screen4_surface_variant">#2C2C2C</color>
+    <color name="screen4_outline">#484847</color>
+    <color name="screen4_outline_soft">#2F2F2F</color>
+    <color name="screen4_text_primary">#FFFFFF</color>
+    <color name="screen4_text_secondary">#ADAAAA</color>
+    <color name="screen4_primary">#81ECFF</color>
+    <color name="screen4_primary_dim">#4CCFE7</color>
+    <color name="screen4_secondary">#C3F400</color>
+    <color name="screen4_secondary_dim">#A9D600</color>
+    <color name="screen4_error_dim">#D7383B</color>
+    <color name="screen4_nav_inactive">#7F7C7C</color>
+
+    <!-- Shared app shell palette promoted from the Screen 4 visual system -->
+    <color name="app_bg">@color/screen4_bg</color>
+    <color name="app_surface">@color/screen4_surface</color>
+    <color name="app_surface_high">@color/screen4_surface_high</color>
+    <color name="app_surface_highest">@color/screen4_surface_highest</color>
+    <color name="app_surface_variant">@color/screen4_surface_variant</color>
+    <color name="app_outline">@color/screen4_outline</color>
+    <color name="app_outline_soft">@color/screen4_outline_soft</color>
+    <color name="app_text_primary">@color/screen4_text_primary</color>
+    <color name="app_text_secondary">@color/screen4_text_secondary</color>
+    <color name="app_primary">@color/screen4_primary</color>
+    <color name="app_primary_dim">@color/screen4_primary_dim</color>
+    <color name="app_secondary">@color/screen4_secondary</color>
+    <color name="app_nav_inactive">@color/screen4_nav_inactive</color>
 </resources>

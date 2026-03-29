@@ -1,0 +1,115 @@
+<svg width="1600" height="1100" viewBox="0 0 1600 1100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: #0D1326; }
+    .panel { fill: #182445; stroke: #3A4D7A; stroke-width: 2; }
+    .panel-soft { fill: #22315C; stroke: #4B5F8F; stroke-width: 2; }
+    .panel-green { fill: #173E2C; stroke: #44D48A; stroke-width: 3; }
+    .panel-pink { fill: #412043; stroke: #F268B7; stroke-width: 3; }
+    .strip { fill: #22315C; stroke: #4B5F8F; stroke-width: 2; }
+    .strip-green { fill: #1A4D37; stroke: #44D48A; stroke-width: 3; }
+    .strip-pink { fill: #5B285A; stroke: #F268B7; stroke-width: 3; }
+    .dock-head { fill: #2A3A68; }
+    .chip { fill: #314675; }
+    .pad-green { fill: #79D78E; }
+    .pad-blue { fill: #4B6EAF; }
+    .pad-pink { fill: #E36AC2; }
+    .label { fill: #F6F8FD; font-family: Arial, sans-serif; font-size: 30px; font-weight: 700; }
+    .small { fill: #D8E1F3; font-family: Arial, sans-serif; font-size: 20px; }
+    .tiny { fill: #AFC0E6; font-family: Arial, sans-serif; font-size: 17px; }
+    .title { fill: #F8FAFF; font-family: Arial, sans-serif; font-size: 42px; font-weight: 700; }
+  </style>
+
+  <rect class="bg" width="1600" height="1100"/>
+  <text x="800" y="62" text-anchor="middle" class="title">Screen 4 Final Direction - Dense Five-Bar Dual Edit State</text>
+
+  <rect x="32" y="88" width="1536" height="120" rx="28" class="panel"/>
+  <text x="70" y="138" class="label">Transport</text>
+  <text x="70" y="174" class="tiny">Compact at the top. Everything important stays visible.</text>
+  <text x="1010" y="138" class="small">BPM 128</text>
+  <text x="1160" y="138" class="small">Playing</text>
+  <text x="1290" y="138" class="small">Cycle 4/4</text>
+  <text x="1420" y="138" class="small">Success</text>
+
+  <rect x="32" y="230" width="1536" height="150" rx="28" class="panel"/>
+  <text x="70" y="286" class="label">Five-Bar Strip Roster</text>
+  <text x="70" y="320" class="tiny">At 5 bars the strips go dense. No inline step pads here. Only name, count, state, and open toggle.</text>
+
+  <rect x="70" y="305" width="260" height="50" rx="18" class="strip-green"/>
+  <text x="95" y="338" class="small">BAR 1 DRUMS   16/16</text>
+  <rect x="355" y="305" width="260" height="50" rx="18" class="strip-pink"/>
+  <text x="380" y="338" class="small">BAR 2 BASS   8/16</text>
+  <rect x="640" y="305" width="210" height="50" rx="18" class="strip"/>
+  <text x="665" y="338" class="small">BAR 3 LEAD 4/16</text>
+  <rect x="875" y="305" width="210" height="50" rx="18" class="strip"/>
+  <text x="900" y="338" class="small">BAR 4 FX 12/16</text>
+  <rect x="1110" y="305" width="210" height="50" rx="18" class="strip"/>
+  <text x="1135" y="338" class="small">BAR 5 PAD 6/16</text>
+
+  <rect x="32" y="410" width="750" height="640" rx="30" class="panel-green"/>
+  <text x="68" y="460" class="label">Bar 1</text>
+  <text x="150" y="460" class="small">Assignment Dock open   Step Pad open   FX collapsed</text>
+  <rect x="60" y="490" width="694" height="120" rx="20" class="panel-soft"/>
+  <rect x="80" y="510" width="654" height="42" rx="14" class="dock-head"/>
+  <text x="102" y="538" class="tiny">Assignment Controls Dock</text>
+  <rect x="82" y="564" width="150" height="32" rx="10" class="chip"/>
+  <rect x="246" y="564" width="150" height="32" rx="10" class="chip"/>
+  <rect x="410" y="564" width="150" height="32" rx="10" class="chip"/>
+  <rect x="574" y="564" width="150" height="32" rx="10" class="chip"/>
+  <text x="157" y="585" text-anchor="middle" class="tiny">SAVE</text>
+  <text x="321" y="585" text-anchor="middle" class="tiny">LOAD</text>
+  <text x="485" y="585" text-anchor="middle" class="tiny">FILL ALL</text>
+  <text x="649" y="585" text-anchor="middle" class="tiny">SELECT</text>
+
+  <rect x="60" y="630" width="694" height="320" rx="20" class="panel-soft"/>
+  <rect x="80" y="650" width="654" height="42" rx="14" class="dock-head"/>
+  <text x="102" y="678" class="tiny">Step Pad Dock</text>
+  <rect x="88" y="712" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="250" y="712" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="412" y="712" width="148" height="52" rx="14" class="pad-blue"/>
+  <rect x="574" y="712" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="88" y="782" width="148" height="52" rx="14" class="pad-blue"/>
+  <rect x="250" y="782" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="412" y="782" width="148" height="52" rx="14" class="pad-blue"/>
+  <rect x="574" y="782" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="88" y="852" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="250" y="852" width="148" height="52" rx="14" class="pad-blue"/>
+  <rect x="412" y="852" width="148" height="52" rx="14" class="pad-green"/>
+  <rect x="574" y="852" width="148" height="52" rx="14" class="pad-blue"/>
+
+  <rect x="818" y="410" width="750" height="640" rx="30" class="panel-pink"/>
+  <text x="854" y="460" class="label">Bar 2</text>
+  <text x="936" y="460" class="small">Assignment Dock collapsed   Step Pad open   FX open as compact rail</text>
+  <rect x="846" y="490" width="694" height="70" rx="20" class="panel-soft"/>
+  <rect x="866" y="510" width="654" height="42" rx="14" class="dock-head"/>
+  <text x="888" y="538" class="tiny">Assignment Controls Dock collapsed</text>
+
+  <rect x="846" y="580" width="500" height="370" rx="20" class="panel-soft"/>
+  <rect x="866" y="600" width="460" height="42" rx="14" class="dock-head"/>
+  <text x="888" y="628" class="tiny">Step Pad Dock</text>
+  <rect x="878" y="662" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="992" y="662" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="1106" y="662" width="100" height="62" rx="14" class="pad-blue"/>
+  <rect x="1220" y="662" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="878" y="742" width="100" height="62" rx="14" class="pad-blue"/>
+  <rect x="992" y="742" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="1106" y="742" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="1220" y="742" width="100" height="62" rx="14" class="pad-blue"/>
+  <rect x="878" y="822" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="992" y="822" width="100" height="62" rx="14" class="pad-blue"/>
+  <rect x="1106" y="822" width="100" height="62" rx="14" class="pad-pink"/>
+  <rect x="1220" y="822" width="100" height="62" rx="14" class="pad-pink"/>
+
+  <rect x="1368" y="580" width="172" height="370" rx="20" class="panel-soft"/>
+  <rect x="1388" y="600" width="132" height="42" rx="14" class="dock-head"/>
+  <text x="1454" y="628" text-anchor="middle" class="tiny">FX Rail</text>
+  <rect x="1406" y="666" width="96" height="40" rx="14" class="chip"/>
+  <rect x="1406" y="720" width="96" height="40" rx="14" class="chip"/>
+  <rect x="1406" y="774" width="96" height="40" rx="14" class="chip"/>
+  <rect x="1406" y="828" width="96" height="40" rx="14" class="chip"/>
+  <text x="1454" y="692" text-anchor="middle" class="tiny">GAIN</text>
+  <text x="1454" y="746" text-anchor="middle" class="tiny">PITCH</text>
+  <text x="1454" y="800" text-anchor="middle" class="tiny">PAN</text>
+  <text x="1454" y="854" text-anchor="middle" class="tiny">SPACE</text>
+
+  <text x="40" y="1080" class="small">Final recommendation: dense top roster, two side-by-side lane editors, and FX in a rail or drawer instead of giant inline sliders.</text>
+</svg>

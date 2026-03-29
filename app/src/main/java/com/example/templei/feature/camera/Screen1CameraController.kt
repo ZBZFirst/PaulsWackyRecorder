@@ -2,6 +2,7 @@ package com.example.templei.feature.camera
 
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.media.MediaMetadataRetriever
 import android.media.ThumbnailUtils
 import android.provider.MediaStore
 import android.view.View
@@ -138,13 +139,18 @@ class Screen1CameraController(
             return
         }
 
+        if (!repository.hasConfiguredDestination(Screen1MediaType.Photo)) {
+            renderStatus(activity.getString(R.string.screen1_status_photo_folder_required))
+            return
+        }
+
         val captureUseCase = imageCapture
         if (captureUseCase == null) {
             renderStatus(activity.getString(R.string.screen1_status_capture_unavailable))
             return
         }
 
-        val outputFile = repository.createMediaFile(Screen1MediaType.Photo)
+        val outputFile = repository.createPendingMediaFile(Screen1MediaType.Photo)
         val outputOptions = ImageCapture.OutputFileOptions.Builder(outputFile).build()
         renderStatus(activity.getString(R.string.screen1_status_saving_photo))
         captureUseCase.takePicture(
@@ -152,8 +158,20 @@ class Screen1CameraController(
             mainExecutor,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    refreshMediaLibrary(selectFile = outputFile)
-                    renderStatus(activity.getString(R.string.screen1_status_photo_saved, outputFile.name))
+                    runCatching {
+                        repository.saveCapturedMedia(outputFile, Screen1MediaType.Photo)
+                    }.onSuccess { savedEntry ->
+                        refreshMediaLibrary(selectUri = savedEntry.uri)
+                        renderStatus(activity.getString(R.string.screen1_status_photo_saved, outputFile.name))
+                    }.onFailure { error ->
+                        renderStatus(
+                            activity.getString(
+                                R.string.screen1_status_photo_failed,
+                                error.localizedMessage ?: "unknown error"
+                            )
+                        )
+                    }
+                    outputFile.delete()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -187,7 +205,12 @@ class Screen1CameraController(
             return
         }
 
-        val outputFile = repository.createMediaFile(Screen1MediaType.Video)
+        if (!repository.hasConfiguredDestination(Screen1MediaType.Video)) {
+            renderStatus(activity.getString(R.string.screen1_status_video_folder_required))
+            return
+        }
+
+        val outputFile = repository.createPendingMediaFile(Screen1MediaType.Video)
         val outputOptions = FileOutputOptions.Builder(outputFile).build()
         var pendingRecording = videoUseCase.output.prepareRecording(activity, outputOptions)
         if (withAudio) {
@@ -216,8 +239,20 @@ class Screen1CameraController(
                             )
                         )
                     } else {
-                        refreshMediaLibrary(selectFile = outputFile)
-                        renderStatus(activity.getString(R.string.screen1_status_recording_saved, outputFile.name))
+                        runCatching {
+                            repository.saveCapturedMedia(outputFile, Screen1MediaType.Video)
+                        }.onSuccess { savedEntry ->
+                            refreshMediaLibrary(selectUri = savedEntry.uri)
+                            renderStatus(activity.getString(R.string.screen1_status_recording_saved, outputFile.name))
+                        }.onFailure { error ->
+                            renderStatus(
+                                activity.getString(
+                                    R.string.screen1_status_recording_failed,
+                                    error.localizedMessage ?: "unknown error"
+                                )
+                            )
+                        }
+                        outputFile.delete()
                     }
                     render()
                 }
@@ -235,7 +270,7 @@ class Screen1CameraController(
         bindSelectedEntry(mediaEntries[position - 1])
     }
 
-    fun refreshMediaLibrary(selectFile: File? = null) {
+    fun refreshMediaLibrary(selectUri: android.net.Uri? = null) {
         mediaEntries = repository.listMediaEntries()
         mediaAdapter.clear()
         mediaAdapter.add(activity.getString(R.string.screen1_media_prompt))
@@ -243,8 +278,8 @@ class Screen1CameraController(
         mediaAdapter.notifyDataSetChanged()
 
         val selectedIndex = when {
-            selectFile != null -> mediaEntries.indexOfFirst { it.file.absolutePath == selectFile.absolutePath }
-            selectedEntry != null -> mediaEntries.indexOfFirst { it.file.absolutePath == selectedEntry?.file?.absolutePath }
+            selectUri != null -> mediaEntries.indexOfFirst { it.uri == selectUri }
+            selectedEntry != null -> mediaEntries.indexOfFirst { it.stableId == selectedEntry?.stableId }
             else -> -1
         }
 
@@ -316,17 +351,16 @@ class Screen1CameraController(
 
     private fun decodePhotoBitmap(entry: Screen1MediaEntry): Bitmap? {
         return runCatching {
-            ImageDecoder.decodeBitmap(ImageDecoder.createSource(entry.file))
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(activity.contentResolver, entry.uri))
         }.getOrNull()
     }
 
-    @Suppress("DEPRECATION")
     private fun decodeVideoThumbnail(entry: Screen1MediaEntry): Bitmap? {
         return runCatching {
-            ThumbnailUtils.createVideoThumbnail(
-                entry.file.absolutePath,
-                MediaStore.Images.Thumbnails.MINI_KIND
-            )
+            MediaMetadataRetriever().use { retriever ->
+                retriever.setDataSource(activity, entry.uri)
+                retriever.frameAtTime
+            }
         }.getOrNull()
     }
 

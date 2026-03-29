@@ -1,0 +1,112 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#F4F1E8"/>
+  <rect x="40" y="28" width="1320" height="72" rx="18" fill="#E8E1D4"/>
+  <text x="700" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#20304F">Screen 3 Concept B   Dual Balloon Split View</text>
+
+  <rect x="40" y="124" width="1320" height="208" rx="28" fill="#20304F"/>
+  <text x="76" y="172" font-family="Arial, sans-serif" font-size="30" fill="#F7F4EB">Compact Channel Strips</text>
+  <text x="76" y="206" font-family="Arial, sans-serif" font-size="18" fill="#BFD0F2">Two bars can open together and share the lower workspace evenly</text>
+
+  <rect x="72" y="212" width="300" height="98" rx="22" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="96" y="248" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar A   Drum Rack</text>
+  <text x="96" y="280" font-family="Arial, sans-serif" font-size="16" fill="#A05B0C">Expanded   Gain hot   Delay 18%</text>
+  <rect x="298" y="232" width="54" height="56" rx="16" fill="#D4872A"/>
+  <text x="325" y="268" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#FFFDF8">-</text>
+
+  <rect x="390" y="228" width="300" height="82" rx="22" fill="#F7F4EB"/>
+  <text x="414" y="262" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar B   Vocal Chops</text>
+  <text x="414" y="292" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Gain   Pitch   Pan   Rev   Dly</text>
+  <rect x="616" y="244" width="54" height="48" rx="16" fill="#D9E6C3"/>
+  <text x="643" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <rect x="708" y="212" width="300" height="98" rx="22" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="732" y="248" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar C   Atmos Pad</text>
+  <text x="732" y="280" font-family="Arial, sans-serif" font-size="16" fill="#A05B0C">Expanded   Reverb 62%   LPF 8k</text>
+  <rect x="934" y="232" width="54" height="56" rx="16" fill="#D4872A"/>
+  <text x="961" y="268" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#FFFDF8">-</text>
+
+  <rect x="1026" y="228" width="300" height="82" rx="22" fill="#F7F4EB"/>
+  <text x="1050" y="262" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar D   FX Lane</text>
+  <text x="1050" y="292" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Gain   Pitch   Pan   Rev   Dly</text>
+  <rect x="1252" y="244" width="54" height="48" rx="16" fill="#D9E6C3"/>
+  <text x="1279" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <path d="M220 310 C220 360 220 362 220 396" stroke="#D4872A" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 10"/>
+  <path d="M860 310 C860 360 860 362 860 396" stroke="#D4872A" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 10"/>
+
+  <rect x="80" y="396" width="600" height="404" rx="34" fill="#FFFDF8" stroke="#D4872A" stroke-width="4"/>
+  <text x="116" y="448" font-family="Arial, sans-serif" font-size="28" fill="#20304F">Balloon A   Punchy Rhythm</text>
+  <rect x="116" y="476" width="218" height="280" rx="24" fill="#20304F"/>
+  <text x="142" y="514" font-family="Arial, sans-serif" font-size="22" fill="#F7F4EB">Quick FX</text>
+  <circle cx="170" cy="574" r="28" fill="#F7F4EB"/>
+  <circle cx="260" cy="574" r="28" fill="#F7F4EB"/>
+  <circle cx="170" cy="654" r="28" fill="#F7F4EB"/>
+  <circle cx="260" cy="654" r="28" fill="#F7F4EB"/>
+  <text x="170" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Gain</text>
+  <text x="260" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Pitch</text>
+  <text x="170" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Pan</text>
+  <text x="260" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Dly</text>
+  <rect x="360" y="476" width="280" height="280" rx="24" fill="#F4F1E8"/>
+  <text x="388" y="514" font-family="Arial, sans-serif" font-size="22" fill="#20304F">Mini Grid</text>
+  <g fill="#D9E6C3">
+    <rect x="388" y="546" width="44" height="44" rx="10"/>
+    <rect x="440" y="546" width="44" height="44" rx="10"/>
+    <rect x="492" y="546" width="44" height="44" rx="10"/>
+    <rect x="544" y="546" width="44" height="44" rx="10"/>
+    <rect x="596" y="546" width="44" height="44" rx="10"/>
+    <rect x="388" y="602" width="44" height="44" rx="10"/>
+    <rect x="440" y="602" width="44" height="44" rx="10"/>
+    <rect x="492" y="602" width="44" height="44" rx="10"/>
+    <rect x="544" y="602" width="44" height="44" rx="10"/>
+    <rect x="596" y="602" width="44" height="44" rx="10"/>
+    <rect x="388" y="658" width="44" height="44" rx="10"/>
+    <rect x="440" y="658" width="44" height="44" rx="10"/>
+    <rect x="492" y="658" width="44" height="44" rx="10"/>
+    <rect x="544" y="658" width="44" height="44" rx="10"/>
+    <rect x="596" y="658" width="44" height="44" rx="10"/>
+  </g>
+  <g fill="#D4872A">
+    <rect x="492" y="546" width="44" height="44" rx="10"/>
+    <rect x="388" y="602" width="44" height="44" rx="10"/>
+    <rect x="544" y="658" width="44" height="44" rx="10"/>
+  </g>
+
+  <rect x="720" y="396" width="600" height="404" rx="34" fill="#FFFDF8" stroke="#D4872A" stroke-width="4"/>
+  <text x="756" y="448" font-family="Arial, sans-serif" font-size="28" fill="#20304F">Balloon C   Space and Texture</text>
+  <rect x="756" y="476" width="218" height="280" rx="24" fill="#20304F"/>
+  <text x="782" y="514" font-family="Arial, sans-serif" font-size="22" fill="#F7F4EB">Quick FX</text>
+  <circle cx="810" cy="574" r="28" fill="#F7F4EB"/>
+  <circle cx="900" cy="574" r="28" fill="#F7F4EB"/>
+  <circle cx="810" cy="654" r="28" fill="#F7F4EB"/>
+  <circle cx="900" cy="654" r="28" fill="#F7F4EB"/>
+  <text x="810" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Rev</text>
+  <text x="900" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">LPF</text>
+  <text x="810" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Pan</text>
+  <text x="900" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#20304F">Gain</text>
+  <rect x="1000" y="476" width="280" height="280" rx="24" fill="#F4F1E8"/>
+  <text x="1028" y="514" font-family="Arial, sans-serif" font-size="22" fill="#20304F">Mini Grid</text>
+  <g fill="#D9E6C3">
+    <rect x="1028" y="546" width="44" height="44" rx="10"/>
+    <rect x="1080" y="546" width="44" height="44" rx="10"/>
+    <rect x="1132" y="546" width="44" height="44" rx="10"/>
+    <rect x="1184" y="546" width="44" height="44" rx="10"/>
+    <rect x="1236" y="546" width="44" height="44" rx="10"/>
+    <rect x="1028" y="602" width="44" height="44" rx="10"/>
+    <rect x="1080" y="602" width="44" height="44" rx="10"/>
+    <rect x="1132" y="602" width="44" height="44" rx="10"/>
+    <rect x="1184" y="602" width="44" height="44" rx="10"/>
+    <rect x="1236" y="602" width="44" height="44" rx="10"/>
+    <rect x="1028" y="658" width="44" height="44" rx="10"/>
+    <rect x="1080" y="658" width="44" height="44" rx="10"/>
+    <rect x="1132" y="658" width="44" height="44" rx="10"/>
+    <rect x="1184" y="658" width="44" height="44" rx="10"/>
+    <rect x="1236" y="658" width="44" height="44" rx="10"/>
+  </g>
+  <g fill="#4D648D">
+    <rect x="1132" y="546" width="44" height="44" rx="10"/>
+    <rect x="1236" y="602" width="44" height="44" rx="10"/>
+    <rect x="1080" y="658" width="44" height="44" rx="10"/>
+  </g>
+
+  <text x="80" y="836" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">Best for comparing or performing with two bars at once, but knob and grid density gets tighter and needs careful scaling rules.</text>
+</svg>

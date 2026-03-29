@@ -68,6 +68,8 @@ class Screen4SequenceStore(private val context: Context) {
             .put("bpm", bpm)
             .put("displayedFavoritePageId", displayedFavoritePageId)
             .put("playBars", playBars.toPlayBarsJson())
+            .put("barEffects", barEffects.toBarEffectsJson())
+            .put("barNames", barNames.toJsonArray())
     }
 
     private fun JSONObject.toWorkingState(): Screen4WorkingSequenceState {
@@ -75,6 +77,8 @@ class Screen4SequenceStore(private val context: Context) {
             bpm = optInt("bpm", Screen4Coordinator.DEFAULT_BPM),
             displayedFavoritePageId = optString("displayedFavoritePageId", "").takeIf { it.isNotBlank() },
             playBars = optJSONArray("playBars").toPlayBars(),
+            barEffects = optJSONArray("barEffects").toBarEffects(),
+            barNames = optJSONArray("barNames").toStringList(),
         )
     }
 
@@ -84,6 +88,7 @@ class Screen4SequenceStore(private val context: Context) {
             name = name,
             savedAtMs = optLong("savedAtMs", 0L),
             steps = optJSONArray("steps").toFavoriteReferenceList(),
+            effectState = optJSONObject("effectState").toBarEffectState(),
         )
     }
 
@@ -95,6 +100,8 @@ class Screen4SequenceStore(private val context: Context) {
             bpm = optInt("bpm", Screen4Coordinator.DEFAULT_BPM),
             displayedFavoritePageId = optString("displayedFavoritePageId", "").takeIf { it.isNotBlank() },
             playBars = optJSONArray("playBars").toPlayBars(),
+            barEffects = optJSONArray("barEffects").toBarEffects(),
+            barNames = optJSONArray("barNames").toStringList(),
         )
     }
 
@@ -105,7 +112,8 @@ class Screen4SequenceStore(private val context: Context) {
                     JSONObject()
                         .put("name", snapshot.name)
                         .put("savedAtMs", snapshot.savedAtMs)
-                        .put("steps", snapshot.steps.toFavoriteReferenceJson()),
+                        .put("steps", snapshot.steps.toFavoriteReferenceJson())
+                        .put("effectState", snapshot.effectState.toJson())
                 )
             }
         }
@@ -120,10 +128,65 @@ class Screen4SequenceStore(private val context: Context) {
                         .put("savedAtMs", snapshot.savedAtMs)
                         .put("bpm", snapshot.bpm)
                         .put("displayedFavoritePageId", snapshot.displayedFavoritePageId)
-                        .put("playBars", snapshot.playBars.toPlayBarsJson()),
+                        .put("playBars", snapshot.playBars.toPlayBarsJson())
+                        .put("barEffects", snapshot.barEffects.toBarEffectsJson())
+                        .put("barNames", snapshot.barNames.toJsonArray())
                 )
             }
         }
+    }
+
+    private fun List<Screen4BarEffectState>.toBarEffectsJson(): JSONArray {
+        return JSONArray().also { array ->
+            forEach { effectState ->
+                array.put(effectState.toJson())
+            }
+        }
+    }
+
+    private fun JSONArray?.toBarEffects(): List<Screen4BarEffectState> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                add(optJSONObject(index).toBarEffectState())
+            }
+        }
+    }
+
+    private fun Screen4BarEffectState.toJson(): JSONObject {
+        return JSONObject()
+            .put("gain", gain.toDouble())
+            .put("pitchSemitones", pitchSemitones.toDouble())
+            .put("pan", pan.toDouble())
+            .put("delaySend", delaySend.toDouble())
+            .put("reverbSend", reverbSend.toDouble())
+            .put("gainEnabled", gainEnabled)
+            .put("gainLevel", gainLevel)
+            .put("pitchEnabled", pitchEnabled)
+            .put("pitchLevel", pitchLevel)
+            .put("reverbEnabled", reverbEnabled)
+            .put("reverbLevel", reverbLevel)
+            .put("panEnabled", panEnabled)
+            .put("panLevel", panLevel)
+    }
+
+    private fun JSONObject?.toBarEffectState(): Screen4BarEffectState {
+        if (this == null) return Screen4BarEffectState()
+        return Screen4BarEffectState(
+            gain = optDouble("gain", 1.0).toFloat(),
+            pitchSemitones = optDouble("pitchSemitones", 0.0).toFloat(),
+            pan = optDouble("pan", 0.0).toFloat(),
+            delaySend = optDouble("delaySend", 0.0).toFloat(),
+            reverbSend = optDouble("reverbSend", 0.0).toFloat(),
+            gainEnabled = optBoolean("gainEnabled", optBoolean("filterEnabled", false)),
+            gainLevel = optInt("gainLevel", optInt("filterLevel", 5)).coerceIn(1, 10),
+            pitchEnabled = optBoolean("pitchEnabled", optBoolean("phaserEnabled", false)),
+            pitchLevel = optInt("pitchLevel", optInt("phaserLevel", 5)).coerceIn(1, 10),
+            reverbEnabled = optBoolean("reverbEnabled", optDouble("reverbSend", 0.0) > 0.0),
+            reverbLevel = optInt("reverbLevel", ((optDouble("reverbSend", 0.0) * 9.0).toInt() + 1)).coerceIn(1, 10),
+            panEnabled = optBoolean("panEnabled", optBoolean("delayEnabled", false)),
+            panLevel = optInt("panLevel", optInt("delayLevel", 5)).coerceIn(1, 10),
+        )
     }
 
     private fun List<List<Screen4FavoritePadReference?>>.toPlayBarsJson(): JSONArray {
@@ -178,6 +241,21 @@ class Screen4SequenceStore(private val context: Context) {
                         )
                     }
                 )
+            }
+        }
+    }
+
+    private fun List<String>.toJsonArray(): JSONArray {
+        return JSONArray().also { array ->
+            forEach { array.put(it) }
+        }
+    }
+
+    private fun JSONArray?.toStringList(): List<String> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                add(optString(index, ""))
             }
         }
     }

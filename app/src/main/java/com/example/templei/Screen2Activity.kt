@@ -17,7 +17,8 @@ import androidx.core.content.ContextCompat
 import com.example.templei.feature.screen2.Screen2ClipRepository
 import com.example.templei.feature.screen2.Screen2WavRecorder
 import com.example.templei.feature.soundboard.Screen3LibraryRefreshSignal
-import com.example.templei.ui.navigation.TopNavigation
+import com.example.templei.ui.navigation.AppShellInsets
+import com.example.templei.ui.navigation.AppShellNavigation
 import java.io.File
 import java.util.Locale
 
@@ -76,7 +77,17 @@ class Screen2Activity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_screen2)
-        TopNavigation.bind(activity = this, currentDestination = Screen2Activity::class.java)
+        AppShellNavigation.bind(
+            activity = this,
+            currentDestination = Screen2Activity::class.java,
+            title = getString(R.string.screen2TitleText),
+            chipText = getString(R.string.screen2_header_chip),
+        )
+        AppShellInsets.apply(
+            activity = this,
+            rootId = R.id.screen2Root,
+            scrollViewId = R.id.screen2ScrollView,
+        )
 
         clipRepository = Screen2ClipRepository(this)
         libraryRefreshSignal = Screen3LibraryRefreshSignal(this)

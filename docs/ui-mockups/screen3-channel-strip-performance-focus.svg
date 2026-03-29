@@ -1,0 +1,96 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#F4F1E8"/>
+  <rect x="40" y="28" width="1320" height="72" rx="18" fill="#E8E1D4"/>
+  <text x="700" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#20304F">Screen 3 Concept C   Performance Focus Drawer</text>
+
+  <rect x="40" y="124" width="280" height="736" rx="30" fill="#20304F"/>
+  <text x="76" y="174" font-family="Arial, sans-serif" font-size="28" fill="#F7F4EB">Play Bars</text>
+  <text x="76" y="206" font-family="Arial, sans-serif" font-size="17" fill="#BFD0F2">Slim list for fast switching</text>
+
+  <rect x="68" y="236" width="224" height="96" rx="22" fill="#F7F4EB"/>
+  <text x="90" y="272" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar A</text>
+  <text x="90" y="302" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Drum Rack</text>
+  <rect x="222" y="252" width="50" height="56" rx="16" fill="#D9E6C3"/>
+  <text x="247" y="289" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <rect x="68" y="348" width="224" height="116" rx="22" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="90" y="384" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar B</text>
+  <text x="90" y="414" font-family="Arial, sans-serif" font-size="16" fill="#A05B0C">Vocal Chops</text>
+  <text x="90" y="442" font-family="Arial, sans-serif" font-size="14" fill="#A05B0C">Selected and pinned</text>
+  <rect x="222" y="374" width="50" height="64" rx="16" fill="#D4872A"/>
+  <text x="247" y="416" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#FFFDF8">-</text>
+
+  <rect x="68" y="480" width="224" height="96" rx="22" fill="#F7F4EB"/>
+  <text x="90" y="516" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar C</text>
+  <text x="90" y="546" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Atmos Pad</text>
+  <rect x="222" y="496" width="50" height="56" rx="16" fill="#D9E6C3"/>
+  <text x="247" y="533" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <rect x="68" y="592" width="224" height="96" rx="22" fill="#F7F4EB"/>
+  <text x="90" y="628" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar D</text>
+  <text x="90" y="658" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">FX Lane</text>
+  <rect x="222" y="608" width="50" height="56" rx="16" fill="#D9E6C3"/>
+  <text x="247" y="645" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <rect x="348" y="124" width="1012" height="736" rx="30" fill="#FFFDF8"/>
+  <text x="390" y="176" font-family="Arial, sans-serif" font-size="32" fill="#20304F">Active Bar Workspace</text>
+  <text x="390" y="208" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">The chosen play bar expands into a full editor while the left rail keeps global context stable</text>
+
+  <rect x="390" y="236" width="972" height="122" rx="24" fill="#E8E1D4"/>
+  <text x="420" y="278" font-family="Arial, sans-serif" font-size="24" fill="#20304F">Pinned Bar B   Vocal Chops</text>
+  <text x="420" y="312" font-family="Arial, sans-serif" font-size="17" fill="#5F6787">Pitch +3   Gain -2 dB   Pan 12R   Reverb 42%   Delay 18%</text>
+  <rect x="1160" y="256" width="170" height="56" rx="16" fill="#D9E6C3"/>
+  <text x="1245" y="292" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#20304F">Open Grid</text>
+
+  <rect x="390" y="388" width="312" height="430" rx="24" fill="#20304F"/>
+  <text x="420" y="430" font-family="Arial, sans-serif" font-size="26" fill="#F7F4EB">Macro Knobs</text>
+  <circle cx="470" cy="514" r="42" fill="#F7F4EB"/>
+  <circle cx="620" cy="514" r="42" fill="#F7F4EB"/>
+  <circle cx="470" cy="654" r="42" fill="#F7F4EB"/>
+  <circle cx="620" cy="654" r="42" fill="#F7F4EB"/>
+  <text x="470" y="522" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#20304F">Gain</text>
+  <text x="620" y="522" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#20304F">Pitch</text>
+  <text x="470" y="662" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#20304F">Reverb</text>
+  <text x="620" y="662" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#20304F">Delay</text>
+  <rect x="430" y="732" width="232" height="54" rx="16" fill="#F7F4EB"/>
+  <text x="546" y="766" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#20304F">Advanced FX</text>
+
+  <rect x="730" y="388" width="632" height="430" rx="24" fill="#F4F1E8"/>
+  <text x="762" y="430" font-family="Arial, sans-serif" font-size="26" fill="#20304F">Pop Out Sequencer Drawer</text>
+  <text x="762" y="462" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Acts like a balloon panel but reads more like a temporary drawer for touch devices</text>
+  <g fill="#D9E6C3">
+    <rect x="762" y="500" width="62" height="62" rx="14"/>
+    <rect x="838" y="500" width="62" height="62" rx="14"/>
+    <rect x="914" y="500" width="62" height="62" rx="14"/>
+    <rect x="990" y="500" width="62" height="62" rx="14"/>
+    <rect x="1066" y="500" width="62" height="62" rx="14"/>
+    <rect x="1142" y="500" width="62" height="62" rx="14"/>
+    <rect x="1218" y="500" width="62" height="62" rx="14"/>
+    <rect x="1294" y="500" width="62" height="62" rx="14"/>
+    <rect x="762" y="578" width="62" height="62" rx="14"/>
+    <rect x="838" y="578" width="62" height="62" rx="14"/>
+    <rect x="914" y="578" width="62" height="62" rx="14"/>
+    <rect x="990" y="578" width="62" height="62" rx="14"/>
+    <rect x="1066" y="578" width="62" height="62" rx="14"/>
+    <rect x="1142" y="578" width="62" height="62" rx="14"/>
+    <rect x="1218" y="578" width="62" height="62" rx="14"/>
+    <rect x="1294" y="578" width="62" height="62" rx="14"/>
+    <rect x="762" y="656" width="62" height="62" rx="14"/>
+    <rect x="838" y="656" width="62" height="62" rx="14"/>
+    <rect x="914" y="656" width="62" height="62" rx="14"/>
+    <rect x="990" y="656" width="62" height="62" rx="14"/>
+    <rect x="1066" y="656" width="62" height="62" rx="14"/>
+    <rect x="1142" y="656" width="62" height="62" rx="14"/>
+    <rect x="1218" y="656" width="62" height="62" rx="14"/>
+    <rect x="1294" y="656" width="62" height="62" rx="14"/>
+  </g>
+  <g fill="#4D648D">
+    <rect x="914" y="500" width="62" height="62" rx="14"/>
+    <rect x="1142" y="500" width="62" height="62" rx="14"/>
+    <rect x="838" y="578" width="62" height="62" rx="14"/>
+    <rect x="1294" y="578" width="62" height="62" rx="14"/>
+    <rect x="990" y="656" width="62" height="62" rx="14"/>
+  </g>
+
+  <text x="390" y="840" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">Best for mobile ergonomics if the top strip becomes too cramped, but it shifts away from your original shared top-band mental model.</text>
+</svg>

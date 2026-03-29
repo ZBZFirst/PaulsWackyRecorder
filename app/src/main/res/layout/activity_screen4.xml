@@ -1,129 +1,407 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_screen3_gradient"
-    android:orientation="vertical">
+    android:background="@drawable/bg_screen4_canvas">
 
-    <TextView
-        android:id="@+id/screenTitle"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:id="@+id/screen4TopBar"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:gravity="center"
-        android:text="@string/screen4TitleText"
-        android:textSize="30sp"
-        android:textStyle="bold" />
+        android:background="@drawable/bg_screen4_top_bar"
+        android:elevation="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        <TextView
+            android:id="@+id/screen4MenuButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:text="≡"
+            android:textColor="@color/screen4_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-        <include
-            android:id="@+id/topNavInclude"
-            layout="@layout/view_top_navigation"
+        <TextView
+            android:id="@+id/screen4HeaderTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="24dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:text="@string/screen4_music_header_title"
+            android:textAllCaps="true"
+            android:textColor="@color/screen4_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-        <ScrollView
-            android:id="@+id/screen4MusicScrollView"
+        <TextView
+            android:id="@+id/screen4HeaderBpmChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_screen4_section_high"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp"
+            android:text="@string/screen4_music_bpm_value_default"
+            android:textColor="@color/screen4_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/screen4BottomNav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_screen4_bottom_nav"
+        android:elevation="12dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:id="@+id/screen4NavCapture"
             android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="24dp"
-            android:layout_marginBottom="24dp"
-            android:fillViewport="true"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/topNavInclude">
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="□"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/screen4_music_bottom_capture"
+                android:textAllCaps="true"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/screen4NavRecorder"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▣"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/screen4_music_bottom_recorder"
+                android:textAllCaps="true"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/screen4NavBoard"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="☷"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/screen4_music_bottom_board"
+                android:textAllCaps="true"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/screen4NavController"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_screen4_nav_active"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="◌"
+                android:textColor="@color/screen4_secondary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/screen4_music_bottom_controller"
+                android:textAllCaps="true"
+                android:textColor="@color/screen4_secondary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/screen4NavHome"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⌂"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/screen4_music_bottom_home"
+                android:textAllCaps="true"
+                android:textColor="@color/screen4_nav_inactive"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/screen4MusicScrollView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingStart="12dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp"
+        app:layout_constraintBottom_toTopOf="@id/screen4BottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/screen4TopBar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/screen4TransportSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card_surface"
+                android:background="@drawable/bg_screen4_section"
+                android:gravity="center_vertical"
                 android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/screen4_music_transport_title"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                android:padding="14dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
-                    <TextView
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/screen4_music_bpm_label" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                    <EditText
-                        android:id="@+id/screen4MusicBpmInput"
-                        android:layout_width="88dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:ems="4"
-                        android:inputType="number"
-                        android:maxLines="1" />
+                        <Button
+                            android:id="@+id/screen4TransportPrevButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="⏮"
+                            android:textColor="@color/screen4_text_primary"
+                            android:textSize="14sp" />
 
-                    <Button
-                        android:id="@+id/screen4MusicPlayButton"
+                        <Button
+                            android:id="@+id/screen4MusicStopButton"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="■"
+                            android:textColor="@color/screen4_text_primary"
+                            android:textSize="16sp" />
+
+                        <Button
+                            android:id="@+id/screen4MusicPlayButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="▶"
+                            android:textColor="@color/screen4_text_primary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="16dp"
                         android:layout_weight="1"
-                        android:text="@string/screen4_music_play" />
+                        android:orientation="vertical">
 
-                    <Button
-                        android:id="@+id/screen4MusicStopButton"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/screen4_music_time_played"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/screen4MusicTransportStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/screen4_music_time_played_placeholder"
+                            android:textColor="@color/screen4_primary"
+                            android:textSize="28sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
                         android:layout_weight="1"
-                        android:enabled="false"
-                        android:text="@string/screen4_music_stop" />
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/screen4_music_tempo_control"
+                                android:textAllCaps="true"
+                                android:textColor="@color/screen4_text_secondary"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/screen4MusicBpmValueText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/screen4_music_bpm_value_default"
+                                android:textColor="@color/screen4_secondary"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/screen4MusicBpmSlider"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:progressTint="@color/screen4_secondary"
+                            android:thumbTint="@color/screen4_secondary" />
+                    </LinearLayout>
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/screen4MusicTransportStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/screen4_music_transport_status_placeholder" />
 
                 <TextView
                     android:id="@+id/screen4MusicCycleStatus"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/screen4_music_cycle_status_placeholder" />
+                    android:layout_marginTop="8dp"
+                    android:text="@string/screen4_music_cycle_status_placeholder"
+                    android:textColor="@color/screen4_text_secondary"
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/screen4MusicRuntimeStatus"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/screen4_music_runtime_placeholder" />
+                    android:layout_marginTop="2dp"
+                    android:text="@string/screen4_music_runtime_placeholder"
+                    android:textColor="@color/screen4_text_secondary"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/screen4MusicSaveSongButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_screen4_transport_button"
+                        android:text="@string/screen4_music_save_song"
+                        android:textColor="@color/screen4_text_primary" />
+
+                    <Button
+                        android:id="@+id/screen4MusicLoadSongButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_screen4_transport_button"
+                        android:text="@string/screen4_music_load_song"
+                        android:textColor="@color/screen4_text_primary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/screen4MusicFavoritesSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_screen4_section"
+                android:orientation="vertical"
+                android:padding="14dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -131,34 +409,25 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/screen4_music_favorites_title"
-                        android:textSize="18sp"
+                        android:text="@string/screen4_music_pad_map_title"
+                        android:textAllCaps="true"
+                        android:textColor="@color/screen4_text_secondary"
+                        android:textSize="10sp"
                         android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/screen4MusicFavoritesToggleButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/screen4_section_collapse" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/screen4MusicFavoritesSection"
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/screen4_music_favorites_help" />
+                    android:layout_marginTop="8dp"
+                    android:fillViewport="true"
+                    android:overScrollMode="never"
+                    android:scrollbars="none">
 
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_section_surface"
+                        android:background="@drawable/bg_screen4_section_high"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:padding="8dp">
@@ -167,162 +436,219 @@
                             android:id="@+id/screen4MusicFavoritePagePrevButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/screen4_music_favorite_page_prev" />
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:minWidth="40dp"
+                            android:text="@string/screen4_music_favorite_page_prev"
+                            android:textColor="@color/screen4_text_secondary" />
 
                         <TextView
                             android:id="@+id/screen4MusicFavoritePageStatusText"
-                            android:layout_width="0dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginHorizontal="8dp"
-                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
                             android:gravity="center"
-                            android:text="@string/screen4_music_favorite_page_status_placeholder" />
+                            android:paddingStart="10dp"
+                            android:paddingTop="10dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="10dp"
+                            android:text="@string/screen4_music_favorite_page_status_placeholder"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="12sp" />
 
                         <Button
                             android:id="@+id/screen4MusicFavoritePageNextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/screen4_music_favorite_page_next" />
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:minWidth="40dp"
+                            android:text="@string/screen4_music_favorite_page_next"
+                            android:textColor="@color/screen4_text_secondary" />
+
+                        <Button
+                            android:id="@+id/screen4MusicSelectionModeButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="@string/screen4_music_group_select_toggle_off"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/screen4MusicAssignSelectionButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="@string/screen4_music_group_select_assign"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/screen4MusicClearSelectionButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="@string/screen4_music_group_select_clear"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/screen4MusicSelectAllButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="@string/screen4_music_group_select_all"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/screen4MusicSelectOddButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="@string/screen4_music_group_select_odd"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp" />
+
+                        <Button
+                            android:id="@+id/screen4MusicSelectEvenButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_screen4_transport_button"
+                            android:text="@string/screen4_music_group_select_even"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:id="@+id/screen4MusicGroupSelectionStatusText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/screen4_music_group_select_status_placeholder"
+                            android:textAllCaps="true"
+                            android:textColor="@color/screen4_text_secondary"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
+                </HorizontalScrollView>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fillViewport="true"
+                    android:overScrollMode="never"
+                    android:scrollbars="none">
 
                     <GridLayout
                         android:id="@+id/screen4MusicFavoritesPad"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:alignmentMode="alignMargins"
-                        android:background="@drawable/bg_section_surface"
-                        android:columnCount="3"
-                        android:padding="8dp"
-                        android:rowCount="3"
-                        android:useDefaultMargins="true" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/screen4MusicCompileStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/screen4_music_compile_placeholder" />
-
-                <TextView
-                    android:id="@+id/screen4MusicErrorStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/screen4_music_error_placeholder" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/screen4_music_play_bar_title"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/screen4MusicPlayBarToggleButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/screen4_section_collapse" />
-                </LinearLayout>
+                        android:alignmentMode="alignMargins"
+                        android:background="@drawable/bg_screen4_section_high"
+                        android:columnCount="9"
+                        android:padding="8dp"
+                        android:rowCount="1"
+                        android:useDefaultMargins="true" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/screen4MusicPlayBarSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
 
                 <LinearLayout
-                    android:id="@+id/screen4MusicPlayBarSection"
+                    android:id="@+id/screen4MusicChannelRosterContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="horizontal" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/screen4_music_play_bar_help" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_section_surface"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="8dp">
-
-                        <TextView
-                            android:id="@+id/screen4MusicPlayBarCountText"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/screen4_music_play_bar_count_placeholder" />
-
-                        <Button
-                            android:id="@+id/screen4MusicAddPlayBarButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/screen4_music_add_play_bar" />
-
-                        <Button
-                            android:id="@+id/screen4MusicRemovePlayBarButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="@string/screen4_music_remove_play_bar" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/screen4MusicSaveSongButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/screen4_music_save_song" />
-
-                        <Button
-                            android:id="@+id/screen4MusicLoadSongButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="@string/screen4_music_load_song" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/screen4MusicPlayBarsContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:orientation="vertical" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/screen4MusicActivePatternStatus"
+                <LinearLayout
+                    android:id="@+id/screen4MusicPlayBarsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="@string/screen4_music_active_pattern_placeholder" />
-
-                <TextView
-                    android:id="@+id/screen4MusicPendingPatternStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/screen4_music_pending_pattern_placeholder" />
-
+                    android:orientation="vertical" />
             </LinearLayout>
-        </ScrollView>
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</LinearLayout>
+
+            <TextView
+                android:id="@+id/screen4MusicCompileStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_compile_placeholder" />
+
+            <TextView
+                android:id="@+id/screen4MusicErrorStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_error_placeholder" />
+
+            <TextView
+                android:id="@+id/screen4MusicActivePatternStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_active_pattern_placeholder" />
+
+            <TextView
+                android:id="@+id/screen4MusicPendingPatternStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_pending_pattern_placeholder" />
+
+            <TextView
+                android:id="@+id/screen4MusicPlayBarCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_play_bar_count_placeholder" />
+
+            <Button
+                android:id="@+id/screen4MusicAddPlayBarButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_add_play_bar" />
+
+            <Button
+                android:id="@+id/screen4MusicRemovePlayBarButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_music_remove_play_bar" />
+
+            <Button
+                android:id="@+id/screen4MusicFavoritesToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_section_collapse" />
+
+            <Button
+                android:id="@+id/screen4MusicPlayBarToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="@string/screen4_section_collapse" />
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,89 @@
+<svg width="1200" height="2000" viewBox="0 0 1200 2000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: #0D1326; }
+    .panel { fill: #182445; stroke: #3A4D7A; stroke-width: 2; }
+    .panel-soft { fill: #22315C; stroke: #4B5F8F; stroke-width: 2; }
+    .panel-accent { fill: #173E2C; stroke: #44D48A; stroke-width: 3; }
+    .strip { fill: #22315C; stroke: #4B5F8F; stroke-width: 2; }
+    .strip-active { fill: #1A4D37; stroke: #44D48A; stroke-width: 3; }
+    .dock-head { fill: #2A3A68; }
+    .fader-bg { fill: #162033; }
+    .fader-track { fill: #394C75; }
+    .fader-fill { fill: #65E593; }
+    .fader-fill-2 { fill: #FFC65C; }
+    .fader-fill-3 { fill: #70C4FF; }
+    .fader-fill-4 { fill: #EE74B9; }
+    .fader-fill-5 { fill: #B68DFF; }
+    .label { fill: #F6F8FD; font-family: Arial, sans-serif; font-size: 34px; font-weight: 700; }
+    .small { fill: #D8E1F3; font-family: Arial, sans-serif; font-size: 24px; }
+    .tiny { fill: #AFC0E6; font-family: Arial, sans-serif; font-size: 20px; }
+    .title { fill: #F8FAFF; font-family: Arial, sans-serif; font-size: 52px; font-weight: 700; }
+  </style>
+
+  <rect class="bg" width="1200" height="2000"/>
+  <text x="600" y="90" text-anchor="middle" class="title">Screen 4 Final Direction - FX Drawer Mode</text>
+
+  <rect x="40" y="130" width="1120" height="150" rx="28" class="panel"/>
+  <text x="80" y="188" class="label">Transport and Strip Roster stay visible while FX is open</text>
+  <text x="80" y="232" class="tiny">The page behind the drawer does not scroll during effect edits</text>
+
+  <rect x="40" y="320" width="1120" height="1100" rx="34" class="panel"/>
+  <text x="80" y="390" class="label">Bar 1 Workspace in background</text>
+  <rect x="70" y="430" width="1060" height="180" rx="26" class="panel-soft"/>
+  <rect x="70" y="635" width="1060" height="500" rx="26" class="panel-soft"/>
+  <rect x="70" y="1160" width="1060" height="220" rx="26" class="panel-soft"/>
+  <text x="95" y="495" class="small">Assignment dock remains visible but inactive behind the FX drawer</text>
+  <text x="95" y="700" class="small">Step pad remains visible for orientation only</text>
+  <text x="95" y="1225" class="small">FX dock launched from here</text>
+
+  <rect x="60" y="900" width="1080" height="920" rx="42" fill="#10192C" stroke="#6AD69B" stroke-width="4"/>
+  <rect x="95" y="940" width="1010" height="66" rx="20" class="dock-head"/>
+  <text x="125" y="984" class="small">Bar 1 FX Drawer</text>
+  <text x="720" y="984" class="tiny">Fixed overlay panel. Great for tablets. No accidental page-scroll while touching controls.</text>
+
+  <rect x="130" y="1035" width="150" height="640" rx="28" class="fader-bg"/>
+  <rect x="186" y="1120" width="38" height="470" rx="19" class="fader-track"/>
+  <rect x="186" y="1320" width="38" height="270" rx="19" class="fader-fill"/>
+  <circle cx="205" cy="1315" r="26" fill="#79F3A0"/>
+  <text x="205" y="1088" text-anchor="middle" class="small">Gain</text>
+  <text x="205" y="1645" text-anchor="middle" class="tiny">64%</text>
+
+  <rect x="310" y="1035" width="150" height="640" rx="28" class="fader-bg"/>
+  <rect x="366" y="1120" width="38" height="470" rx="19" class="fader-track"/>
+  <rect x="366" y="1240" width="38" height="350" rx="19" class="fader-fill-2"/>
+  <circle cx="385" cy="1235" r="26" fill="#FFD371"/>
+  <text x="385" y="1088" text-anchor="middle" class="small">Pitch</text>
+  <text x="385" y="1645" text-anchor="middle" class="tiny">+6</text>
+
+  <rect x="490" y="1035" width="150" height="640" rx="28" class="fader-bg"/>
+  <rect x="546" y="1120" width="38" height="470" rx="19" class="fader-track"/>
+  <rect x="546" y="1365" width="38" height="225" rx="19" class="fader-fill-3"/>
+  <circle cx="565" cy="1360" r="26" fill="#7FD2FF"/>
+  <text x="565" y="1088" text-anchor="middle" class="small">Pan</text>
+  <text x="565" y="1645" text-anchor="middle" class="tiny">24R</text>
+
+  <rect x="670" y="1035" width="150" height="640" rx="28" class="fader-bg"/>
+  <rect x="726" y="1120" width="38" height="470" rx="19" class="fader-track"/>
+  <rect x="726" y="1390" width="38" height="200" rx="19" class="fader-fill-4"/>
+  <circle cx="745" cy="1385" r="26" fill="#F486C6"/>
+  <text x="745" y="1088" text-anchor="middle" class="small">Reverb</text>
+  <text x="745" y="1645" text-anchor="middle" class="tiny">34%</text>
+
+  <rect x="850" y="1035" width="150" height="640" rx="28" class="fader-bg"/>
+  <rect x="906" y="1120" width="38" height="470" rx="19" class="fader-track"/>
+  <rect x="906" y="1495" width="38" height="95" rx="19" class="fader-fill-5"/>
+  <circle cx="925" cy="1490" r="26" fill="#C3A3FF"/>
+  <text x="925" y="1088" text-anchor="middle" class="small">Delay</text>
+  <text x="925" y="1645" text-anchor="middle" class="tiny">12%</text>
+
+  <rect x="130" y="1705" width="210" height="64" rx="18" fill="#314675"/>
+  <text x="235" y="1747" text-anchor="middle" class="small">LPF Soon</text>
+  <rect x="360" y="1705" width="210" height="64" rx="18" fill="#314675"/>
+  <text x="465" y="1747" text-anchor="middle" class="small">HPF Soon</text>
+  <rect x="780" y="1705" width="150" height="64" rx="18" fill="#314675"/>
+  <text x="855" y="1747" text-anchor="middle" class="small">Reset</text>
+  <rect x="950" y="1705" width="150" height="64" rx="18" fill="#65E593"/>
+  <text x="1025" y="1747" text-anchor="middle" class="small" fill="#0C1B14">Done</text>
+
+  <text x="80" y="1900" class="small">Recommended final interaction: FX edits happen in a fixed drawer or modal rail, not inside the main scrolling lane card.</text>
+</svg>

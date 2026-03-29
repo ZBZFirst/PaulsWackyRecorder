@@ -1,0 +1,338 @@
+<!-- Screen 4 SVG registry prototype. Repeated strips, slots, and docks are composed from symbols and placed in clipped parent cards. -->
+<svg width="1600" height="1320" viewBox="0 0 1600 1320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: #0D1326; }
+    .panel { fill: #182445; stroke: #334775; stroke-width: 2; }
+    .panel-soft { fill: #22315C; stroke: #49609A; stroke-width: 2; }
+    .panel-deep { fill: #16203D; stroke: #314675; stroke-width: 2; }
+    .panel-green { fill: #173E2C; stroke: #44D48A; stroke-width: 3; }
+    .panel-pink { fill: #472246; stroke: #F268B7; stroke-width: 3; }
+    .panel-amber { fill: #4B3511; stroke: #FFC65C; stroke-width: 3; }
+    .header { fill: #2A3A68; }
+    .chip { fill: #32497D; }
+    .button-green { fill: #43D665; }
+    .button-red { fill: #E45858; }
+    .slot-blue { fill: #4B6EAF; }
+    .slot-green { fill: #79D78E; }
+    .slot-pink { fill: #E36AC2; }
+    .slot-amber { fill: #FFC65C; }
+    .track { fill: #314675; }
+    .track-fill { fill: #65E593; }
+    .title { fill: #F8FAFF; font-family: Arial, sans-serif; font-size: 40px; font-weight: 700; }
+    .section { fill: #F6F8FD; font-family: Arial, sans-serif; font-size: 26px; font-weight: 700; }
+    .label { fill: #F6F8FD; font-family: Arial, sans-serif; font-size: 22px; font-weight: 700; }
+    .small { fill: #D8E1F3; font-family: Arial, sans-serif; font-size: 16px; }
+    .tiny { fill: #AFC0E6; font-family: Arial, sans-serif; font-size: 13px; }
+    .dark-text { fill: #112033; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; }
+    .light-text { fill: #F7FAFF; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; }
+  </style>
+
+  <defs>
+    <clipPath id="catalog-clip">
+      <rect x="28" y="108" width="1544" height="176" rx="28"/>
+    </clipPath>
+
+    <clipPath id="left-card-clip">
+      <rect x="52" y="394" width="734" height="894" rx="26"/>
+    </clipPath>
+
+    <clipPath id="right-card-clip">
+      <rect x="814" y="394" width="734" height="894" rx="26"/>
+    </clipPath>
+
+    <symbol id="transport-shell" viewBox="0 0 680 120">
+      <rect x="1" y="1" width="678" height="118" rx="22" class="panel-soft"/>
+    </symbol>
+
+    <symbol id="bpm-block" viewBox="0 0 180 86">
+      <rect x="1" y="1" width="178" height="84" rx="18" class="panel-deep"/>
+      <text x="18" y="28" class="tiny">BPM</text>
+      <text x="18" y="54" class="label">128</text>
+      <use href="#bpm-slider" x="18" y="63"/>
+    </symbol>
+
+    <symbol id="bpm-slider" viewBox="0 0 144 10">
+      <rect width="144" height="10" rx="5" class="track"/>
+      <rect width="98" height="10" rx="5" class="track-fill"/>
+      <circle cx="98" cy="5" r="8" fill="#E8FFF0"/>
+    </symbol>
+
+    <symbol id="strip-neutral" viewBox="0 0 198 56">
+      <rect x="1" y="1" width="196" height="48" rx="16" class="panel-soft"/>
+      <path d="M86 48 H112 L99 56 Z" fill="#49609A"/>
+    </symbol>
+
+    <symbol id="strip-green" viewBox="0 0 198 56">
+      <rect x="1" y="1" width="196" height="48" rx="16" class="panel-green"/>
+      <path d="M86 48 H112 L99 56 Z" fill="#44D48A"/>
+    </symbol>
+
+    <symbol id="strip-pink" viewBox="0 0 198 56">
+      <rect x="1" y="1" width="196" height="48" rx="16" class="panel-pink"/>
+      <path d="M86 48 H112 L99 56 Z" fill="#F268B7"/>
+    </symbol>
+
+    <symbol id="strip-selected" viewBox="0 0 198 56">
+      <rect x="1" y="1" width="196" height="48" rx="16" class="panel-amber"/>
+      <path d="M86 48 H112 L99 56 Z" fill="#FFC65C"/>
+    </symbol>
+
+    <symbol id="anchor-green" viewBox="0 0 198 40">
+      <path d="M99 0 C99 14, 99 20, 99 28" stroke="#44D48A" stroke-width="6" stroke-linecap="round"/>
+      <path d="M99 28 C99 33, 94 36, 88 39" stroke="#44D48A" stroke-width="6" stroke-linecap="round"/>
+      <path d="M99 28 C99 33, 104 36, 110 39" stroke="#44D48A" stroke-width="6" stroke-linecap="round"/>
+    </symbol>
+
+    <symbol id="anchor-pink" viewBox="0 0 198 40">
+      <path d="M99 0 C99 14, 99 20, 99 28" stroke="#F268B7" stroke-width="6" stroke-linecap="round"/>
+      <path d="M99 28 C99 33, 94 36, 88 39" stroke="#F268B7" stroke-width="6" stroke-linecap="round"/>
+      <path d="M99 28 C99 33, 104 36, 110 39" stroke="#F268B7" stroke-width="6" stroke-linecap="round"/>
+    </symbol>
+
+    <symbol id="workspace-green" viewBox="0 0 680 478">
+      <path d="M314 0 H366 L352 16 H328 Z" fill="#44D48A"/>
+      <rect x="1" y="14" width="678" height="463" rx="28" class="panel-green"/>
+    </symbol>
+
+    <symbol id="workspace-pink" viewBox="0 0 680 478">
+      <path d="M314 0 H366 L352 16 H328 Z" fill="#F268B7"/>
+      <rect x="1" y="14" width="678" height="463" rx="28" class="panel-pink"/>
+    </symbol>
+
+    <symbol id="dock-wide" viewBox="0 0 632 98">
+      <rect x="1" y="1" width="630" height="96" rx="20" class="panel-soft"/>
+      <rect x="16" y="16" width="600" height="28" rx="10" class="header"/>
+    </symbol>
+
+    <symbol id="dock-grid" viewBox="0 0 458 214">
+      <rect x="1" y="1" width="456" height="212" rx="20" class="panel-soft"/>
+      <rect x="16" y="16" width="426" height="28" rx="10" class="header"/>
+    </symbol>
+
+    <symbol id="dock-rail" viewBox="0 0 150 214">
+      <rect x="1" y="1" width="148" height="212" rx="20" class="panel-soft"/>
+      <rect x="14" y="16" width="122" height="28" rx="10" class="header"/>
+    </symbol>
+
+    <symbol id="action-chip" viewBox="0 0 100 32">
+      <rect width="100" height="32" rx="12" class="chip"/>
+    </symbol>
+
+    <symbol id="step-slot-empty" viewBox="0 0 96 48">
+      <rect x="1" y="1" width="94" height="46" rx="14" class="slot-blue"/>
+    </symbol>
+
+    <symbol id="step-slot-green" viewBox="0 0 96 48">
+      <rect x="1" y="1" width="94" height="46" rx="14" class="slot-green"/>
+    </symbol>
+
+    <symbol id="step-slot-pink" viewBox="0 0 96 48">
+      <rect x="1" y="1" width="94" height="46" rx="14" class="slot-pink"/>
+    </symbol>
+
+    <symbol id="step-slot-selected" viewBox="0 0 96 48">
+      <rect x="1" y="1" width="94" height="46" rx="14" class="slot-amber"/>
+    </symbol>
+  </defs>
+
+  <rect width="1600" height="1320" class="bg"/>
+  <text x="800" y="50" text-anchor="middle" class="title">Screen 4 SVG Component Registry Prototype</text>
+  <text x="800" y="78" text-anchor="middle" class="small">Registry-driven mockups with clipped parent cards and fixed inset content.</text>
+
+  <rect x="28" y="108" width="1544" height="176" rx="28" class="panel"/>
+  <g clip-path="url(#catalog-clip)">
+    <text x="52" y="144" class="section">Registry Catalog</text>
+    <text x="52" y="168" class="small">Show the building blocks plainly here. Generated views below demonstrate nesting.</text>
+
+    <g transform="translate(52 196)">
+      <use href="#transport-shell" width="320" height="56"/>
+      <text x="8" y="26" class="tiny">transport shell</text>
+    </g>
+
+    <g transform="translate(430 196)">
+      <use href="#bpm-block"/>
+      <text x="0" y="106" class="tiny">bpm block</text>
+    </g>
+
+    <g transform="translate(680 196)">
+      <use href="#strip-neutral"/>
+      <use href="#strip-green" x="216"/>
+      <use href="#strip-selected" x="432"/>
+      <text x="0" y="82" class="tiny">strip states</text>
+    </g>
+
+    <g transform="translate(1190 196)">
+      <use href="#step-slot-green"/>
+      <use href="#step-slot-empty" x="108"/>
+      <use href="#step-slot-selected" x="216"/>
+      <text x="0" y="78" class="tiny">step states</text>
+    </g>
+  </g>
+
+  <rect x="28" y="316" width="1544" height="976" rx="28" class="panel"/>
+  <text x="52" y="352" class="section">Generated Views</text>
+  <text x="52" y="376" class="small">Each mockup is a clipped parent card. All child surfaces sit on a fixed inset grid.</text>
+
+  <rect x="52" y="394" width="734" height="894" rx="26" class="panel-deep"/>
+  <rect x="814" y="394" width="734" height="894" rx="26" class="panel-deep"/>
+
+  <g clip-path="url(#left-card-clip)">
+    <text x="76" y="430" class="section">Assignment Focus Variant</text>
+    <text x="76" y="452" class="small">Primary emphasis stays on the step grid.</text>
+
+    <g transform="translate(76 480)">
+      <use href="#transport-shell"/>
+      <text x="20" y="34" class="label">Transport</text>
+      <use href="#bpm-block" x="478" y="18"/>
+      <rect x="206" y="24" width="78" height="38" rx="14" class="button-green"/>
+      <rect x="294" y="24" width="78" height="38" rx="14" class="button-red"/>
+      <rect x="382" y="24" width="72" height="38" rx="14" class="chip"/>
+      <text x="245" y="49" text-anchor="middle" class="dark-text">PLAY</text>
+      <text x="333" y="49" text-anchor="middle" class="light-text">STOP</text>
+      <text x="418" y="49" text-anchor="middle" class="light-text">SAVE</text>
+      <text x="20" y="84" class="small">BPM slider stays inside the transport card.</text>
+    </g>
+
+    <g transform="translate(76 624)">
+      <rect width="680" height="82" rx="20" class="panel-soft"/>
+      <text x="20" y="30" class="label">Strip Roster</text>
+      <use href="#strip-green" x="18" y="20"/>
+      <use href="#strip-neutral" x="240" y="20"/>
+      <use href="#strip-selected" x="462" y="20"/>
+      <text x="40" y="50" class="small">BAR 1</text>
+      <text x="262" y="50" class="small">BAR 2</text>
+      <text x="484" y="50" class="small">BAR 3</text>
+    </g>
+
+    <g transform="translate(76 736)">
+      <use href="#anchor-green" x="18"/>
+      <use href="#workspace-green" y="34"/>
+      <text x="24" y="84" class="label">Bar 1 Assignment Workspace</text>
+      <text x="24" y="106" class="small">All child cards share the same inset and stay clipped by the parent shell.</text>
+
+      <g transform="translate(24 138)">
+        <use href="#dock-wide"/>
+        <text x="18" y="36" class="small">Assignment Dock</text>
+        <use href="#action-chip" x="18" y="54"/>
+        <use href="#action-chip" x="130" y="54"/>
+        <use href="#action-chip" x="242" y="54"/>
+        <use href="#action-chip" x="354" y="54"/>
+        <text x="68" y="75" text-anchor="middle" class="tiny">SAVE BAR</text>
+        <text x="180" y="75" text-anchor="middle" class="tiny">LOAD BAR</text>
+        <text x="292" y="75" text-anchor="middle" class="tiny">FILL ALL</text>
+        <text x="404" y="75" text-anchor="middle" class="tiny">SELECT</text>
+      </g>
+
+      <g transform="translate(24 254)">
+        <use href="#dock-grid"/>
+        <text x="18" y="36" class="small">Step Grid</text>
+        <use href="#step-slot-green" x="18" y="62"/>
+        <use href="#step-slot-green" x="128" y="62"/>
+        <use href="#step-slot-selected" x="238" y="62"/>
+        <use href="#step-slot-green" x="348" y="62"/>
+        <use href="#step-slot-green" x="18" y="122"/>
+        <use href="#step-slot-empty" x="128" y="122"/>
+        <use href="#step-slot-green" x="238" y="122"/>
+        <use href="#step-slot-empty" x="348" y="122"/>
+        <text x="65" y="92" text-anchor="middle" class="dark-text">1</text>
+        <text x="175" y="92" text-anchor="middle" class="dark-text">2</text>
+        <text x="285" y="92" text-anchor="middle" class="dark-text">3</text>
+        <text x="395" y="92" text-anchor="middle" class="dark-text">4</text>
+        <text x="65" y="152" text-anchor="middle" class="dark-text">5</text>
+        <text x="175" y="152" text-anchor="middle" class="dark-text">6</text>
+        <text x="285" y="152" text-anchor="middle" class="dark-text">7</text>
+        <text x="395" y="152" text-anchor="middle" class="dark-text">8</text>
+      </g>
+
+      <g transform="translate(506 254)">
+        <use href="#dock-rail"/>
+        <text x="18" y="36" class="small">FX Rail</text>
+        <use href="#action-chip" x="24" y="60"/>
+        <use href="#action-chip" x="24" y="98"/>
+        <use href="#action-chip" x="24" y="136"/>
+        <text x="74" y="81" text-anchor="middle" class="tiny">GAIN</text>
+        <text x="74" y="119" text-anchor="middle" class="tiny">PAN</text>
+        <text x="74" y="157" text-anchor="middle" class="tiny">SPACE</text>
+      </g>
+    </g>
+  </g>
+
+  <g clip-path="url(#right-card-clip)">
+    <text x="838" y="430" class="section">FX Visible Variant</text>
+    <text x="838" y="452" class="small">FX is visible, but still secondary to the grid.</text>
+
+    <g transform="translate(838 480)">
+      <use href="#transport-shell"/>
+      <text x="20" y="34" class="label">Transport</text>
+      <use href="#bpm-block" x="478" y="18"/>
+      <rect x="240" y="24" width="78" height="38" rx="14" class="button-green"/>
+      <rect x="328" y="24" width="72" height="38" rx="14" class="chip"/>
+      <text x="279" y="49" text-anchor="middle" class="dark-text">PLAY</text>
+      <text x="364" y="49" text-anchor="middle" class="light-text">SAVE</text>
+      <text x="20" y="84" class="small">Transport remains stable while the lane editor changes.</text>
+    </g>
+
+    <g transform="translate(838 624)">
+      <rect width="680" height="82" rx="20" class="panel-soft"/>
+      <text x="20" y="30" class="label">Strip Roster</text>
+      <use href="#strip-pink" x="18" y="20"/>
+      <use href="#strip-neutral" x="240" y="20"/>
+      <use href="#strip-neutral" x="462" y="20"/>
+      <text x="40" y="50" class="small">BAR 2</text>
+      <text x="262" y="50" class="small">BAR 3</text>
+      <text x="484" y="50" class="small">BAR 4</text>
+    </g>
+
+    <g transform="translate(838 736)">
+      <use href="#anchor-pink" x="18"/>
+      <use href="#workspace-pink" y="34"/>
+      <text x="24" y="84" class="label">Bar 2 FX Editing Workspace</text>
+      <text x="24" y="106" class="small">Selection remains amber. Assignment remains pink.</text>
+
+      <g transform="translate(24 138)">
+        <use href="#dock-wide"/>
+        <text x="18" y="36" class="small">Assignment Dock</text>
+        <use href="#action-chip" x="18" y="54"/>
+        <use href="#action-chip" x="130" y="54"/>
+        <use href="#action-chip" x="242" y="54"/>
+        <use href="#action-chip" x="354" y="54"/>
+        <text x="68" y="75" text-anchor="middle" class="tiny">LOAD BAR</text>
+        <text x="180" y="75" text-anchor="middle" class="tiny">ODD</text>
+        <text x="292" y="75" text-anchor="middle" class="tiny">EVEN</text>
+        <text x="404" y="75" text-anchor="middle" class="tiny">SELECT</text>
+      </g>
+
+      <g transform="translate(24 254)">
+        <use href="#dock-grid"/>
+        <text x="18" y="36" class="small">Step Grid</text>
+        <use href="#step-slot-pink" x="18" y="62"/>
+        <use href="#step-slot-selected" x="128" y="62"/>
+        <use href="#step-slot-pink" x="238" y="62"/>
+        <use href="#step-slot-empty" x="348" y="62"/>
+        <use href="#step-slot-empty" x="18" y="122"/>
+        <use href="#step-slot-pink" x="128" y="122"/>
+        <use href="#step-slot-empty" x="238" y="122"/>
+        <use href="#step-slot-pink" x="348" y="122"/>
+        <text x="65" y="92" text-anchor="middle" class="dark-text">1</text>
+        <text x="175" y="92" text-anchor="middle" class="dark-text">2</text>
+        <text x="285" y="92" text-anchor="middle" class="dark-text">3</text>
+        <text x="395" y="92" text-anchor="middle" class="dark-text">4</text>
+        <text x="65" y="152" text-anchor="middle" class="dark-text">5</text>
+        <text x="175" y="152" text-anchor="middle" class="dark-text">6</text>
+        <text x="285" y="152" text-anchor="middle" class="dark-text">7</text>
+        <text x="395" y="152" text-anchor="middle" class="dark-text">8</text>
+      </g>
+
+      <g transform="translate(506 254)">
+        <use href="#dock-rail"/>
+        <text x="18" y="36" class="small">FX Rail</text>
+        <use href="#action-chip" x="24" y="60"/>
+        <use href="#action-chip" x="24" y="98"/>
+        <use href="#action-chip" x="24" y="136"/>
+        <text x="74" y="81" text-anchor="middle" class="tiny">GAIN</text>
+        <text x="74" y="119" text-anchor="middle" class="tiny">PITCH</text>
+        <text x="74" y="157" text-anchor="middle" class="tiny">SPACE</text>
+      </g>
+    </g>
+  </g>
+</svg>

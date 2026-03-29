@@ -1,0 +1,132 @@
+<svg width="1200" height="2000" viewBox="0 0 1200 2000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: #0D1326; }
+    .panel { fill: #182445; stroke: #3A4D7A; stroke-width: 2; }
+    .panel-soft { fill: #22315C; stroke: #4B5F8F; stroke-width: 2; }
+    .panel-accent { fill: #173E2C; stroke: #44D48A; stroke-width: 3; }
+    .strip { fill: #22315C; stroke: #4B5F8F; stroke-width: 2; }
+    .strip-active { fill: #1A4D37; stroke: #44D48A; stroke-width: 3; }
+    .button { fill: #E7ECF7; }
+    .button-dark { fill: #314675; }
+    .pad { fill: #4B6EAF; }
+    .pad-on { fill: #79D78E; }
+    .dock-head { fill: #2A3A68; }
+    .muted { fill: #9FB1D9; font-family: Arial, sans-serif; font-size: 26px; }
+    .label { fill: #F6F8FD; font-family: Arial, sans-serif; font-size: 34px; font-weight: 700; }
+    .small { fill: #D8E1F3; font-family: Arial, sans-serif; font-size: 22px; }
+    .tiny { fill: #AFC0E6; font-family: Arial, sans-serif; font-size: 20px; }
+    .btn-txt { fill: #111827; font-family: Arial, sans-serif; font-size: 24px; font-weight: 700; }
+    .btn-dark-txt { fill: #F6F8FD; font-family: Arial, sans-serif; font-size: 22px; font-weight: 700; }
+    .title { fill: #F8FAFF; font-family: Arial, sans-serif; font-size: 52px; font-weight: 700; }
+    .green { fill: #71F097; }
+    .orange { fill: #FFC65C; }
+  </style>
+
+  <rect class="bg" width="1200" height="2000"/>
+
+  <text x="600" y="90" text-anchor="middle" class="title">Screen 4 Final Direction - Assignment Mode</text>
+
+  <rect x="40" y="130" width="1120" height="170" rx="30" class="panel"/>
+  <text x="80" y="195" class="label">BPM 128</text>
+  <rect x="250" y="160" width="200" height="72" rx="16" fill="#3CD35E"/>
+  <text x="350" y="206" text-anchor="middle" class="btn-dark-txt">PLAY</text>
+  <rect x="470" y="160" width="200" height="72" rx="16" fill="#E45858"/>
+  <text x="570" y="206" text-anchor="middle" class="btn-dark-txt">STOP</text>
+  <rect x="700" y="160" width="170" height="72" rx="16" class="button-dark"/>
+  <text x="785" y="206" text-anchor="middle" class="btn-dark-txt">SAVE SONG</text>
+  <rect x="890" y="160" width="170" height="72" rx="16" class="button-dark"/>
+  <text x="975" y="206" text-anchor="middle" class="btn-dark-txt">LOAD SONG</text>
+  <text x="80" y="265" class="small">Favorite Page 1 of 7</text>
+  <text x="760" y="265" class="small">Playing  Cycle 4/4  Runtime 02:13  Compiled Success</text>
+
+  <rect x="40" y="340" width="1120" height="150" rx="28" class="panel"/>
+  <text x="80" y="395" class="label">Channel Strips</text>
+  <text x="80" y="435" class="tiny">Final behavior: strips stay compact, editing happens below</text>
+
+  <rect x="70" y="440" width="240" height="70" rx="22" class="strip-active"/>
+  <text x="95" y="482" class="small">BAR 1 DRUMS</text>
+  <text x="245" y="482" class="small">16/16</text>
+  <circle cx="285" cy="472" r="16" fill="#44D48A"/>
+
+  <rect x="330" y="440" width="240" height="70" rx="22" class="strip"/>
+  <text x="355" y="482" class="small">BAR 2 BASS</text>
+  <text x="505" y="482" class="small">8/16</text>
+  <circle cx="545" cy="472" r="16" fill="#FFD05C"/>
+
+  <rect x="590" y="440" width="240" height="70" rx="22" class="strip"/>
+  <text x="615" y="482" class="small">BAR 3 LEAD</text>
+  <text x="765" y="482" class="small">4/16</text>
+  <circle cx="805" cy="472" r="16" fill="#9FB1D9"/>
+
+  <rect x="850" y="440" width="130" height="70" rx="22" class="strip"/>
+  <text x="915" y="482" text-anchor="middle" class="small">ADD</text>
+
+  <rect x="1000" y="440" width="130" height="70" rx="22" class="strip"/>
+  <text x="1065" y="482" text-anchor="middle" class="small">FX</text>
+
+  <path d="M190 515 C190 560, 220 570, 220 610" stroke="#44D48A" stroke-width="6" stroke-linecap="round"/>
+
+  <rect x="40" y="560" width="1120" height="1280" rx="34" class="panel-accent"/>
+  <text x="80" y="635" class="label">Bar 1 Assignment Workspace</text>
+  <text x="80" y="675" class="small">Primary editing state. Keep Actions and Step Pad open. FX stays collapsed until needed.</text>
+
+  <rect x="70" y="720" width="1060" height="250" rx="26" class="panel-soft"/>
+  <rect x="95" y="745" width="1010" height="56" rx="18" class="dock-head"/>
+  <text x="125" y="782" class="small">Assignment Controls Dock</text>
+  <rect x="960" y="756" width="120" height="36" rx="14" fill="#49629B"/>
+  <text x="1020" y="781" text-anchor="middle" class="tiny">Collapse</text>
+
+  <rect x="105" y="825" width="300" height="58" rx="16" class="button"/>
+  <text x="255" y="863" text-anchor="middle" class="btn-txt">SAVE BAR</text>
+  <rect x="425" y="825" width="300" height="58" rx="16" class="button"/>
+  <text x="575" y="863" text-anchor="middle" class="btn-txt">LOAD BAR</text>
+  <rect x="745" y="825" width="300" height="58" rx="16" class="button"/>
+  <text x="895" y="863" text-anchor="middle" class="btn-txt">REMOVE BAR</text>
+
+  <rect x="105" y="900" width="220" height="58" rx="16" class="button"/>
+  <text x="215" y="938" text-anchor="middle" class="btn-txt">FILL ALL</text>
+  <rect x="345" y="900" width="220" height="58" rx="16" class="button"/>
+  <text x="455" y="938" text-anchor="middle" class="btn-txt">FILL ODD</text>
+  <rect x="585" y="900" width="220" height="58" rx="16" class="button"/>
+  <text x="695" y="938" text-anchor="middle" class="btn-txt">FILL EVEN</text>
+  <rect x="825" y="900" width="220" height="58" rx="16" fill="#8AE3A3"/>
+  <text x="935" y="938" text-anchor="middle" class="btn-txt">SELECT SLOTS</text>
+
+  <rect x="70" y="995" width="1060" height="520" rx="26" class="panel-soft"/>
+  <rect x="95" y="1020" width="1010" height="56" rx="18" class="dock-head"/>
+  <text x="125" y="1057" class="small">Step Pad Dock</text>
+  <text x="885" y="1057" class="tiny">Tap clears   Long press assigns   Drag from favorites</text>
+
+  <rect x="100" y="1105" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="350" y="1105" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="600" y="1105" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="850" y="1105" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="100" y="1210" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="350" y="1210" width="230" height="85" rx="22" class="pad"/>
+  <rect x="600" y="1210" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="850" y="1210" width="230" height="85" rx="22" class="pad"/>
+  <rect x="100" y="1315" width="230" height="85" rx="22" class="pad"/>
+  <rect x="350" y="1315" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="600" y="1315" width="230" height="85" rx="22" class="pad"/>
+  <rect x="850" y="1315" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="100" y="1420" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="350" y="1420" width="230" height="85" rx="22" class="pad"/>
+  <rect x="600" y="1420" width="230" height="85" rx="22" class="pad-on"/>
+  <rect x="850" y="1420" width="230" height="85" rx="22" class="pad"/>
+
+  <text x="215" y="1157" text-anchor="middle" class="btn-txt">1  PG1 PAD1</text>
+  <text x="465" y="1157" text-anchor="middle" class="btn-txt">2  PG1 PAD1</text>
+  <text x="715" y="1157" text-anchor="middle" class="btn-txt">3  PG1 PAD1</text>
+  <text x="965" y="1157" text-anchor="middle" class="btn-txt">4  PG1 PAD1</text>
+
+  <rect x="70" y="1540" width="1060" height="200" rx="26" class="panel-soft"/>
+  <rect x="95" y="1565" width="1010" height="56" rx="18" class="dock-head"/>
+  <text x="125" y="1602" class="small">FX Dock</text>
+  <text x="690" y="1602" class="tiny">Collapsed by default to avoid scroll conflicts while assigning steps</text>
+  <rect x="950" y="1576" width="130" height="36" rx="14" fill="#49629B"/>
+  <text x="1015" y="1601" text-anchor="middle" class="tiny">Open FX</text>
+  <text x="105" y="1670" class="small">Gain  Pitch  Pan  Reverb  Delay  Filter</text>
+  <text x="105" y="1710" class="tiny">Open this dock only when shaping the lane. Keep it closed during step editing.</text>
+
+  <text x="70" y="1885" class="muted">Final recommendation: one active lane editor at a time, with dedicated docks instead of one long scrolling card.</text>
+</svg>

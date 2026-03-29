@@ -1,0 +1,86 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" fill="#F4F1E8"/>
+  <rect x="40" y="28" width="1320" height="72" rx="18" fill="#E8E1D4"/>
+  <text x="700" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#20304F">Screen 3 Concept A   Single Balloon Sequencer</text>
+
+  <rect x="40" y="124" width="1320" height="208" rx="28" fill="#20304F"/>
+  <text x="76" y="172" font-family="Arial, sans-serif" font-size="30" fill="#F7F4EB">Compact Channel Strips</text>
+  <text x="76" y="206" font-family="Arial, sans-serif" font-size="18" fill="#BFD0F2">Persistent mixer lane with one expand button per play bar</text>
+
+  <rect x="72" y="228" width="300" height="82" rx="22" fill="#F7F4EB"/>
+  <text x="96" y="262" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar A   Drum Rack</text>
+  <text x="96" y="292" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Gain   Pitch   Pan   Rev   Dly</text>
+  <rect x="298" y="244" width="54" height="48" rx="16" fill="#D9E6C3"/>
+  <text x="325" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <rect x="390" y="212" width="300" height="98" rx="22" fill="#FFF1D6" stroke="#D4872A" stroke-width="3"/>
+  <text x="414" y="248" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar B   Vocal Chops</text>
+  <text x="414" y="280" font-family="Arial, sans-serif" font-size="16" fill="#A05B0C">Expanded   Pitch +3   Reverb 42%</text>
+  <rect x="616" y="232" width="54" height="56" rx="16" fill="#D4872A"/>
+  <text x="643" y="268" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#FFFDF8">-</text>
+
+  <rect x="708" y="228" width="300" height="82" rx="22" fill="#F7F4EB"/>
+  <text x="732" y="262" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar C   Atmos Pad</text>
+  <text x="732" y="292" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Gain   Pitch   Pan   Rev   Dly</text>
+  <rect x="934" y="244" width="54" height="48" rx="16" fill="#D9E6C3"/>
+  <text x="961" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <rect x="1026" y="228" width="300" height="82" rx="22" fill="#F7F4EB"/>
+  <text x="1050" y="262" font-family="Arial, sans-serif" font-size="20" fill="#20304F">Bar D   FX Lane</text>
+  <text x="1050" y="292" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Gain   Pitch   Pan   Rev   Dly</text>
+  <rect x="1252" y="244" width="54" height="48" rx="16" fill="#D9E6C3"/>
+  <text x="1279" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#20304F">+</text>
+
+  <path d="M540 310 C540 352 540 356 540 392" stroke="#D4872A" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 10"/>
+
+  <rect x="160" y="392" width="1080" height="418" rx="36" fill="#FFFDF8" stroke="#D4872A" stroke-width="4"/>
+  <text x="210" y="448" font-family="Arial, sans-serif" font-size="30" fill="#20304F">Expanded Balloon   Bar B Sequencer and Effects</text>
+  <text x="210" y="482" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">Anchored to the strip above so the user always knows which lane is open</text>
+
+  <rect x="210" y="514" width="340" height="246" rx="24" fill="#20304F"/>
+  <text x="240" y="554" font-family="Arial, sans-serif" font-size="24" fill="#F7F4EB">Channel Strip</text>
+  <circle cx="270" cy="616" r="34" fill="#F7F4EB"/>
+  <circle cx="380" cy="616" r="34" fill="#F7F4EB"/>
+  <circle cx="490" cy="616" r="34" fill="#F7F4EB"/>
+  <circle cx="270" cy="706" r="34" fill="#F7F4EB"/>
+  <circle cx="380" cy="706" r="34" fill="#F7F4EB"/>
+  <circle cx="490" cy="706" r="34" fill="#F7F4EB"/>
+  <text x="270" y="622" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#20304F">Gain</text>
+  <text x="380" y="622" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#20304F">Pitch</text>
+  <text x="490" y="622" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#20304F">Pan</text>
+  <text x="270" y="712" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#20304F">Rev</text>
+  <text x="380" y="712" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#20304F">Dly</text>
+  <text x="490" y="712" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#20304F">LPF</text>
+
+  <rect x="580" y="514" width="610" height="246" rx="24" fill="#F4F1E8"/>
+  <text x="610" y="554" font-family="Arial, sans-serif" font-size="24" fill="#20304F">Sequencer Grid</text>
+  <text x="610" y="584" font-family="Arial, sans-serif" font-size="16" fill="#5F6787">Wide enough for touch without forcing the whole screen to scroll sideways</text>
+  <g fill="#D9E6C3">
+    <rect x="610" y="612" width="50" height="50" rx="12"/>
+    <rect x="670" y="612" width="50" height="50" rx="12"/>
+    <rect x="730" y="612" width="50" height="50" rx="12"/>
+    <rect x="790" y="612" width="50" height="50" rx="12"/>
+    <rect x="850" y="612" width="50" height="50" rx="12"/>
+    <rect x="910" y="612" width="50" height="50" rx="12"/>
+    <rect x="970" y="612" width="50" height="50" rx="12"/>
+    <rect x="1030" y="612" width="50" height="50" rx="12"/>
+    <rect x="1090" y="612" width="50" height="50" rx="12"/>
+    <rect x="610" y="676" width="50" height="50" rx="12"/>
+    <rect x="670" y="676" width="50" height="50" rx="12"/>
+    <rect x="730" y="676" width="50" height="50" rx="12"/>
+    <rect x="790" y="676" width="50" height="50" rx="12"/>
+    <rect x="850" y="676" width="50" height="50" rx="12"/>
+    <rect x="910" y="676" width="50" height="50" rx="12"/>
+    <rect x="970" y="676" width="50" height="50" rx="12"/>
+    <rect x="1030" y="676" width="50" height="50" rx="12"/>
+    <rect x="1090" y="676" width="50" height="50" rx="12"/>
+  </g>
+  <g fill="#D4872A">
+    <rect x="730" y="612" width="50" height="50" rx="12"/>
+    <rect x="910" y="612" width="50" height="50" rx="12"/>
+    <rect x="670" y="676" width="50" height="50" rx="12"/>
+    <rect x="1030" y="676" width="50" height="50" rx="12"/>
+  </g>
+
+  <text x="210" y="790" font-family="Arial, sans-serif" font-size="18" fill="#5F6787">Best for one active detailed edit at a time while the rest of the bars stay visible and stable.</text>
+</svg>

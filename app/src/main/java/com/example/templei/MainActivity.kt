@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.example.templei.device.DeviceCapabilityProbe
 import com.example.templei.device.DeviceCapabilityRegistry
 import com.example.templei.device.DeviceCapabilitySnapshot
@@ -35,13 +37,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        val root = findViewById<android.view.View>(R.id.mainRoot)
+        val rootPaddingStart = root.paddingStart
+        val rootPaddingTop = root.paddingTop
+        val rootPaddingEnd = root.paddingEnd
+        val rootPaddingBottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, windowInsets ->
+            val systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPaddingRelative(
+                rootPaddingStart + systemBars.left,
+                rootPaddingTop + systemBars.top,
+                rootPaddingEnd + systemBars.right,
+                rootPaddingBottom + systemBars.bottom,
+            )
+            windowInsets
+        }
+        ViewCompat.requestApplyInsets(root)
+
         deviceStatusText = findViewById(R.id.deviceStatusText)
 
         findViewById<Button>(R.id.requestPermissionsButton).setOnClickListener {
             requestMissingPermissions()
         }
 
-        TopNavigation.bind(activity = this)
         TopNavigation.bindMainMenuGrid(activity = this)
 
         refreshDeviceStatus()

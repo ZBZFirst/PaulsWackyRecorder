@@ -12,6 +12,13 @@ enum class Screen4TransportState {
     ERROR,
 }
 
+enum class Screen4BatchAssignTarget {
+    ALL_SLOTS,
+    ODD_SLOTS,
+    EVEN_SLOTS,
+    SELECTED_SLOTS,
+}
+
 data class Screen4PatternSource(
     val text: String,
     val compileResult: Screen4CompileResult = Screen4CompileResult.Idle,
@@ -112,7 +119,27 @@ data class Screen4UiState(
 data class Screen4SequenceBarUi(
     val barIndex: Int,
     val label: String,
+    val displayName: String,
     val steps: List<Screen4VisualSlot>,
+    val effectState: Screen4BarEffectState = Screen4BarEffectState(),
+    val isSelectionModeEnabled: Boolean = false,
+    val selectedStepIndices: List<Int> = emptyList(),
+)
+
+data class Screen4BarEffectState(
+    val gain: Float = 1f,
+    val pitchSemitones: Float = 0f,
+    val pan: Float = 0f,
+    val delaySend: Float = 0f,
+    val reverbSend: Float = 0f,
+    val gainEnabled: Boolean = false,
+    val gainLevel: Int = 5,
+    val pitchEnabled: Boolean = false,
+    val pitchLevel: Int = 5,
+    val reverbEnabled: Boolean = false,
+    val reverbLevel: Int = 5,
+    val panEnabled: Boolean = false,
+    val panLevel: Int = 5,
 )
 
 data class Screen4VisualSlot(
@@ -134,12 +161,15 @@ data class Screen4WorkingSequenceState(
     val bpm: Int,
     val displayedFavoritePageId: String?,
     val playBars: List<List<Screen4FavoritePadReference?>>,
+    val barEffects: List<Screen4BarEffectState> = emptyList(),
+    val barNames: List<String> = emptyList(),
 )
 
 data class Screen4SavedBarSnapshot(
     val name: String,
     val savedAtMs: Long,
     val steps: List<Screen4FavoritePadReference?>,
+    val effectState: Screen4BarEffectState = Screen4BarEffectState(),
 )
 
 data class Screen4SavedSongSnapshot(
@@ -148,6 +178,8 @@ data class Screen4SavedSongSnapshot(
     val bpm: Int,
     val displayedFavoritePageId: String?,
     val playBars: List<List<Screen4FavoritePadReference?>>,
+    val barEffects: List<Screen4BarEffectState> = emptyList(),
+    val barNames: List<String> = emptyList(),
 )
 
 sealed class Screen4PatternNode {

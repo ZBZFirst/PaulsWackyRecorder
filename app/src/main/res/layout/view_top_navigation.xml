@@ -2,50 +2,44 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:background="@drawable/bg_app_top_nav"
+    android:orientation="horizontal"
+    android:padding="6dp">
 
     <!-- Shared top navigation shell used across all screens. -->
     <Button
         android:id="@+id/navButtonScreen1"
+        style="@style/AppTopNavButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/button1text"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="8sp"
-        android:autoSizeMaxTextSize="16sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:layout_marginEnd="4dp"
+        android:text="@string/button1text" />
 
     <Button
         android:id="@+id/navButtonScreen2"
+        style="@style/AppTopNavButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/button2text"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="8sp"
-        android:autoSizeMaxTextSize="16sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:layout_marginHorizontal="4dp"
+        android:text="@string/button2text" />
 
     <Button
         android:id="@+id/navButtonScreen3"
+        style="@style/AppTopNavButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/button3text"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="8sp"
-        android:autoSizeMaxTextSize="16sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:layout_marginHorizontal="4dp"
+        android:text="@string/button3text" />
 
     <Button
         android:id="@+id/navButtonScreen4"
+        style="@style/AppTopNavButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/button4text"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="8sp"
-        android:autoSizeMaxTextSize="16sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:layout_marginStart="4dp"
+        android:text="@string/button4text" />
 </LinearLayout>

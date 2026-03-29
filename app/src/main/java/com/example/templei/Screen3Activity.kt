@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -37,7 +39,9 @@ import com.example.templei.feature.soundboard.Screen3FolderBrowserCoordinator
 import com.example.templei.feature.soundboard.Screen3LibraryRefreshSignal
 import com.example.templei.feature.soundboard.Screen3Coordinator
 import com.example.templei.feature.soundboard.Screen3Intent
-import com.example.templei.ui.navigation.TopNavigation
+import com.example.templei.ui.navigation.AppShellInsets
+import com.example.templei.ui.navigation.AppShellNavigation
+import java.util.Locale
 import kotlin.math.max
 
 /**
@@ -65,6 +69,7 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var favoritePageAddButton: Button
     private lateinit var favoritePageRemoveButton: Button
     private lateinit var favoritePageStatusText: TextView
+    private lateinit var favoritePageDotsContainer: LinearLayout
     private lateinit var clipBrowserContainer: LinearLayout
     private lateinit var clipBrowserScroll: ScrollView
     private lateinit var favoritesPad: android.widget.GridLayout
@@ -106,7 +111,8 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var clipBrowserRenderer: Screen3ClipBrowserRenderer
     private val favoritePadHelper = Screen3FavoritePadHelper()
     private lateinit var favoritePadButtons: List<Button>
-    private lateinit var controlsGroup: LinearLayout
+    private lateinit var controlsCard: View
+    private lateinit var controlsGroup: View
     private lateinit var controlsToggleButton: Button
     private lateinit var folderSpinnerAdapter: ArrayAdapter<String>
     private var suppressFolderSpinnerSelection: Boolean = false
@@ -132,7 +138,17 @@ class Screen3Activity : ComponentActivity() {
 
         runCatching {
             setContentView(R.layout.activity_screen3)
-            TopNavigation.bind(activity = this, currentDestination = Screen3Activity::class.java)
+            AppShellNavigation.bind(
+                activity = this,
+                currentDestination = Screen3Activity::class.java,
+                title = getString(R.string.screen3TitleText),
+                chipText = getString(R.string.screen3_header_chip),
+            )
+            AppShellInsets.apply(
+                activity = this,
+                rootId = R.id.screen3Root,
+                scrollViewId = R.id.screen3ScrollView,
+            )
 
             statusText = findViewById(R.id.soundboardStatusText)
             loadingDetailText = findViewById(R.id.soundboardLoadingDetailText)
@@ -152,14 +168,29 @@ class Screen3Activity : ComponentActivity() {
             favoritePageAddButton = findViewById(R.id.soundboardFavoritePageAddButton)
             favoritePageRemoveButton = findViewById(R.id.soundboardFavoritePageRemoveButton)
             favoritePageStatusText = findViewById(R.id.soundboardFavoritePageStatusText)
+            favoritePageDotsContainer = findViewById(R.id.soundboardFavoritePageDotsContainer)
             clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
             clipBrowserScroll = findViewById(R.id.soundboardClipBrowserScroll)
             favoritesPad = findViewById(R.id.soundboardFavoritesPad)
             browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
             favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
+            controlsCard = findViewById(R.id.soundboardControlsCard)
             controlsGroup = findViewById(R.id.soundboardControlsGroup)
             controlsToggleButton = findViewById(R.id.soundboardControlsToggleButton)
             favoritePadButtons = favoritePadButtonIds.map { findViewById(it) }
+            findViewById<TextView>(R.id.appHeaderChip)?.setOnClickListener {
+                toggleControlsCard(scrollIntoView = true)
+            }
+            clipBrowserScroll.setOnTouchListener { view, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN,
+                    MotionEvent.ACTION_MOVE -> view.parent?.requestDisallowInterceptTouchEvent(true)
+
+                    MotionEvent.ACTION_UP,
+                    MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
+                }
+                false
+            }
 
             uiRenderer = Screen3UiRenderer(
                 context = this,
@@ -299,9 +330,7 @@ class Screen3Activity : ComponentActivity() {
                 updateSectionVisibility()
             }
             controlsToggleButton.setOnClickListener {
-                val next = !screen3Coordinator.currentViewState().isControlsCollapsed
-                screen3Coordinator.dispatch(Screen3Intent.SetControlsCollapsed(next))
-                updateSectionVisibility()
+                toggleControlsCard(scrollIntoView = false)
             }
 
             bindFavoritePadButtons()
@@ -327,7 +356,9 @@ class Screen3Activity : ComponentActivity() {
         super.onDestroy()
         clearCacheAndPending()
         audioEngine.release()
-        soundPool.release()
+        if (::soundPool.isInitialized) {
+            soundPool.release()
+        }
     }
 
     private fun buildSoundPool(maxStreams: Int) {
@@ -530,10 +561,27 @@ class Screen3Activity : ComponentActivity() {
             isBrowserCollapsed = viewState.isBrowserCollapsed,
             isFavoritesCollapsed = viewState.isFavoritesCollapsed
         )
-        controlsGroup.visibility = if (viewState.isControlsCollapsed) android.view.View.GONE else android.view.View.VISIBLE
+        controlsCard.visibility = if (viewState.isControlsCollapsed) View.GONE else View.VISIBLE
+        controlsGroup.visibility = View.VISIBLE
         controlsToggleButton.text = getString(
             if (viewState.isControlsCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
         )
+    }
+
+    private fun toggleControlsCard(scrollIntoView: Boolean) {
+        val nextCollapsed = !screen3Coordinator.currentViewState().isControlsCollapsed
+        screen3Coordinator.dispatch(Screen3Intent.SetControlsCollapsed(nextCollapsed))
+        updateSectionVisibility()
+        if (!nextCollapsed && scrollIntoView) {
+            scrollToControlsCard()
+        }
+    }
+
+    private fun scrollToControlsCard() {
+        val scrollView = findViewById<ScrollView>(R.id.screen3ScrollView) ?: return
+        scrollView.post {
+            scrollView.smoothScrollTo(0, controlsCard.top)
+        }
     }
 
 
@@ -585,10 +633,12 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderFavoritePadButtons() {
-        val labels = favoritesManager
-            .buildSlotItems(clipById.mapValues { it.value.displayName })
-            .map { it.label }
-        favoritePadHelper.renderLabels(favoritePadButtons, labels)
+        val items = favoritesManager.buildSlotItems(clipById.mapValues { it.value.displayName })
+        favoritePadHelper.renderSlots(
+            buttons = favoritePadButtons,
+            items = items,
+            selectedSlotIndex = selectedAssignmentSlotIndex,
+        )
     }
 
     private fun renderFavoritePadState() {
@@ -615,21 +665,51 @@ class Screen3Activity : ComponentActivity() {
         favoritePagePrevButton.isEnabled = favoritesManager.currentPageIndex() > 0
         favoritePageNextButton.isEnabled = favoritesManager.currentPageIndex() < favoritesManager.pageCount() - 1
         favoritePageRemoveButton.isEnabled = favoritesManager.pageCount() > 1
+        renderFavoritePageDots()
     }
 
     private fun renderClipBrowser(clips: List<ClipMetadata>) {
         val models = clips.map {
             Screen3ClipBrowserRenderer.ClipButtonModel(
                 displayName = it.displayName,
+                metaLabel = clipMetaLabel(it),
                 playable = it.isPlayable,
                 payloadId = it.id
             )
         }
         clipBrowserRenderer.render(
             clips = models,
-            onTap = { clipId -> clipById[clipId]?.let(::attemptPlayback) },
-            onLongPress = { clipId -> clipById[clipId]?.let(::showAssignClipDialog) }
+            onPlay = { clipId -> clipById[clipId]?.let(::attemptPlayback) },
+            onAssign = { clipId -> clipById[clipId]?.let(::showAssignClipDialog) }
         )
+    }
+
+    private fun renderFavoritePageDots() {
+        favoritePageDotsContainer.removeAllViews()
+        repeat(favoritesManager.pageCount()) { index ->
+            favoritePageDotsContainer.addView(
+                View(this).apply {
+                    background = getDrawable(
+                        if (index == favoritesManager.currentPageIndex()) {
+                            R.drawable.bg_screen3_page_dot_secondary
+                        } else {
+                            R.drawable.bg_screen3_page_dot_inactive
+                        }
+                    )
+                },
+                LinearLayout.LayoutParams(dp(8), dp(8)).apply {
+                    if (index > 0) {
+                        marginStart = dp(6)
+                    }
+                }
+            )
+        }
+    }
+
+    private fun clipMetaLabel(clip: ClipMetadata): String {
+        val extension = clip.displayName.substringAfterLast('.', "wav").uppercase(Locale.US)
+        val durationSeconds = String.format(Locale.US, "%.1fs", clip.durationMs / 1000f)
+        return "$extension / $durationSeconds"
     }
 
     private fun showAssignClipDialog(clip: ClipMetadata) {
@@ -887,6 +967,10 @@ class Screen3Activity : ComponentActivity() {
             clipNotPlayable = count(SoundboardStateMachine.PlaybackRejectionReason.CLIP_NOT_PLAYABLE),
             engineError = count(SoundboardStateMachine.PlaybackRejectionReason.ENGINE_ERROR)
         )
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
     }
 
     private fun renderState(state: SoundboardStateMachine.State) {

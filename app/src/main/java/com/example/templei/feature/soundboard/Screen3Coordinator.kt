@@ -22,9 +22,9 @@ class Screen3Coordinator(
     private var favoriteItems: List<Screen3FavoriteSlotItem> = buildDefaultFavorites(favoriteSlotCount)
 
     private var selectedAssignmentSlotIndex: Int = 0
-    private var isBrowserCollapsed: Boolean = true
-    private var isFavoritesCollapsed: Boolean = true
-    private var isControlsCollapsed: Boolean = true
+    private var isBrowserCollapsed: Boolean = DEFAULT_BROWSER_COLLAPSED
+    private var isFavoritesCollapsed: Boolean = DEFAULT_FAVORITES_COLLAPSED
+    private var isControlsCollapsed: Boolean = DEFAULT_CONTROLS_COLLAPSED
     private var hasRootSelection: Boolean = false
 
     private var viewState: Screen3ViewState = buildViewState()
@@ -181,6 +181,9 @@ class Screen3Coordinator(
 
     private companion object {
         private const val DEFAULT_FAVORITE_SLOT_COUNT = 9
+        private const val DEFAULT_BROWSER_COLLAPSED = false
+        private const val DEFAULT_FAVORITES_COLLAPSED = false
+        private const val DEFAULT_CONTROLS_COLLAPSED = true
 
         private fun buildDefaultFavorites(slotCount: Int): List<Screen3FavoriteSlotItem> {
             return (0 until slotCount).map { index ->
