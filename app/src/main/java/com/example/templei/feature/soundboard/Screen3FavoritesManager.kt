@@ -128,6 +128,28 @@ class Screen3FavoritesManager(
         }
     }
 
+    fun saveCurrentPagePreset(name: String): Screen3SettingsStore.SavedFavoritePagePreset {
+        val preset = Screen3SettingsStore.SavedFavoritePagePreset(
+            presetId = "favorite_preset_${System.currentTimeMillis()}",
+            name = name.ifBlank { "Page ${currentPageIndex() + 1}" },
+            assignments = currentPageAssignments().toMap(),
+        )
+        settingsStore.saveFavoritePagePreset(preset, favoriteSlotCount)
+        return preset
+    }
+
+    fun savedPagePresets(): List<Screen3SettingsStore.SavedFavoritePagePreset> {
+        return settingsStore.loadFavoritePagePresets(favoriteSlotCount)
+    }
+
+    fun loadPagePreset(presetId: String): Screen3SettingsStore.SavedFavoritePagePreset? {
+        val preset = savedPagePresets().firstOrNull { it.presetId == presetId } ?: return null
+        currentPageAssignments().clear()
+        currentPageAssignments().putAll(preset.assignments)
+        persist()
+        return preset
+    }
+
     private fun persist() {
         settingsStore.saveFavoritePagesState(
             state = Screen3SettingsStore.FavoritePagesState(

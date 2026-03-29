@@ -227,6 +227,34 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/soundboardFavoritePagePresetRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/soundboardFavoritePageSaveButton"
+                            style="@style/Screen3SecondaryActionButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="@string/soundboard_favorite_page_save" />
+
+                        <Space
+                            android:layout_width="8dp"
+                            android:layout_height="wrap_content" />
+
+                        <Button
+                            android:id="@+id/soundboardFavoritePageLoadButton"
+                            style="@style/Screen3SecondaryActionButton"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="@string/soundboard_favorite_page_load" />
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:id="@+id/soundboardAssignmentRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

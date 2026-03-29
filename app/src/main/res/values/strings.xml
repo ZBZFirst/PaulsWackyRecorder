@@ -168,6 +168,14 @@
     <string name="soundboard_favorite_page_added">Created favorite page %1$d.</string>
     <string name="soundboard_favorite_page_removed">Removed favorite page. Now viewing page %1$d.</string>
     <string name="soundboard_favorite_page_remove_blocked">At least one favorite page must remain.</string>
+    <string name="soundboard_favorite_page_save">Save Page</string>
+    <string name="soundboard_favorite_page_load">Load Page</string>
+    <string name="soundboard_favorite_page_save_dialog_title">Save Favorite Page</string>
+    <string name="soundboard_favorite_page_load_dialog_title">Load Favorite Page</string>
+    <string name="soundboard_favorite_page_save_default_name">Page %1$d Snapshot</string>
+    <string name="soundboard_favorite_page_saved">Saved favorite page as %1$s.</string>
+    <string name="soundboard_favorite_page_loaded">Loaded favorite page %1$s.</string>
+    <string name="soundboard_favorite_page_load_empty">No saved favorite pages yet.</string>
     <string name="soundboard_assignment_target_default">Target PAD 01 on page 1 of 1. Long press any pad to retarget.</string>
     <string name="soundboard_assignment_target">Target PAD %3$02d on page %1$d of %2$d. Long press any pad to retarget.</string>
     <string name="soundboard_assignment_clear_slot">Clear Slot</string>

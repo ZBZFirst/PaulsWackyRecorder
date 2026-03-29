@@ -6,10 +6,12 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -68,6 +70,8 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var favoritePageNextButton: Button
     private lateinit var favoritePageAddButton: Button
     private lateinit var favoritePageRemoveButton: Button
+    private lateinit var favoritePageSaveButton: Button
+    private lateinit var favoritePageLoadButton: Button
     private lateinit var favoritePageStatusText: TextView
     private lateinit var favoritePageDotsContainer: LinearLayout
     private lateinit var clipBrowserContainer: LinearLayout
@@ -167,6 +171,8 @@ class Screen3Activity : ComponentActivity() {
             favoritePageNextButton = findViewById(R.id.soundboardFavoritePageNextButton)
             favoritePageAddButton = findViewById(R.id.soundboardFavoritePageAddButton)
             favoritePageRemoveButton = findViewById(R.id.soundboardFavoritePageRemoveButton)
+            favoritePageSaveButton = findViewById(R.id.soundboardFavoritePageSaveButton)
+            favoritePageLoadButton = findViewById(R.id.soundboardFavoritePageLoadButton)
             favoritePageStatusText = findViewById(R.id.soundboardFavoritePageStatusText)
             favoritePageDotsContainer = findViewById(R.id.soundboardFavoritePageDotsContainer)
             clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
@@ -318,6 +324,12 @@ class Screen3Activity : ComponentActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            }
+            favoritePageSaveButton.setOnClickListener {
+                showSaveFavoritePageDialog()
+            }
+            favoritePageLoadButton.setOnClickListener {
+                showLoadFavoritePageDialog()
             }
             browserToggleButton.setOnClickListener {
                 val next = !screen3Coordinator.currentViewState().isBrowserCollapsed
@@ -665,7 +677,65 @@ class Screen3Activity : ComponentActivity() {
         favoritePagePrevButton.isEnabled = favoritesManager.currentPageIndex() > 0
         favoritePageNextButton.isEnabled = favoritesManager.currentPageIndex() < favoritesManager.pageCount() - 1
         favoritePageRemoveButton.isEnabled = favoritesManager.pageCount() > 1
+        favoritePageLoadButton.isEnabled = favoritesManager.savedPagePresets().isNotEmpty()
         renderFavoritePageDots()
+    }
+
+    private fun showSaveFavoritePageDialog() {
+        val suggestedName = getString(
+            R.string.soundboard_favorite_page_save_default_name,
+            favoritesManager.currentPageIndex() + 1,
+        )
+        val input = EditText(this).apply {
+            hint = suggestedName
+            setText(suggestedName)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            setSelection(text.length)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.soundboard_favorite_page_save_dialog_title)
+            .setView(input)
+            .setPositiveButton(R.string.soundboard_favorite_page_save) { _, _ ->
+                val preset = favoritesManager.saveCurrentPagePreset(
+                    input.text?.toString()?.trim().orEmpty().ifBlank { suggestedName }
+                )
+                renderFavoritePadState()
+                Toast.makeText(
+                    this,
+                    getString(R.string.soundboard_favorite_page_saved, preset.name),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showLoadFavoritePageDialog() {
+        val presets = favoritesManager.savedPagePresets()
+        if (presets.isEmpty()) {
+            Toast.makeText(
+                this,
+                getString(R.string.soundboard_favorite_page_load_empty),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return
+        }
+        val labels = presets.map { preset -> preset.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.soundboard_favorite_page_load_dialog_title)
+            .setItems(labels) { _, which ->
+                val preset = presets.getOrNull(which) ?: return@setItems
+                val loaded = favoritesManager.loadPagePreset(preset.presetId) ?: return@setItems
+                syncFavoritesFromManager()
+                renderFavoritePadState()
+                Toast.makeText(
+                    this,
+                    getString(R.string.soundboard_favorite_page_loaded, loaded.name),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun renderClipBrowser(clips: List<ClipMetadata>) {

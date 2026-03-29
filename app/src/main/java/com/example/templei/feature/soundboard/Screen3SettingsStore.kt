@@ -11,6 +11,12 @@ class Screen3SettingsStore(private val context: Context) {
         val assignments: Map<Int, String>,
     )
 
+    data class SavedFavoritePagePreset(
+        val presetId: String,
+        val name: String,
+        val assignments: Map<Int, String>,
+    )
+
     data class FavoritePagesState(
         val pages: List<FavoritePage>,
         val selectedPageId: String?,
@@ -118,6 +124,67 @@ class Screen3SettingsStore(private val context: Context) {
         return prefs().getInt(KEY_SELECTED_ASSIGNMENT_SLOT, 0).coerceIn(0, favoriteSlotCount - 1)
     }
 
+    fun saveFavoritePagePreset(
+        preset: SavedFavoritePagePreset,
+        favoriteSlotCount: Int,
+    ) {
+        val normalizedPreset = preset.copy(
+            presetId = preset.presetId.ifBlank { "favorite_preset_${System.currentTimeMillis()}" },
+            name = preset.name.ifBlank { "Favorite Page" },
+            assignments = preset.assignments
+                .filterKeys { slotIndex -> slotIndex in 0 until favoriteSlotCount }
+                .filterValues { clipId -> clipId.isNotBlank() },
+        )
+        val existing = loadFavoritePagePresets(favoriteSlotCount).filterNot { it.presetId == normalizedPreset.presetId }
+        val payload = JSONArray()
+        (existing + normalizedPreset).forEach { entry ->
+            val entryObject = JSONObject()
+                .put("presetId", entry.presetId)
+                .put("name", entry.name)
+            val assignmentsObject = JSONObject()
+            entry.assignments.forEach { (slotIndex, clipId) ->
+                assignmentsObject.put(slotIndex.toString(), clipId)
+            }
+            entryObject.put("assignments", assignmentsObject)
+            payload.put(entryObject)
+        }
+        prefs().edit()
+            .putString(KEY_SAVED_FAVORITE_PAGE_PRESETS, payload.toString())
+            .apply()
+    }
+
+    fun loadFavoritePagePresets(favoriteSlotCount: Int): List<SavedFavoritePagePreset> {
+        val raw = prefs().getString(KEY_SAVED_FAVORITE_PAGE_PRESETS, null).orEmpty()
+        return runCatching { JSONArray(raw) }.getOrNull()
+            ?.let { array ->
+                buildList {
+                    for (index in 0 until array.length()) {
+                        val item = array.optJSONObject(index) ?: continue
+                        val presetId = item.optString("presetId", "").takeIf { it.isNotBlank() } ?: continue
+                        val name = item.optString("name", "").takeIf { it.isNotBlank() } ?: continue
+                        val assignmentsObject = item.optJSONObject("assignments") ?: JSONObject()
+                        val assignments = buildMap {
+                            assignmentsObject.keys().forEach { slotKey ->
+                                val slotIndex = slotKey.toIntOrNull() ?: return@forEach
+                                val clipId = assignmentsObject.optString(slotKey, "").takeIf { it.isNotBlank() } ?: return@forEach
+                                if (slotIndex in 0 until favoriteSlotCount) {
+                                    put(slotIndex, clipId)
+                                }
+                            }
+                        }
+                        add(
+                            SavedFavoritePagePreset(
+                                presetId = presetId,
+                                name = name,
+                                assignments = assignments,
+                            )
+                        )
+                    }
+                }
+            }
+            .orEmpty()
+    }
+
     fun loadConfig(defaults: Defaults): SoundboardConfig {
         val prefs = prefs()
         val policyName = prefs.getString(KEY_CACHE_POLICY, defaults.defaultCachePolicy.name) ?: defaults.defaultCachePolicy.name
@@ -177,6 +244,7 @@ class Screen3SettingsStore(private val context: Context) {
         private const val KEY_SELECTED_FAVORITE_PAGE_ID = "selected_favorite_page_id"
         private const val KEY_FAVORITE_ASSIGNMENTS = "favorite_assignments"
         private const val KEY_SELECTED_ASSIGNMENT_SLOT = "selected_assignment_slot"
+        private const val KEY_SAVED_FAVORITE_PAGE_PRESETS = "saved_favorite_page_presets"
         const val DEFAULT_FAVORITE_PAGE_ID = "favorite_page_1"
     }
 }
