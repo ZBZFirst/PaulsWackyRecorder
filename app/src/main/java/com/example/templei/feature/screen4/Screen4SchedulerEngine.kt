@@ -9,6 +9,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.math.roundToLong
 
 /**
  * Deterministic next-cycle scheduler for one active pattern stream.
@@ -39,45 +40,53 @@ class Screen4SchedulerEngine(
         this.cycleIndex = 0L
 
         transportJob = scope.launch {
-            var nextCycleStartMs = System.currentTimeMillis() + START_DELAY_MS
+            var nextStepStartMs = System.currentTimeMillis() + START_DELAY_MS
+            var activeStepIndex = 0
             while (isActive) {
-                val active = stateMutex.withLock {
-                    pendingPattern?.let {
-                        activePattern = it
-                        pendingPattern = null
+                val state = stateMutex.withLock {
+                    if (activeStepIndex == 0) {
+                        pendingPattern?.let {
+                            activePattern = it
+                            pendingPattern = null
+                        }
                     }
-                    activePattern
-                } ?: break
-
-                val cycleDurationMs = cycleDurationMs(this@Screen4SchedulerEngine.bpm)
-                val cycleWindow = Screen4CycleWindow(
-                    cycleIndex = cycleIndex,
-                    bpm = this@Screen4SchedulerEngine.bpm,
-                    startTimeMs = nextCycleStartMs,
-                    durationMs = cycleDurationMs,
-                )
-                onCycleWindow(cycleWindow)
-
-                val stepDurationMs = if (active.stepsPerCycle <= 0) cycleDurationMs else cycleDurationMs / active.stepsPerCycle
-                repeat(active.stepsPerCycle) { stepIndex ->
-                    val tickAtMs = nextCycleStartMs + (stepIndex * stepDurationMs)
-                    launch {
-                        val waitMs = (tickAtMs - System.currentTimeMillis()).coerceAtLeast(0L)
-                        delay(waitMs)
-                        onStepTick(stepIndex)
-                    }
+                    SchedulerStepState(
+                        pattern = activePattern,
+                        bpm = this@Screen4SchedulerEngine.bpm,
+                        cycleIndex = cycleIndex,
+                    )
+                }
+                val active = state.pattern ?: break
+                val stepsPerCycle = active.stepsPerCycle.coerceAtLeast(1)
+                val stepDurationMs = stepDurationMs(state.bpm, stepsPerCycle)
+                if (activeStepIndex == 0) {
+                    onCycleWindow(
+                        Screen4CycleWindow(
+                            cycleIndex = state.cycleIndex,
+                            bpm = state.bpm,
+                            startTimeMs = nextStepStartMs,
+                            durationMs = stepDurationMs * stepsPerCycle,
+                        )
+                    )
                 }
 
-                active.scheduledEvents.forEach { event ->
+                val waitMs = (nextStepStartMs - System.currentTimeMillis()).coerceAtLeast(0L)
+                delay(waitMs)
+                onStepTick(activeStepIndex)
+
+                active.scheduledEvents
+                    .filter { it.stepIndex == activeStepIndex }
+                    .forEach { event ->
                     val descriptor = active.resolvedSamples[event.sampleId.lowercase()]
                     if (descriptor == null) {
                         onRuntimeError("Resolved sample ${event.sampleId} disappeared before playback.")
                         return@forEach
                     }
+                    val relativeStepPosition = (event.stepPosition - activeStepIndex.toDouble()).coerceAtLeast(0.0)
                     val instruction = Screen4PlaybackInstruction(
                         sampleId = event.sampleId,
                         sampleUri = descriptor.uri,
-                        triggerAtMs = nextCycleStartMs + event.offsetMs,
+                        triggerAtMs = nextStepStartMs + (relativeStepPosition * stepDurationMs.toDouble()).roundToLong(),
                         gain = event.gain,
                         pan = event.pan,
                         speed = event.speed,
@@ -89,10 +98,14 @@ class Screen4SchedulerEngine(
                     }
                 }
 
-                val sleepMs = (nextCycleStartMs + cycleDurationMs - System.currentTimeMillis()).coerceAtLeast(0L)
-                delay(sleepMs)
-                nextCycleStartMs += cycleDurationMs
-                cycleIndex += 1L
+                nextStepStartMs += stepDurationMs
+                activeStepIndex += 1
+                if (activeStepIndex >= stepsPerCycle) {
+                    activeStepIndex = 0
+                    stateMutex.withLock {
+                        cycleIndex += 1L
+                    }
+                }
             }
         }
     }
@@ -105,6 +118,12 @@ class Screen4SchedulerEngine(
         stateMutex.withLock {
             this.bpm = bpm
             this.pendingPattern = pattern
+        }
+    }
+
+    suspend fun updateTempo(bpm: Int) {
+        stateMutex.withLock {
+            this.bpm = bpm
         }
     }
 
@@ -148,6 +167,20 @@ class Screen4SchedulerEngine(
     private fun cycleDurationMs(bpm: Int): Long {
         return (4 * 60_000L) / bpm.coerceAtLeast(1)
     }
+
+    private fun stepDurationMs(
+        bpm: Int,
+        stepsPerCycle: Int,
+    ): Long {
+        val cycleDurationMs = cycleDurationMs(bpm)
+        return (cycleDurationMs / stepsPerCycle.coerceAtLeast(1)).coerceAtLeast(1L)
+    }
+
+    private data class SchedulerStepState(
+        val pattern: Screen4CompiledPattern?,
+        val bpm: Int,
+        val cycleIndex: Long,
+    )
 
     private companion object {
         private const val START_DELAY_MS = 120L

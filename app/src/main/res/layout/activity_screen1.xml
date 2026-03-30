@@ -43,8 +43,50 @@
             android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/screen1TutorialCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_app_card"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/screen1TutorialProgressText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAllCaps="true"
+                    android:textColor="@color/app_text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/screen1TutorialPromptText"
+                    style="@style/AppSectionHeaderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    android:id="@+id/screen1TutorialInstructionText"
+                    style="@style/AppBodyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+
+                <Button
+                    android:id="@+id/screen1TutorialSkipButton"
+                    style="@style/AppSecondaryActionButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/screen1_tutorial_skip" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:background="@drawable/bg_app_card"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -150,6 +192,14 @@
                     android:layout_weight="1"
                     android:text="@string/screen1_start_recording" />
                 </LinearLayout>
+
+                <Button
+                    android:id="@+id/screen1SequencerToggleButton"
+                    style="@style/AppSecondaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/screen1_sequencer_toggle_start" />
             </LinearLayout>
 
             <LinearLayout
@@ -287,4 +337,14 @@
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
+
+    <com.example.templei.feature.tutorial.TutorialSpotlightOverlayView
+        android:id="@+id/screen1TutorialOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/appBottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appTopBar" />
 </androidx.constraintlayout.widget.ConstraintLayout>

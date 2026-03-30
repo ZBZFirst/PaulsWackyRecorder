@@ -39,6 +39,9 @@ class Screen1CameraController(
     private val repository: Screen1MediaRepository,
     private val views: Views
 ) {
+    var onStateChanged: ((Screen1CameraFeedState, Screen1CameraCaptureState) -> Unit)? = null
+    var onMediaSaved: ((Screen1MediaType) -> Unit)? = null
+
     data class Views(
         val renderContainer: FrameLayout,
         val renderPlaceholder: TextView,
@@ -163,6 +166,7 @@ class Screen1CameraController(
                     }.onSuccess { savedEntry ->
                         refreshMediaLibrary(selectUri = savedEntry.uri)
                         renderStatus(activity.getString(R.string.screen1_status_photo_saved, outputFile.name))
+                        onMediaSaved?.invoke(Screen1MediaType.Photo)
                     }.onFailure { error ->
                         renderStatus(
                             activity.getString(
@@ -244,6 +248,7 @@ class Screen1CameraController(
                         }.onSuccess { savedEntry ->
                             refreshMediaLibrary(selectUri = savedEntry.uri)
                             renderStatus(activity.getString(R.string.screen1_status_recording_saved, outputFile.name))
+                            onMediaSaved?.invoke(Screen1MediaType.Video)
                         }.onFailure { error ->
                             renderStatus(
                                 activity.getString(
@@ -398,6 +403,7 @@ class Screen1CameraController(
                 R.string.screen1_start_recording
             }
         )
+        onStateChanged?.invoke(feedState, captureState)
     }
 
     private fun renderStatus(message: String) {

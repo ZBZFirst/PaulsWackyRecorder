@@ -42,6 +42,16 @@ class Screen4SequenceStore(private val context: Context) {
         return replacedExisting
     }
 
+    fun deleteBar(name: String): Boolean {
+        val existing = loadSavedBars()
+        if (existing.none { it.name.equals(name, ignoreCase = true) }) return false
+        val updated = existing.filterNot { it.name.equals(name, ignoreCase = true) }
+        prefs().edit()
+            .putString(KEY_SAVED_BARS, updated.toBarJsonArray().toString())
+            .apply()
+        return true
+    }
+
     fun loadSavedSongs(): List<Screen4SavedSongSnapshot> {
         val raw = prefs().getString(KEY_SAVED_SONGS, null).orEmpty()
         val parsed = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
@@ -61,6 +71,16 @@ class Screen4SequenceStore(private val context: Context) {
             .putString(KEY_SAVED_SONGS, updated.toSongJsonArray().toString())
             .apply()
         return replacedExisting
+    }
+
+    fun deleteSong(name: String): Boolean {
+        val existing = loadSavedSongs()
+        if (existing.none { it.name.equals(name, ignoreCase = true) }) return false
+        val updated = existing.filterNot { it.name.equals(name, ignoreCase = true) }
+        prefs().edit()
+            .putString(KEY_SAVED_SONGS, updated.toSongJsonArray().toString())
+            .apply()
+        return true
     }
 
     private fun Screen4WorkingSequenceState.toJson(): JSONObject {

@@ -102,6 +102,11 @@ class Screen3FavoritesManager(
         persist()
     }
 
+    fun clearCurrentPageAssignments() {
+        currentPageAssignments().clear()
+        persist()
+    }
+
     fun clipIdForSlot(slotIndex: Int): String? {
         val clamped = slotIndex.coerceIn(0, favoriteSlotCount - 1)
         return currentPageAssignments()[clamped]
@@ -115,6 +120,7 @@ class Screen3FavoritesManager(
         return (0 until favoriteSlotCount).map { slotIndex ->
             val clipId = currentPageAssignments()[slotIndex]
             val slotNumber = slotIndex + 1
+            val isMissingSource = clipId != null && clipNameById[clipId] == null
             val label = when {
                 clipId == null -> emptyLabelForSlot(slotNumber)
                 clipNameById[clipId] != null -> assignedLabelForSlot(slotNumber, clipNameById.getValue(clipId))
@@ -123,7 +129,8 @@ class Screen3FavoritesManager(
             Screen3FavoriteSlotItem(
                 slotIndex = slotIndex,
                 label = label,
-                assignedClipId = clipId
+                assignedClipId = clipId,
+                isMissingSource = isMissingSource,
             )
         }
     }
@@ -147,6 +154,14 @@ class Screen3FavoritesManager(
         currentPageAssignments().clear()
         currentPageAssignments().putAll(preset.assignments)
         persist()
+        return preset
+    }
+
+    fun deletePagePreset(presetId: String): Screen3SettingsStore.SavedFavoritePagePreset? {
+        val preset = savedPagePresets().firstOrNull { it.presetId == presetId } ?: return null
+        if (!settingsStore.deleteFavoritePagePreset(presetId, favoriteSlotCount)) {
+            return null
+        }
         return preset
     }
 

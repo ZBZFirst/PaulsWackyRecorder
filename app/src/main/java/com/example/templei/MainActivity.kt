@@ -1,6 +1,7 @@
 package com.example.templei
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
@@ -16,6 +17,10 @@ import com.example.templei.device.DeviceCapabilityRegistry
 import com.example.templei.device.DeviceCapabilitySnapshot
 import com.example.templei.device.PermissionState
 import com.example.templei.device.StorageModel
+import com.example.templei.feature.tutorial.TutorialProgress
+import com.example.templei.feature.tutorial.TutorialScreen
+import com.example.templei.feature.tutorial.TutorialStatus
+import com.example.templei.feature.tutorial.TutorialStore
 import com.example.templei.ui.navigation.TopNavigation
 
 /**
@@ -25,6 +30,11 @@ import com.example.templei.ui.navigation.TopNavigation
  */
 class MainActivity : ComponentActivity() {
     private lateinit var deviceStatusText: TextView
+    private lateinit var tutorialSummaryText: TextView
+    private lateinit var startTutorialButton: Button
+    private lateinit var redoTutorialButton: Button
+    private lateinit var skipTutorialButton: Button
+    private lateinit var tutorialStore: TutorialStore
 
     private val permissionRequestLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -55,19 +65,48 @@ class MainActivity : ComponentActivity() {
         ViewCompat.requestApplyInsets(root)
 
         deviceStatusText = findViewById(R.id.deviceStatusText)
+        tutorialSummaryText = findViewById(R.id.tutorialSummaryText)
+        startTutorialButton = findViewById(R.id.startTutorialButton)
+        redoTutorialButton = findViewById(R.id.redoTutorialButton)
+        skipTutorialButton = findViewById(R.id.skipTutorialButton)
+        tutorialStore = TutorialStore(this)
 
         findViewById<Button>(R.id.requestPermissionsButton).setOnClickListener {
             requestMissingPermissions()
+        }
+        findViewById<Button>(R.id.supportProjectButton).setOnClickListener {
+            openSupportPage()
+        }
+        startTutorialButton.setOnClickListener {
+            val progress = tutorialStore.loadProgress()
+            if (progress.status == TutorialStatus.IN_PROGRESS) {
+                launchTutorialDestination(progress)
+            } else {
+                tutorialStore.startTutorial()
+                launchTutorialDestination(tutorialStore.loadProgress())
+            }
+        }
+        redoTutorialButton.setOnClickListener {
+            tutorialStore.redoTutorial()
+            updateTutorialCard()
+            launchTutorialDestination(tutorialStore.loadProgress())
+        }
+        skipTutorialButton.setOnClickListener {
+            tutorialStore.skipTutorial()
+            updateTutorialCard()
+            Toast.makeText(this, getString(R.string.mainTutorialSkippedToast), Toast.LENGTH_SHORT).show()
         }
 
         TopNavigation.bindMainMenuGrid(activity = this)
 
         refreshDeviceStatus()
+        updateTutorialCard()
     }
 
     override fun onResume() {
         super.onResume()
         refreshDeviceStatus()
+        updateTutorialCard()
     }
 
     private fun requestMissingPermissions() {
@@ -83,10 +122,51 @@ class MainActivity : ComponentActivity() {
         permissionRequestLauncher.launch(permissionsToRequest.toTypedArray())
     }
 
+    private fun openSupportPage() {
+        startActivity(Intent(this, SupportWebActivity::class.java))
+    }
+
     private fun refreshDeviceStatus() {
         val snapshot = DeviceCapabilityProbe.snapshot(this)
         DeviceCapabilityRegistry.update(snapshot)
         deviceStatusText.text = formatSnapshot(snapshot)
+    }
+
+    private fun updateTutorialCard() {
+        val progress = tutorialStore.loadProgress()
+        tutorialSummaryText.text = when (progress.status) {
+            TutorialStatus.NOT_STARTED -> getString(R.string.mainTutorialSummaryDefault)
+            TutorialStatus.IN_PROGRESS -> getString(
+                R.string.mainTutorialSummaryInProgress,
+                tutorialLabelFor(progress.currentScreen),
+            )
+            TutorialStatus.SKIPPED -> getString(R.string.mainTutorialSummarySkipped)
+            TutorialStatus.COMPLETED -> getString(R.string.mainTutorialSummaryCompleted)
+        }
+        startTutorialButton.text = getString(
+            if (progress.status == TutorialStatus.IN_PROGRESS) {
+                R.string.mainTutorialContinue
+            } else {
+                R.string.mainTutorialStart
+            }
+        )
+    }
+
+    private fun launchTutorialDestination(progress: TutorialProgress) {
+        val destination = when (progress.currentScreen) {
+            TutorialScreen.SCREEN2 -> Screen2Activity::class.java
+            TutorialScreen.SCREEN3 -> Screen3Activity::class.java
+            TutorialScreen.SCREEN4 -> Screen4Activity::class.java
+            TutorialScreen.SCREEN1 -> Screen1Activity::class.java
+        }
+        startActivity(Intent(this, destination))
+    }
+
+    private fun tutorialLabelFor(screen: TutorialScreen): String = when (screen) {
+        TutorialScreen.SCREEN2 -> getString(R.string.button2text)
+        TutorialScreen.SCREEN3 -> getString(R.string.button3text)
+        TutorialScreen.SCREEN4 -> getString(R.string.button4text)
+        TutorialScreen.SCREEN1 -> getString(R.string.button1text)
     }
 
     private fun formatSnapshot(snapshot: DeviceCapabilitySnapshot): String {

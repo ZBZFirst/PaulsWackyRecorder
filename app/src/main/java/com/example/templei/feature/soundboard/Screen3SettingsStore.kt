@@ -185,6 +185,34 @@ class Screen3SettingsStore(private val context: Context) {
             .orEmpty()
     }
 
+    fun deleteFavoritePagePreset(
+        presetId: String,
+        favoriteSlotCount: Int,
+    ): Boolean {
+        val existing = loadFavoritePagePresets(favoriteSlotCount)
+        if (existing.none { it.presetId == presetId }) return false
+
+        val payload = JSONArray()
+        existing
+            .filterNot { it.presetId == presetId }
+            .forEach { entry ->
+                val entryObject = JSONObject()
+                    .put("presetId", entry.presetId)
+                    .put("name", entry.name)
+                val assignmentsObject = JSONObject()
+                entry.assignments.forEach { (slotIndex, clipId) ->
+                    assignmentsObject.put(slotIndex.toString(), clipId)
+                }
+                entryObject.put("assignments", assignmentsObject)
+                payload.put(entryObject)
+            }
+
+        prefs().edit()
+            .putString(KEY_SAVED_FAVORITE_PAGE_PRESETS, payload.toString())
+            .apply()
+        return true
+    }
+
     fun loadConfig(defaults: Defaults): SoundboardConfig {
         val prefs = prefs()
         val policyName = prefs.getString(KEY_CACHE_POLICY, defaults.defaultCachePolicy.name) ?: defaults.defaultCachePolicy.name

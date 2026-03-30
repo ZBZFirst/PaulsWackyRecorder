@@ -21,6 +21,7 @@ Agents must preserve the following repository-level invariants:
 - Screen shells remain reproducible and separable.
 - Compose under `ui/*` is incremental only. Do not force full migration from XML unless explicitly requested.
 - UI work must not silently change existing screen roles.
+- The primary operator loop remains: `MainActivity` setup, `Screen2Activity` WAV capture, `Screen3Activity` favorites-pad assignment, `Screen4Activity` sequencing, then `Screen1Activity` camera capture while playback continues.
 
 Do not rename packages, activities, files, ids, database entities, or routing surfaces unless the task explicitly requires it.
 
@@ -40,17 +41,30 @@ It may expose:
 Do not convert `MainActivity` into a feature-specific workflow screen.
 
 ### 3.2 Screen1Activity
-`Screen1Activity` is a lightweight shell host.
+`Screen1Activity` is the camera preview and capture surface used after sequencing starts.
+
+Screen 1 contract:
+- camera feed start or stop remains explicit,
+- photo and video storage configuration stays local to Screen 1 media capture,
+- it may capture reactions while Screen 4 playback continues in the background,
+- it must not become the primary audio recording or sequencing editor.
 
 Do not overload it with unrelated business logic unless a task explicitly targets Screen 1.
 
 ### 3.3 Screen2Activity
-`Screen2Activity` is a lightweight shell host.
+`Screen2Activity` is the bounded WAV recording surface.
+
+Screen 2 contract:
+- recorded output is `.wav`,
+- clip capture depends on an explicitly selected target folder,
+- file naming and save behavior stay explicit before recording begins,
+- save completion is the handoff point into the Screen 3 sound library flow,
+- microphone permission and recording status remain visible and bounded.
 
 Do not overload it with unrelated business logic unless a task explicitly targets Screen 2.
 
 ### 3.4 Screen3Activity
-`Screen3Activity` is the Action Pad / Soundboard axis.
+`Screen3Activity` is the Action Pad / Soundboard axis and the source of truth for favorites-pad assignment.
 
 Screen 3 contract:
 - sound source is a user-selected folder obtained through the system picker,
@@ -61,6 +75,8 @@ Screen 3 contract:
 - no autoplay behavior may be introduced,
 - folder back/forward navigation must remain available,
 - the centered label must show the active sample folder name,
+- favorite pages and favorite-pad assignments remain explicit,
+- Screen 4 consumes the shared favorite-pad state rather than redefining it locally,
 - state vocabulary should remain explicit and finite.
 
 Preferred Screen 3 state set:
@@ -72,14 +88,16 @@ Preferred Screen 3 state set:
 Do not introduce implicit state transitions.
 
 ### 3.5 Screen4Activity
-`Screen4Activity` is the structured measurement/table workspace.
+`Screen4Activity` is the multi-bar WAV loop sequencer.
 
 Screen 4 contract:
-- supports workspace-oriented table management,
-- supports row/cell/column operations through defined boundaries,
-- validation behavior belongs to engine/repository/validator layers, not ad hoc UI code,
-- schema behavior must remain deterministic,
-- regex and validation rules must be explicit and inspectable.
+- the sequencer is built from favorite-pad assignments shared from Screen 3,
+- playback transport remains explicit through user play and stop actions,
+- song construction uses play bars, steps, and favorite references rather than ad hoc clip launching,
+- BPM, compile status, runtime status, and error state remain inspectable,
+- save and load behavior belongs to sequencer stores and coordinator paths,
+- transport continuity across navigation is intentional so the user can move to Screen 1 while the loop keeps playing,
+- no hidden autoplay or implicit reassignment behavior may be introduced on entry or sync.
 
 Do not collapse Screen 4 into a monolithic activity script.
 
@@ -90,22 +108,30 @@ Do not collapse Screen 4 into a monolithic activity script.
 Agents modifying Screen 4 must preserve the layered boundary below.
 
 ### 4.1 UI host boundary
-- `Screen4Activity` is the long-form / workspace management host.
-- `Screen4ShortFormActivity` is the rapid-entry host.
+- `Screen4Activity` is the active sequencer host.
+- `Screen4ShortFormActivity` and `Screen4LongFormActivity` are legacy redirect shims that forward into `Screen4Activity`.
 
-### 4.2 Command boundary
-- activity/UI code routes actions through `Screen4Coordinator`.
-- UI code must not bypass coordinator/repository boundaries for persistence logic.
+### 4.2 Runtime boundary
+- `Screen4MusicRuntime` owns the process-level Screen 4 coordinator lifecycle.
+- transport continuity across screen navigation must remain outside any one activity instance.
 
-### 4.3 Domain engine boundary
-- `Screen4MeasurementEngine` owns active columns, draft state, rapid-entry configuration, and commit composition behavior.
+### 4.3 Sequencing boundary
+- activity and UI code route sequencer actions through `Screen4Coordinator`.
+- `Screen4Coordinator` owns favorite-page synchronization, play-bar state, selection state, compile composition, and transport-facing UI state.
 
-### 4.4 Persistence boundary
-- `Screen4Repository` owns Room-backed persistence, workspace lifecycle, commit/update/delete behavior, and persistence-side validation gates.
+### 4.4 Sample and shared-state boundary
+- `Screen4SampleLibraryRepository` resolves sample metadata derived from the Screen 3 library/index path.
+- `Screen3SettingsStore` remains the source of truth for shared favorite-page assignments.
+- Screen 4 must not silently fork favorite-pad state away from Screen 3.
 
-### 4.5 Type and formatting boundary
-- semantic type handling belongs in the Screen 4 type registry / formatter / validator path.
-- do not hardcode one-off validation rules in activity classes when a reusable registry or validator path exists.
+### 4.5 Playback and persistence boundary
+- `Screen4SchedulerEngine` and `Screen4SamplePlaybackEngine` own timed playback behavior.
+- `Screen4SequenceStore` owns sequencer working-state persistence.
+- UI hosts must not embed timing logic or persistence logic that belongs in runtime, store, or engine layers.
+
+### 4.6 Legacy module boundary
+- historical table-measurement modules may still exist under `feature/screen4`.
+- they are not the active Screen 4 product contract and must not be revived or expanded unless the task explicitly calls for it.
 
 ---
 
@@ -118,7 +144,7 @@ Agents must prefer bounded edits over broad rewrites.
 - preserve buildability where possible,
 - preserve public behavior unless the task requests behavioral change,
 - preserve existing contracts unless updating them is part of the task,
-- update associated comments/docs only when observable behavior changes.
+- update associated comments or docs only when observable behavior changes.
 
 ### Disallowed behavior
 - silent architectural rewrites,
@@ -139,7 +165,7 @@ Prefer defining:
 - enums,
 - indexed mappings,
 - invariants,
-- input/output contracts,
+- input and output contracts,
 - validation stages,
 - persistence ownership.
 
@@ -159,7 +185,7 @@ Rules:
 - keep helper creation minimal and purpose-bound,
 - avoid synonyms that fragment the architecture.
 
-If a new helper/type is required, it must have:
+If a new helper or type is required, it must have:
 - a single clear responsibility,
 - a stable call site,
 - a reason it cannot be expressed cleanly in the current structure.
@@ -192,7 +218,7 @@ Documentation must describe observable behavior and responsibility boundaries, n
 - Avoid hardcoded UI text when practical.
 - Preserve existing resource naming conventions.
 - Do not introduce quote-heavy UI strings unnecessarily.
-- Shared navigation/UI partials should remain shared unless the task requires divergence.
+- Shared navigation or UI partials should remain shared unless the task requires divergence.
 
 ---
 
@@ -207,7 +233,7 @@ Agents must validate changes to the degree the environment permits.
 
 ### When environment permits
 - run Gradle checks,
-- run compile/build validation,
+- run compile and build validation,
 - report failures precisely.
 
 ### When environment does not permit
@@ -217,39 +243,42 @@ Agents must validate changes to the degree the environment permits.
 
 ---
 
-## 11. Spreadsheet / schema integration rules
+## 11. Workbook and schema reference rules
 
-When integrating workbook- or schema-driven behavior into Screen 4:
+Workbook and schema assets under `docs/` are reference material, not the active Screen 4 runtime contract.
 
-- treat external schema as a contract source, not ad hoc UI data,
-- map schema fields into typed internal definitions first,
+When integrating workbook- or schema-driven behavior:
+
+- treat external schema as an explicit import or analysis source, not ad hoc UI data,
 - keep parsing, validation, and persistence separated,
-- do not couple XLSX parsing logic directly into activity classes,
-- prefer import/report flows over silent coercion,
+- do not couple XLSX parsing logic directly into `MainActivity`, `Screen2Activity`, `Screen3Activity`, or the live `Screen4Activity` sequencer flow,
+- prefer import and report flows over silent coercion,
 - report mismatches explicitly,
-- preserve deterministic validation behavior.
+- preserve deterministic validation behavior,
+- do not let legacy workbook concepts silently redefine the current Screen 4 music-sequencer contract.
 
-Schema import should enrich existing Screen 4 template/validation systems, not bypass them.
-
-TableManagementScreen.md has more information on Screen 4 and the Table Management System/Engine/State Machine we are trying to build.
+`docs/Screen4MusicSequencer.md` and `docs/PaulsDatasetExplained.md` contain the current documentation posture for the live Screen 4 flow and legacy workbook references.
 
 ---
 
 ## 12. Database and persistence rules
 
-For Room-backed changes:
+For Room-backed or store-backed changes:
 
 - preserve migration correctness,
-- do not change entity meaning without corresponding migration/update work,
-- keep repository ownership of persistence,
-- avoid direct database access from UI hosts,
-- preserve workspace lifecycle semantics.
+- do not change entity meaning without corresponding migration or update work,
+- keep repository or store ownership of persistence,
+- avoid direct database or store access from UI hosts,
+- preserve sequencer working-state semantics,
+- preserve shared favorite-pad synchronization semantics.
 
-Any schema change must account for:
+Any schema or persistence change must account for:
 - entity compatibility,
 - migration path,
-- seed/update behavior,
-- validator interaction.
+- seed or update behavior,
+- validator interaction,
+- saved-sequence compatibility,
+- shared favorites compatibility.
 
 ---
 

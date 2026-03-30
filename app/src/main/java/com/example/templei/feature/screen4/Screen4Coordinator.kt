@@ -273,12 +273,27 @@ class Screen4Coordinator(
         }
     }
 
-    fun updateBpm(rawValue: String) {
-        val parsed = rawValue.toIntOrNull()?.coerceIn(MIN_BPM, MAX_BPM) ?: return
+    fun updateBpm(value: Int) {
+        val parsed = value.coerceIn(MIN_BPM, MAX_BPM)
         mutableUiState.value = mutableUiState.value.copy(bpm = parsed)
         persistWorkingState()
         if (mutableUiState.value.isPlaying) {
-            queueCurrentLoopForNextCycle()
+            scope.launch {
+                runCatching { schedulerEngine.updateTempo(parsed) }
+                    .onSuccess {
+                        mutableUiState.value = mutableUiState.value.copy(
+                            runtimeStatus = "Tempo updated to $parsed BPM.",
+                            lastError = null,
+                        )
+                    }
+                    .onFailure {
+                        mutableUiState.value = mutableUiState.value.copy(
+                            transportState = Screen4TransportState.ERROR,
+                            runtimeStatus = "Tempo update failed.",
+                            lastError = it.message ?: "unknown",
+                        )
+                    }
+            }
         } else {
             updateCompileStatusFromVisualLoop()
         }
@@ -360,6 +375,31 @@ class Screen4Coordinator(
             runtimeStatus = "Channel roster synced to $normalizedTarget channels.",
             lastError = null,
         )
+    }
+
+    fun prepareTutorialWorkspace() {
+        scope.launch {
+            schedulerEngine.stop()
+            playBars.indices.forEach { barIndex ->
+                playBars[barIndex] = MutableList(STEP_COUNT) { null }
+            }
+            barSelectionStates.indices.forEach { barIndex ->
+                barSelectionStates[barIndex] = BarSelectionState()
+            }
+            persistWorkingState()
+            mutableUiState.value = mutableUiState.value.copy(
+                transportState = Screen4TransportState.STOPPED,
+                isPlaying = false,
+                activeCycle = 0L,
+                activeStepIndex = 0,
+                pendingPatternSummary = "No queued next-cycle update.",
+            )
+            applyUiRefresh(
+                runtimeStatus = "Screen 4 tutorial workspace is ready.",
+                lastError = null,
+            )
+            updateCompileStatusFromVisualLoop()
+        }
     }
 
     fun toggleGainEnabled(barIndex: Int) {
@@ -695,28 +735,57 @@ class Screen4Coordinator(
         savedName: String,
     ) {
         val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
-        val snapshot = sequenceStore.loadSavedBars()
-            .firstOrNull { it.name.equals(savedName, ignoreCase = true) }
-        if (snapshot == null) {
-            mutableUiState.value = mutableUiState.value.copy(
-                runtimeStatus = "Saved bar \"$savedName\" was not found.",
-                lastError = "Saved bar \"$savedName\" was not found.",
+        scope.launch {
+            if (!refreshSavedLoadDependencies()) {
+                return@launch
+            }
+            val snapshot = sequenceStore.loadSavedBars()
+                .firstOrNull { it.name.equals(savedName, ignoreCase = true) }
+            if (snapshot == null) {
+                applyUiRefresh(
+                    runtimeStatus = "Saved bar \"$savedName\" was not found.",
+                    lastError = "Saved bar \"$savedName\" was not found.",
+                )
+                return@launch
+            }
+            val missingDependency = collectMissingDependencies(
+                bars = listOf(snapshot.steps),
+                barIndexOffset = normalizedBarIndex,
+            ).firstOrNull()
+            if (missingDependency != null) {
+                applyUiRefresh(
+                    runtimeStatus = "Cannot load \"$savedName\" because saved dependencies were deleted.",
+                    lastError = formatMissingDependencyDetail(missingDependency),
+                )
+                return@launch
+            }
+
+            playBars[normalizedBarIndex] = normalizeStepSnapshot(snapshot.steps).toMutableList()
+            barEffectStates[normalizedBarIndex] = snapshot.effectState
+            barNames[normalizedBarIndex] = snapshot.name
+            persistWorkingState()
+            applyUiRefresh(
+                runtimeStatus = "Loaded \"$savedName\" into bar ${normalizedBarIndex + 1}.",
+                lastError = null,
             )
-            return
+            if (mutableUiState.value.isPlaying) {
+                queueCurrentLoopForNextCycle()
+            } else {
+                updateCompileStatusFromVisualLoop()
+            }
         }
-        playBars[normalizedBarIndex] = normalizeStepSnapshot(snapshot.steps).toMutableList()
-        barEffectStates[normalizedBarIndex] = snapshot.effectState
-        barNames[normalizedBarIndex] = snapshot.name
-        persistWorkingState()
+    }
+
+    fun deleteSavedPlayBar(savedName: String) {
+        val deleted = sequenceStore.deleteBar(savedName)
         applyUiRefresh(
-            runtimeStatus = "Loaded \"$savedName\" into bar ${normalizedBarIndex + 1}.",
-            lastError = null,
+            runtimeStatus = if (deleted) {
+                "Deleted saved bar \"$savedName\"."
+            } else {
+                "Saved bar \"$savedName\" was not found."
+            },
+            lastError = if (deleted) null else "Saved bar \"$savedName\" was not found.",
         )
-        if (mutableUiState.value.isPlaying) {
-            queueCurrentLoopForNextCycle()
-        } else {
-            updateCompileStatusFromVisualLoop()
-        }
     }
 
     fun savedSongSnapshots(): List<Screen4SavedSongSnapshot> {
@@ -747,33 +816,59 @@ class Screen4Coordinator(
     }
 
     fun loadSavedSong(savedName: String) {
-        val snapshot = sequenceStore.loadSavedSongs()
-            .firstOrNull { it.name.equals(savedName, ignoreCase = true) }
-        if (snapshot == null) {
+        scope.launch {
+            if (!refreshSavedLoadDependencies()) {
+                return@launch
+            }
+            val snapshot = sequenceStore.loadSavedSongs()
+                .firstOrNull { it.name.equals(savedName, ignoreCase = true) }
+            if (snapshot == null) {
+                applyUiRefresh(
+                    runtimeStatus = "Saved song \"$savedName\" was not found.",
+                    lastError = "Saved song \"$savedName\" was not found.",
+                )
+                return@launch
+            }
+            val missingDependency = collectMissingDependencies(snapshot.playBars).firstOrNull()
+            if (missingDependency != null) {
+                applyUiRefresh(
+                    runtimeStatus = "Cannot load \"$savedName\" because saved dependencies were deleted.",
+                    lastError = formatMissingDependencyDetail(missingDependency),
+                )
+                return@launch
+            }
+
             mutableUiState.value = mutableUiState.value.copy(
-                runtimeStatus = "Saved song \"$savedName\" was not found.",
-                lastError = "Saved song \"$savedName\" was not found.",
+                bpm = snapshot.bpm.coerceIn(MIN_BPM, MAX_BPM),
             )
-            return
+            displayedFavoritePageId = snapshot.displayedFavoritePageId ?: displayedFavoritePageId
+            sharedFavoritesStore.saveSelectedFavoritePageId(displayedFavoritePageId)
+            replacePlayBars(snapshot.playBars)
+            replaceBarEffects(snapshot.barEffects)
+            replaceBarNames(snapshot.barNames)
+            persistWorkingState()
+            applyUiRefresh(
+                runtimeStatus = "Loaded song \"$savedName\".",
+                lastError = null,
+            )
+            if (mutableUiState.value.isPlaying) {
+                queueCurrentLoopForNextCycle()
+            } else {
+                updateCompileStatusFromVisualLoop()
+            }
         }
-        mutableUiState.value = mutableUiState.value.copy(
-            bpm = snapshot.bpm.coerceIn(MIN_BPM, MAX_BPM),
-        )
-        displayedFavoritePageId = snapshot.displayedFavoritePageId ?: displayedFavoritePageId
-        sharedFavoritesStore.saveSelectedFavoritePageId(displayedFavoritePageId)
-        replacePlayBars(snapshot.playBars)
-        replaceBarEffects(snapshot.barEffects)
-        replaceBarNames(snapshot.barNames)
-        persistWorkingState()
+    }
+
+    fun deleteSavedSong(savedName: String) {
+        val deleted = sequenceStore.deleteSong(savedName)
         applyUiRefresh(
-            runtimeStatus = "Loaded song \"$savedName\".",
-            lastError = null,
+            runtimeStatus = if (deleted) {
+                "Deleted saved song \"$savedName\"."
+            } else {
+                "Saved song \"$savedName\" was not found."
+            },
+            lastError = if (deleted) null else "Saved song \"$savedName\" was not found.",
         )
-        if (mutableUiState.value.isPlaying) {
-            queueCurrentLoopForNextCycle()
-        } else {
-            updateCompileStatusFromVisualLoop()
-        }
     }
 
     fun play() {
@@ -942,7 +1037,6 @@ class Screen4Coordinator(
                 throw IllegalArgumentException("Assign at least one Screen 3 pad to any play bar.")
             }
 
-            val cycleDurationMs = (4 * 60_000L) / mutableUiState.value.bpm.coerceAtLeast(1)
             val resolvedSamples = mutableMapOf<String, Screen4SampleDescriptor>()
             val scheduledEvents = populatedSteps.flatMap { (barIndex, indexedStep) ->
                 val stepIndex = indexedStep.first
@@ -956,13 +1050,19 @@ class Screen4Coordinator(
                     )
                 val descriptor = resolveDescriptorByClipId(clipId)
                     ?: throw IllegalArgumentException(
-                        "Saved clip for page ${displayPageNumber(favoriteReference.pageId)} pad ${favoriteReference.slotIndex + 1} is no longer available."
+                        "Saved dependencies were deleted. ${formatMissingDependencyDetail(
+                            SavedDependencyIssue(
+                                barIndex = barIndex,
+                                stepIndex = stepIndex,
+                                pageId = favoriteReference.pageId,
+                                slotIndex = favoriteReference.slotIndex,
+                            )
+                        )}"
                     )
                 resolvedSamples[descriptor.sampleId.lowercase(Locale.US)] = descriptor
                 buildScheduledEventsForBarStep(
                     descriptor = descriptor,
                     stepIndex = stepIndex,
-                    cycleDurationMs = cycleDurationMs,
                     effectState = effectState,
                 )
             }
@@ -979,17 +1079,15 @@ class Screen4Coordinator(
     private fun buildScheduledEventsForBarStep(
         descriptor: Screen4SampleDescriptor,
         stepIndex: Int,
-        cycleDurationMs: Long,
         effectState: Screen4BarEffectState,
     ): List<Screen4ScheduledEvent> {
-        val baseOffsetMs = (stepIndex * cycleDurationMs.toDouble() / STEP_COUNT).toLong()
-        val stepDurationMs = cycleDurationMs / STEP_COUNT.toLong().coerceAtLeast(1L)
+        val baseStepPosition = stepIndex.toDouble()
         val speed = pitchSemitonesToSpeed(effectState.pitchSemitones)
         val events = mutableListOf(
             Screen4ScheduledEvent(
                 sampleId = descriptor.sampleId,
                 stepIndex = stepIndex,
-                offsetMs = baseOffsetMs,
+                stepPosition = baseStepPosition,
                 gain = effectState.gain,
                 pan = effectState.pan,
                 speed = speed,
@@ -1001,7 +1099,7 @@ class Screen4Coordinator(
             events += Screen4ScheduledEvent(
                 sampleId = descriptor.sampleId,
                 stepIndex = stepIndex,
-                offsetMs = baseOffsetMs + (stepDurationMs * 2L),
+                stepPosition = baseStepPosition + 2.0,
                 gain = delayGain.coerceIn(0f, 1f),
                 pan = effectState.pan,
                 speed = speed,
@@ -1014,7 +1112,7 @@ class Screen4Coordinator(
             events += Screen4ScheduledEvent(
                 sampleId = descriptor.sampleId,
                 stepIndex = stepIndex,
-                offsetMs = baseOffsetMs + (stepDurationMs / 2L),
+                stepPosition = baseStepPosition + 0.5,
                 gain = reverbFirstGain.coerceIn(0f, 1f),
                 pan = effectState.pan * 0.7f,
                 speed = speed,
@@ -1024,7 +1122,7 @@ class Screen4Coordinator(
             events += Screen4ScheduledEvent(
                 sampleId = descriptor.sampleId,
                 stepIndex = stepIndex,
-                offsetMs = baseOffsetMs + stepDurationMs,
+                stepPosition = baseStepPosition + 1.0,
                 gain = reverbSecondGain.coerceIn(0f, 1f),
                 pan = effectState.pan * 0.5f,
                 speed = speed,
@@ -1035,6 +1133,49 @@ class Screen4Coordinator(
 
     private fun pitchSemitonesToSpeed(pitchSemitones: Float): Float {
         return 2.0.pow((pitchSemitones / 12f).toDouble()).toFloat().coerceIn(0.5f, 2f)
+    }
+
+    private suspend fun refreshSavedLoadDependencies(): Boolean {
+        return runCatching {
+            withContext(Dispatchers.IO) { sampleLibraryRepository.refreshIndex() }
+        }.onSuccess { index ->
+            samplePackIndex = index
+            synchronizeSharedFavorites()
+        }.onFailure {
+            mutableUiState.value = mutableUiState.value.copy(
+                transportState = Screen4TransportState.ERROR,
+                runtimeStatus = "Saved dependency check failed.",
+                lastError = it.message ?: "unknown",
+            )
+        }.isSuccess
+    }
+
+    private fun collectMissingDependencies(
+        bars: List<List<Screen4FavoritePadReference?>>,
+        barIndexOffset: Int = 0,
+    ): List<SavedDependencyIssue> {
+        return bars.flatMapIndexed { offset, steps ->
+            steps.mapIndexedNotNull { stepIndex, favoriteReference ->
+                favoriteReference?.takeIf { currentClipIdForReference(it) == null || resolveDescriptorByClipId(currentClipIdForReference(it).orEmpty()) == null }
+                    ?.let {
+                        SavedDependencyIssue(
+                            barIndex = barIndexOffset + offset,
+                            stepIndex = stepIndex,
+                            pageId = it.pageId,
+                            slotIndex = it.slotIndex,
+                        )
+                    }
+            }
+        }
+    }
+
+    private fun currentClipIdForReference(reference: Screen4FavoritePadReference): String? {
+        return reference.clipId ?: favoritePages.firstOrNull { it.pageId == reference.pageId }
+            ?.clipIds?.getOrNull(reference.slotIndex)
+    }
+
+    private fun formatMissingDependencyDetail(issue: SavedDependencyIssue): String {
+        return "Ch ${issue.barIndex + 1} Step ${issue.stepIndex + 1} depends on page ${displayPageNumber(issue.pageId)} pad ${issue.slotIndex + 1}, but that WAV was deleted."
     }
 
     private fun resolveDescriptorByClipId(clipId: String): Screen4SampleDescriptor? {
@@ -1357,6 +1498,13 @@ class Screen4Coordinator(
     private data class SharedFavoritePage(
         val pageId: String,
         val clipIds: List<String?>,
+    )
+
+    private data class SavedDependencyIssue(
+        val barIndex: Int,
+        val stepIndex: Int,
+        val pageId: String,
+        val slotIndex: Int,
     )
 
     private data class BarSelectionState(

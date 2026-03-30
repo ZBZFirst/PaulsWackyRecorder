@@ -58,7 +58,7 @@ class ClipIndexRepository(private val context: Context) {
 
         val folders = mutableListOf<Pair<String, DocumentFile>>()
         if (root.listFiles().any { it.isFile }) {
-            folders += CURRENT_FOLDER_NAME to root
+            folders += rootFolderName(root) to root
         }
         siblingDirectories.forEach { dir ->
             folders += ((dir.name ?: UNKNOWN_FOLDER_NAME) to dir)
@@ -119,6 +119,10 @@ class ClipIndexRepository(private val context: Context) {
             .toList()
     }
 
+    fun latestIndexedTimestampMs(): Long {
+        return loadRows().maxOfOrNull { it.lastSeenTimestampMs } ?: 0L
+    }
+
     private fun replaceFolderRows(folderName: String, refreshedRows: List<IndexedClip>): RebuildSummary {
         val mergedRows = loadRows()
             .filterNot { it.folderName == folderName } +
@@ -133,7 +137,8 @@ class ClipIndexRepository(private val context: Context) {
 
     private fun resolveFolderDocument(root: DocumentFile, folderName: String): DocumentFile? {
         return when (folderName) {
-            CURRENT_FOLDER_NAME -> root.takeIf { it.canRead() }
+            CURRENT_FOLDER_NAME,
+            rootFolderName(root) -> root.takeIf { it.canRead() }
             else -> root.listFiles()
                 .firstOrNull { it.isDirectory && it.canRead() && (it.name ?: UNKNOWN_FOLDER_NAME) == folderName }
         }
@@ -219,6 +224,10 @@ class ClipIndexRepository(private val context: Context) {
 
     private fun isSupportedExtension(displayName: String): Boolean {
         return displayName.endsWith(".wav", ignoreCase = true) || displayName.endsWith(".mp3", ignoreCase = true)
+    }
+
+    private fun rootFolderName(root: DocumentFile): String {
+        return root.name?.takeIf { it.isNotBlank() } ?: CURRENT_FOLDER_NAME
     }
 
     private fun prefs() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

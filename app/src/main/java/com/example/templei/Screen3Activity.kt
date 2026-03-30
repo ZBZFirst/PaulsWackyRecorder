@@ -1,6 +1,7 @@
 package com.example.templei
 
 import android.content.Intent
+import android.graphics.Rect
 import android.media.SoundPool
 import android.net.Uri
 import android.os.Bundle
@@ -24,6 +25,8 @@ import android.app.AlertDialog
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
+import androidx.documentfile.provider.DocumentFile
 import com.example.templei.feature.soundboard.CachePolicy
 import com.example.templei.feature.soundboard.SoundboardAudioEngine
 import com.example.templei.feature.soundboard.SoundboardConfig
@@ -41,6 +44,10 @@ import com.example.templei.feature.soundboard.Screen3FolderBrowserCoordinator
 import com.example.templei.feature.soundboard.Screen3LibraryRefreshSignal
 import com.example.templei.feature.soundboard.Screen3Coordinator
 import com.example.templei.feature.soundboard.Screen3Intent
+import com.example.templei.feature.tutorial.TutorialScreen
+import com.example.templei.feature.tutorial.TutorialSpotlightOverlayView
+import com.example.templei.feature.tutorial.TutorialStatus
+import com.example.templei.feature.tutorial.TutorialStore
 import com.example.templei.ui.navigation.AppShellInsets
 import com.example.templei.ui.navigation.AppShellNavigation
 import java.util.Locale
@@ -76,9 +83,19 @@ class Screen3Activity : ComponentActivity() {
     private lateinit var favoritePageDotsContainer: LinearLayout
     private lateinit var clipBrowserContainer: LinearLayout
     private lateinit var clipBrowserScroll: ScrollView
+    private lateinit var mainScrollView: ScrollView
     private lateinit var favoritesPad: android.widget.GridLayout
     private lateinit var browserToggleButton: Button
     private lateinit var favoritesToggleButton: Button
+    private lateinit var tutorialCard: LinearLayout
+    private lateinit var tutorialHandoffCard: LinearLayout
+    private lateinit var tutorialProgressText: TextView
+    private lateinit var tutorialPromptText: TextView
+    private lateinit var tutorialInstructionText: TextView
+    private lateinit var tutorialSkipButton: Button
+    private lateinit var continueTutorialButton: Button
+    private lateinit var closeTutorialButton: Button
+    private lateinit var tutorialOverlay: TutorialSpotlightOverlayView
 
     private lateinit var soundPool: SoundPool
     private var config = SoundboardConfig()
@@ -104,6 +121,7 @@ class Screen3Activity : ComponentActivity() {
     private val audioEngine by lazy { SoundboardAudioEngine.getInstance(this) }
     private val clipIndexRepository by lazy { ClipIndexRepository(this) }
     private val libraryRefreshSignal by lazy { Screen3LibraryRefreshSignal(this) }
+    private val tutorialStore by lazy { TutorialStore(this) }
     private lateinit var uiRenderer: Screen3UiRenderer
     private val settingsStore by lazy { Screen3SettingsStore(this) }
     private val settingsDialogHelper by lazy { Screen3SettingsDialogHelper(this) }
@@ -122,6 +140,16 @@ class Screen3Activity : ComponentActivity() {
     private var suppressFolderSpinnerSelection: Boolean = false
     private var lastObservedLibraryChangeMs: Long = 0L
     private var hasCompletedInitialResume: Boolean = false
+    private var tutorialMode: Boolean = false
+    private var favoritePadDeleteMode: Boolean = false
+
+    private val tutorialAssignments = listOf(
+        Screen3TutorialAssignment(slotIndex = 0, spokenPrompt = "so", clipBaseName = "tutorial_01_so"),
+        Screen3TutorialAssignment(slotIndex = 1, spokenPrompt = "re", clipBaseName = "tutorial_02_re"),
+        Screen3TutorialAssignment(slotIndex = 2, spokenPrompt = "mi", clipBaseName = "tutorial_03_mi"),
+        Screen3TutorialAssignment(slotIndex = 3, spokenPrompt = "do", clipBaseName = "tutorial_04_do"),
+        Screen3TutorialAssignment(slotIndex = 4, spokenPrompt = "la", clipBaseName = "tutorial_05_la"),
+    )
 
     private val pickFolderLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -142,6 +170,7 @@ class Screen3Activity : ComponentActivity() {
 
         runCatching {
             setContentView(R.layout.activity_screen3)
+            tutorialMode = shouldRunTutorial()
             AppShellNavigation.bind(
                 activity = this,
                 currentDestination = Screen3Activity::class.java,
@@ -177,15 +206,30 @@ class Screen3Activity : ComponentActivity() {
             favoritePageDotsContainer = findViewById(R.id.soundboardFavoritePageDotsContainer)
             clipBrowserContainer = findViewById(R.id.soundboardClipBrowserContainer)
             clipBrowserScroll = findViewById(R.id.soundboardClipBrowserScroll)
+            mainScrollView = findViewById(R.id.screen3ScrollView)
             favoritesPad = findViewById(R.id.soundboardFavoritesPad)
             browserToggleButton = findViewById(R.id.soundboardBrowserToggleButton)
             favoritesToggleButton = findViewById(R.id.soundboardFavoritesToggleButton)
+            tutorialCard = findViewById(R.id.screen3TutorialCard)
+            tutorialHandoffCard = findViewById(R.id.screen3TutorialHandoffCard)
+            tutorialProgressText = findViewById(R.id.screen3TutorialProgressText)
+            tutorialPromptText = findViewById(R.id.screen3TutorialPromptText)
+            tutorialInstructionText = findViewById(R.id.screen3TutorialInstructionText)
+            tutorialSkipButton = findViewById(R.id.screen3TutorialSkipButton)
+            continueTutorialButton = findViewById(R.id.screen3ContinueTutorialButton)
+            closeTutorialButton = findViewById(R.id.screen3CloseTutorialButton)
+            tutorialOverlay = findViewById(R.id.screen3TutorialOverlay)
             controlsCard = findViewById(R.id.soundboardControlsCard)
             controlsGroup = findViewById(R.id.soundboardControlsGroup)
             controlsToggleButton = findViewById(R.id.soundboardControlsToggleButton)
             favoritePadButtons = favoritePadButtonIds.map { findViewById(it) }
             findViewById<TextView>(R.id.appHeaderChip)?.setOnClickListener {
                 toggleControlsCard(scrollIntoView = true)
+            }
+            mainScrollView.setOnScrollChangeListener { _, _, _, _, _ ->
+                if (tutorialMode) {
+                    tutorialOverlay.invalidate()
+                }
             }
             clipBrowserScroll.setOnTouchListener { view, event ->
                 when (event.actionMasked) {
@@ -196,6 +240,11 @@ class Screen3Activity : ComponentActivity() {
                     MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
                 }
                 false
+            }
+            clipBrowserScroll.setOnScrollChangeListener { _, _, _, _, _ ->
+                if (tutorialMode) {
+                    tutorialOverlay.invalidate()
+                }
             }
 
             uiRenderer = Screen3UiRenderer(
@@ -236,11 +285,12 @@ class Screen3Activity : ComponentActivity() {
                 assignedLabelForSlot = { slotNumber, clipDisplayName ->
                     getString(R.string.soundboard_favorite_slot_label_assigned, slotNumber, clipDisplayName)
                 },
-                savedUnknownLabelForSlot = { slotNumber -> getString(R.string.soundboard_favorite_slot_label_saved, slotNumber) }
+                savedUnknownLabelForSlot = { slotNumber -> getString(R.string.soundboard_favorite_slot_label_missing, slotNumber) }
             )
             favoritesManager.initialize()
             selectedAssignmentSlotIndex = favoritesManager.selectedSlotIndex()
             syncFavoritesFromManager()
+            prepareTutorialFavoritePadIfNeeded()
             screen3Coordinator.dispatch(Screen3Intent.Initialize)
 
             folderSpinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf<String>())
@@ -285,6 +335,15 @@ class Screen3Activity : ComponentActivity() {
                     runCatching { rebuildIndexAndBind(rootUri) }.onFailure(::failToMainMenu)
                 }
             }
+            tutorialSkipButton.setOnClickListener {
+                closeTutorialAndKeepExploring()
+            }
+            continueTutorialButton.setOnClickListener {
+                continueToSequencer()
+            }
+            closeTutorialButton.setOnClickListener {
+                closeTutorialAndKeepExploring()
+            }
             clearSelectedSlotButton.setOnClickListener { showClearSlotDialog() }
             favoritePagePrevButton.setOnClickListener {
                 if (favoritesManager.moveToPreviousPage()) {
@@ -326,7 +385,11 @@ class Screen3Activity : ComponentActivity() {
                 }
             }
             favoritePageSaveButton.setOnClickListener {
-                showSaveFavoritePageDialog()
+                if (tutorialMode && currentTutorialPhase() == Screen3TutorialPhase.SAVE_PAGE) {
+                    saveTutorialFavoritePage()
+                } else {
+                    showSaveFavoritePageDialog()
+                }
             }
             favoritePageLoadButton.setOnClickListener {
                 showLoadFavoritePageDialog()
@@ -337,9 +400,7 @@ class Screen3Activity : ComponentActivity() {
                 updateSectionVisibility()
             }
             favoritesToggleButton.setOnClickListener {
-                val next = !screen3Coordinator.currentViewState().isFavoritesCollapsed
-                screen3Coordinator.dispatch(Screen3Intent.SetFavoritesCollapsed(next))
-                updateSectionVisibility()
+                toggleFavoritePadDeleteMode()
             }
             controlsToggleButton.setOnClickListener {
                 toggleControlsCard(scrollIntoView = false)
@@ -347,7 +408,7 @@ class Screen3Activity : ComponentActivity() {
 
             bindFavoritePadButtons()
             updateSectionVisibility()
-            initializeFromPersistedIndexOrNoRoot()
+            initializeFromLaunchContext()
         }.onFailure(::failToMainMenu)
     }
 
@@ -362,6 +423,13 @@ class Screen3Activity : ComponentActivity() {
             maybeRefreshIndexedLibrary()
         }
         updateSectionVisibility()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && tutorialMode) {
+            renderTutorialChrome()
+        }
     }
 
     override fun onDestroy() {
@@ -413,7 +481,7 @@ class Screen3Activity : ComponentActivity() {
 
     private fun initializeFromPersistedIndexOrNoRoot() {
         val indexedState = folderBrowserCoordinator.initializeFromPersistedRoot()
-        lastObservedLibraryChangeMs = libraryRefreshSignal.lastChangedAtMs()
+        lastObservedLibraryChangeMs = clipIndexRepository.latestIndexedTimestampMs()
         if (!indexedState.hasRootSelection) {
             screen3Coordinator.dispatch(Screen3Intent.FolderPicked(uri = null))
             renderNoRootSelected()
@@ -430,6 +498,24 @@ class Screen3Activity : ComponentActivity() {
             return
         }
         applyIndexedState(indexedState)
+    }
+
+    private fun initializeFromLaunchContext() {
+        val tutorialRootUri = intent?.getStringExtra(EXTRA_TUTORIAL_ROOT_URI)?.let(Uri::parse)
+        if (tutorialRootUri != null) {
+            clipIndexRepository.setPersistedRootUri(tutorialRootUri)
+            val selectedFolderName = DocumentFile.fromTreeUri(this, tutorialRootUri)?.name
+            clipIndexRepository.setPersistedSelectedFolderName(selectedFolderName)
+            runCatching { rebuildIndexAndBind(tutorialRootUri) }.onFailure(::failToMainMenu)
+            return
+        }
+        val forceRebuildOnStart = intent?.getBooleanExtra(EXTRA_FORCE_REBUILD_ON_START, false) == true
+        val persistedRootUri = clipIndexRepository.getPersistedRootUri()
+        if (forceRebuildOnStart && persistedRootUri != null) {
+            runCatching { rebuildIndexAndBind(persistedRootUri) }.onFailure(::failToMainMenu)
+            return
+        }
+        initializeFromPersistedIndexOrNoRoot()
     }
 
     private fun maybeRefreshIndexedLibrary(): Boolean {
@@ -455,7 +541,7 @@ class Screen3Activity : ComponentActivity() {
         Thread {
             runCatching { folderBrowserCoordinator.refreshCurrentFolder() }
                 .onSuccess { summary ->
-                    lastObservedLibraryChangeMs = libraryRefreshSignal.lastChangedAtMs()
+                    lastObservedLibraryChangeMs = clipIndexRepository.latestIndexedTimestampMs()
                     mainHandler.post {
                         if (showLoading) {
                             loadingProgressBar.isIndeterminate = false
@@ -483,6 +569,7 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun rebuildIndexAndBind(rootUri: Uri) {
+        screen3Coordinator.dispatch(Screen3Intent.FolderPicked(rootUri))
         stateMachine.onLoading()
         renderState(stateMachine.currentState())
         loadingProgressBar.isIndeterminate = true
@@ -492,6 +579,7 @@ class Screen3Activity : ComponentActivity() {
         Thread {
             val summary = folderBrowserCoordinator.setPickedRootAndRebuild(rootUri)
             mainHandler.post {
+                lastObservedLibraryChangeMs = clipIndexRepository.latestIndexedTimestampMs()
                 loadingProgressBar.isIndeterminate = false
                 loadingProgressBar.max = 100
                 loadingProgressBar.progress = 100
@@ -578,6 +666,7 @@ class Screen3Activity : ComponentActivity() {
         controlsToggleButton.text = getString(
             if (viewState.isControlsCollapsed) R.string.soundboard_section_expand else R.string.soundboard_section_collapse
         )
+        renderFavoritePadDeleteToggle()
     }
 
     private fun toggleControlsCard(scrollIntoView: Boolean) {
@@ -617,6 +706,12 @@ class Screen3Activity : ComponentActivity() {
         favoritePadHelper.bind(
             buttons = favoritePadButtons,
             onTapSlot = { index ->
+                if (tutorialMode && handleTutorialFavoritePadTap(index)) {
+                    return@bind
+                }
+                if (handleFavoritePadDeleteTap(index)) {
+                    return@bind
+                }
                 val clipId = favoriteSlotClipIds[index]
                 if (clipId == null) {
                     reject(
@@ -636,9 +731,13 @@ class Screen3Activity : ComponentActivity() {
                 }
             },
             onLongPressSlot = { index ->
+                if (tutorialMode && handleTutorialFavoritePadTap(index)) {
+                    return@bind
+                }
                 favoritesManager.selectSlot(index)
                 selectedAssignmentSlotIndex = favoritesManager.selectedSlotIndex()
                 renderAssignmentTarget()
+                renderTutorialChrome()
             }
         )
         renderFavoritePadState()
@@ -658,6 +757,7 @@ class Screen3Activity : ComponentActivity() {
         renderAssignmentTarget()
         renderFavoritePageControls()
         refreshReadyState()
+        renderTutorialChrome()
     }
 
     private fun renderAssignmentTarget() {
@@ -669,6 +769,7 @@ class Screen3Activity : ComponentActivity() {
     }
 
     private fun renderFavoritePageControls() {
+        val tutorialPhase = currentTutorialPhase()
         favoritePageStatusText.text = getString(
             R.string.soundboard_favorite_page_status_value,
             favoritesManager.currentPageIndex() + 1,
@@ -677,7 +778,9 @@ class Screen3Activity : ComponentActivity() {
         favoritePagePrevButton.isEnabled = favoritesManager.currentPageIndex() > 0
         favoritePageNextButton.isEnabled = favoritesManager.currentPageIndex() < favoritesManager.pageCount() - 1
         favoritePageRemoveButton.isEnabled = favoritesManager.pageCount() > 1
+        favoritePageSaveButton.isEnabled = !tutorialMode || tutorialPhase == Screen3TutorialPhase.SAVE_PAGE
         favoritePageLoadButton.isEnabled = favoritesManager.savedPagePresets().isNotEmpty()
+        favoritePageLoadButton.isVisible = !tutorialMode || tutorialPhase == Screen3TutorialPhase.SCREEN_COMPLETE
         renderFavoritePageDots()
     }
 
@@ -720,17 +823,65 @@ class Screen3Activity : ComponentActivity() {
             ).show()
             return
         }
-        val labels = presets.map { preset -> preset.name }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle(R.string.soundboard_favorite_page_load_dialog_title)
+            .setItems(
+                arrayOf(
+                    getString(R.string.soundboard_favorite_page_load_item),
+                    getString(R.string.soundboard_favorite_page_delete_item),
+                )
+            ) { _, which ->
+                when (which) {
+                    0 -> showFavoritePagePresetPicker(
+                        title = R.string.soundboard_favorite_page_load_dialog_title,
+                        presets = presets,
+                        onSelect = { preset ->
+                            val loaded = favoritesManager.loadPagePreset(preset.presetId) ?: return@showFavoritePagePresetPicker
+                            syncFavoritesFromManager()
+                            renderFavoritePadState()
+                            Toast.makeText(
+                                this,
+                                getString(R.string.soundboard_favorite_page_loaded, loaded.name),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                    )
+                    1 -> showFavoritePagePresetPicker(
+                        title = R.string.soundboard_favorite_page_delete_dialog_title,
+                        presets = presets,
+                        onSelect = ::confirmFavoritePagePresetDelete,
+                    )
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showFavoritePagePresetPicker(
+        title: Int,
+        presets: List<Screen3SettingsStore.SavedFavoritePagePreset>,
+        onSelect: (Screen3SettingsStore.SavedFavoritePagePreset) -> Unit,
+    ) {
+        val labels = presets.map { preset -> preset.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(title)
             .setItems(labels) { _, which ->
-                val preset = presets.getOrNull(which) ?: return@setItems
-                val loaded = favoritesManager.loadPagePreset(preset.presetId) ?: return@setItems
-                syncFavoritesFromManager()
+                presets.getOrNull(which)?.let(onSelect)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun confirmFavoritePagePresetDelete(preset: Screen3SettingsStore.SavedFavoritePagePreset) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.soundboard_favorite_page_delete_dialog_title)
+            .setMessage(getString(R.string.soundboard_favorite_page_delete_dialog_message, preset.name))
+            .setPositiveButton(R.string.soundboard_favorite_page_delete) { _, _ ->
+                val deleted = favoritesManager.deletePagePreset(preset.presetId) ?: return@setPositiveButton
                 renderFavoritePadState()
                 Toast.makeText(
                     this,
-                    getString(R.string.soundboard_favorite_page_loaded, loaded.name),
+                    getString(R.string.soundboard_favorite_page_deleted, deleted.name),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -750,8 +901,9 @@ class Screen3Activity : ComponentActivity() {
         clipBrowserRenderer.render(
             clips = models,
             onPlay = { clipId -> clipById[clipId]?.let(::attemptPlayback) },
-            onAssign = { clipId -> clipById[clipId]?.let(::showAssignClipDialog) }
+            onAssign = { clipId -> clipById[clipId]?.let(::handleClipAssignRequest) }
         )
+        renderTutorialChrome()
     }
 
     private fun renderFavoritePageDots() {
@@ -781,6 +933,370 @@ class Screen3Activity : ComponentActivity() {
         val durationSeconds = String.format(Locale.US, "%.1fs", clip.durationMs / 1000f)
         return "$extension / $durationSeconds"
     }
+
+    private fun shouldRunTutorial(): Boolean {
+        val progress = tutorialStore.loadProgress()
+        return progress.status == TutorialStatus.IN_PROGRESS && progress.currentScreen == TutorialScreen.SCREEN3
+    }
+
+    private fun handleClipAssignRequest(clip: ClipMetadata) {
+        if (tutorialMode) {
+            val expectedAssignment = currentTutorialAssignment() ?: return
+            if (currentTutorialPhase() == Screen3TutorialPhase.ASSIGN_CLIP &&
+                clipMatchesTutorialAssignment(clip, expectedAssignment)
+            ) {
+                assignFavoriteClip(expectedAssignment.slotIndex, clip)
+                onTutorialClipAssigned()
+                return
+            }
+        }
+
+        showAssignClipDialog(clip)
+    }
+
+    private fun handleTutorialFavoritePadTap(slotIndex: Int): Boolean {
+        if (!tutorialMode || currentTutorialPhase() != Screen3TutorialPhase.SELECT_SLOT) {
+            return false
+        }
+
+        val expectedAssignment = currentTutorialAssignment() ?: return true
+        if (slotIndex != expectedAssignment.slotIndex) {
+            return true
+        }
+
+        favoritesManager.selectSlot(slotIndex)
+        selectedAssignmentSlotIndex = favoritesManager.selectedSlotIndex()
+        renderFavoritePadState()
+        tutorialStore.setCurrentScreen(TutorialScreen.SCREEN3, STEP_ASSIGN_CLIP)
+        renderTutorialChrome()
+        return true
+    }
+
+    private fun onTutorialClipAssigned() {
+        val completedCount = completedTutorialAssignmentCount()
+        if (completedCount >= tutorialAssignments.size) {
+            tutorialStore.setCurrentScreen(TutorialScreen.SCREEN3, STEP_SAVE_PAGE)
+        } else {
+            tutorialStore.setCurrentScreen(TutorialScreen.SCREEN3, STEP_SELECT_SLOT)
+        }
+        renderTutorialChrome()
+    }
+
+    private fun currentTutorialPhase(): Screen3TutorialPhase {
+        if (!tutorialMode) return Screen3TutorialPhase.INACTIVE
+        if (completedTutorialAssignmentCount() >= tutorialAssignments.size) {
+            return when (tutorialStore.loadProgress().currentStepIndex) {
+                STEP_SCREEN_COMPLETE -> Screen3TutorialPhase.SCREEN_COMPLETE
+                else -> Screen3TutorialPhase.SAVE_PAGE
+            }
+        }
+        return when (tutorialStore.loadProgress().currentStepIndex) {
+            STEP_ASSIGN_CLIP -> {
+                if (currentTutorialAssignment()?.let(::tutorialClipForAssignment) == null) {
+                    Screen3TutorialPhase.WAITING_FOR_CLIP
+                } else {
+                    Screen3TutorialPhase.ASSIGN_CLIP
+                }
+            }
+            STEP_SCREEN_COMPLETE -> Screen3TutorialPhase.SCREEN_COMPLETE
+            else -> Screen3TutorialPhase.SELECT_SLOT
+        }
+    }
+
+    private fun currentTutorialAssignment(): Screen3TutorialAssignment? {
+        val completedCount = completedTutorialAssignmentCount()
+        return tutorialAssignments.getOrNull(completedCount)
+    }
+
+    private fun completedTutorialAssignmentCount(): Int {
+        var count = 0
+        tutorialAssignments.forEach { assignment ->
+            val clipId = favoriteSlotClipIds[assignment.slotIndex] ?: return count
+            val clip = clipById[clipId] ?: return count
+            if (!clipMatchesTutorialAssignment(clip, assignment)) {
+                return count
+            }
+            count += 1
+        }
+        return count
+    }
+
+    private fun clipMatchesTutorialAssignment(
+        clip: ClipMetadata,
+        assignment: Screen3TutorialAssignment,
+    ): Boolean {
+        return clip.displayName.startsWith(assignment.clipBaseName, ignoreCase = true)
+    }
+
+    private fun tutorialClipForAssignment(assignment: Screen3TutorialAssignment): ClipMetadata? {
+        return activeFolderClips.firstOrNull { clipMatchesTutorialAssignment(it, assignment) }
+    }
+
+    private fun renderTutorialChrome() {
+        if (!::tutorialCard.isInitialized) return
+        if (!tutorialMode) {
+            tutorialCard.isVisible = false
+            tutorialHandoffCard.isVisible = false
+            tutorialOverlay.clearTargets()
+            return
+        }
+
+        val phase = currentTutorialPhase()
+        ensureTutorialRecoveryUiVisible(phase)
+        val assignment = currentTutorialAssignment()
+        val visibleProgress = (completedTutorialAssignmentCount() + 1).coerceAtMost(tutorialAssignments.size)
+        tutorialCard.isVisible = phase != Screen3TutorialPhase.SCREEN_COMPLETE
+        tutorialHandoffCard.isVisible = phase == Screen3TutorialPhase.SCREEN_COMPLETE
+
+        if (phase != Screen3TutorialPhase.SCREEN_COMPLETE) {
+            tutorialProgressText.text = getString(
+                R.string.screen3_tutorial_progress,
+                if (phase == Screen3TutorialPhase.SAVE_PAGE) tutorialAssignments.size else visibleProgress,
+                tutorialAssignments.size,
+            )
+            tutorialPromptText.text = when (phase) {
+                Screen3TutorialPhase.SELECT_SLOT ->
+                    assignment?.let {
+                        getString(R.string.screen3_tutorial_select_pad_title, it.slotIndex + 1)
+                    }.orEmpty()
+                Screen3TutorialPhase.ASSIGN_CLIP -> {
+                    val clip = assignment?.let(::tutorialClipForAssignment)
+                    getString(
+                        R.string.screen3_tutorial_assign_clip_title,
+                        clip?.displayName ?: "${assignment?.clipBaseName}.wav",
+                    )
+                }
+                Screen3TutorialPhase.WAITING_FOR_CLIP ->
+                    getString(R.string.screen3_tutorial_clip_missing_title, "${assignment?.clipBaseName}.wav")
+                Screen3TutorialPhase.SAVE_PAGE ->
+                    getString(R.string.screen3_tutorial_save_title)
+                else -> ""
+            }
+            tutorialInstructionText.text = when (phase) {
+                Screen3TutorialPhase.SELECT_SLOT ->
+                    assignment?.let {
+                        getString(R.string.screen3_tutorial_select_pad_instruction, it.slotIndex + 1)
+                    }.orEmpty()
+                Screen3TutorialPhase.ASSIGN_CLIP -> {
+                    val clip = assignment?.let(::tutorialClipForAssignment)
+                    getString(
+                        R.string.screen3_tutorial_assign_clip_instruction,
+                        clip?.displayName ?: "${assignment?.clipBaseName}.wav",
+                        (assignment?.slotIndex ?: 0) + 1,
+                    )
+                }
+                Screen3TutorialPhase.WAITING_FOR_CLIP ->
+                    getString(R.string.screen3_tutorial_clip_missing_instruction)
+                Screen3TutorialPhase.SAVE_PAGE ->
+                    getString(R.string.screen3_tutorial_save_instruction)
+                else -> ""
+            }
+        }
+
+        renderTutorialCardEmphasis(phase)
+        renderTutorialSpotlight(phase, assignment)
+    }
+
+    private fun ensureTutorialRecoveryUiVisible(phase: Screen3TutorialPhase) {
+        var updated = false
+        val viewState = screen3Coordinator.currentViewState()
+        if ((phase == Screen3TutorialPhase.ASSIGN_CLIP || phase == Screen3TutorialPhase.WAITING_FOR_CLIP) &&
+            viewState.isBrowserCollapsed
+        ) {
+            screen3Coordinator.dispatch(Screen3Intent.SetBrowserCollapsed(false))
+            updated = true
+        }
+        if (phase == Screen3TutorialPhase.WAITING_FOR_CLIP && viewState.isControlsCollapsed) {
+            screen3Coordinator.dispatch(Screen3Intent.SetControlsCollapsed(false))
+            updated = true
+        }
+        if (updated) {
+            updateSectionVisibility()
+        }
+    }
+
+    private fun renderTutorialCardEmphasis(phase: Screen3TutorialPhase) {
+        val emphasized = tutorialMode && phase != Screen3TutorialPhase.SCREEN_COMPLETE
+        tutorialCard.animate()
+            .scaleX(if (emphasized) 1.04f else 1f)
+            .scaleY(if (emphasized) 1.04f else 1f)
+            .setDuration(180L)
+            .start()
+    }
+
+    private fun renderTutorialSpotlight(
+        phase: Screen3TutorialPhase,
+        assignment: Screen3TutorialAssignment?,
+    ) {
+        if (!tutorialMode) {
+            tutorialOverlay.clearTargets()
+            return
+        }
+
+        val targets = tutorialSpotlightTargets(phase, assignment)
+        if (targets.isEmpty()) {
+            tutorialOverlay.clearTargets()
+            return
+        }
+
+        val primaryTarget = tutorialPrimaryTarget(phase, assignment) ?: targets.first()
+        tutorialOverlay.post {
+            scrollTutorialTargetIntoView(primaryTarget)
+            tutorialOverlay.post {
+                tutorialOverlay.showTargets(targets)
+            }
+        }
+    }
+
+    private fun tutorialSpotlightTargets(
+        phase: Screen3TutorialPhase,
+        assignment: Screen3TutorialAssignment?,
+    ): List<View> {
+        return when (phase) {
+            Screen3TutorialPhase.SELECT_SLOT -> {
+                val targetPad = assignment?.let { favoritePadButtons.getOrNull(it.slotIndex) }
+                listOfNotNull(tutorialCard, targetPad)
+            }
+            Screen3TutorialPhase.ASSIGN_CLIP -> {
+                val targetClip = assignment?.let(::tutorialClipForAssignment)
+                listOfNotNull(
+                    tutorialCard,
+                    targetClip?.let { clipBrowserRenderer.clipCardViewFor(it.id) },
+                    targetClip?.let { clipBrowserRenderer.clipAssignButtonViewFor(it.id) },
+                )
+            }
+            Screen3TutorialPhase.WAITING_FOR_CLIP -> listOfNotNull(
+                tutorialCard,
+                soundboardBrowserHeaderRow(),
+                selectFolderButton,
+                rescanLibraryButton,
+            )
+            Screen3TutorialPhase.SAVE_PAGE -> listOfNotNull(tutorialCard, favoritePageSaveButton)
+            Screen3TutorialPhase.SCREEN_COMPLETE -> listOfNotNull(
+                tutorialHandoffCard,
+                favoritePageLoadButton,
+                continueTutorialButton,
+                closeTutorialButton,
+            )
+            Screen3TutorialPhase.INACTIVE -> emptyList()
+        }.filter { it.isShown }
+    }
+
+    private fun tutorialPrimaryTarget(
+        phase: Screen3TutorialPhase,
+        assignment: Screen3TutorialAssignment?,
+    ): View? {
+        return when (phase) {
+            Screen3TutorialPhase.SELECT_SLOT -> assignment?.let { favoritePadButtons.getOrNull(it.slotIndex) }
+            Screen3TutorialPhase.ASSIGN_CLIP -> assignment
+                ?.let(::tutorialClipForAssignment)
+                ?.let { clipBrowserRenderer.clipAssignButtonViewFor(it.id) }
+            Screen3TutorialPhase.WAITING_FOR_CLIP -> selectFolderButton
+            Screen3TutorialPhase.SAVE_PAGE -> favoritePageSaveButton
+            Screen3TutorialPhase.SCREEN_COMPLETE -> continueTutorialButton
+            Screen3TutorialPhase.INACTIVE -> null
+        }
+    }
+
+    private fun scrollTutorialTargetIntoView(target: View) {
+        val focusRect = Rect(0, -resources.displayMetrics.density.times(16).toInt(), target.width, target.height)
+        target.requestRectangleOnScreen(focusRect, true)
+    }
+
+    private fun closeTutorialAndKeepExploring() {
+        tutorialStore.skipTutorial()
+        tutorialMode = false
+        renderTutorialChrome()
+    }
+
+    private fun handleFavoritePadDeleteTap(slotIndex: Int): Boolean {
+        if (!favoritePadDeleteMode) return false
+        if (favoriteSlotClipIds[slotIndex] == null) return true
+
+        favoritePadDeleteMode = false
+        favoritesManager.selectSlot(slotIndex)
+        selectedAssignmentSlotIndex = favoritesManager.selectedSlotIndex()
+        clearSelectedAssignmentSlot()
+        renderFavoritePadDeleteToggle()
+        return true
+    }
+
+    private fun toggleFavoritePadDeleteMode() {
+        if (!canUseFavoritePadDeleteMode()) return
+        favoritePadDeleteMode = !favoritePadDeleteMode
+        renderFavoritePadDeleteToggle()
+        Toast.makeText(
+            this,
+            getString(
+                if (favoritePadDeleteMode) {
+                    R.string.soundboard_favorite_pad_delete_mode_on
+                } else {
+                    R.string.soundboard_favorite_pad_delete_mode_off
+                }
+            ),
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+
+    private fun renderFavoritePadDeleteToggle() {
+        if (!::favoritesToggleButton.isInitialized) return
+        if (!canUseFavoritePadDeleteMode() && favoritePadDeleteMode) {
+            favoritePadDeleteMode = false
+        }
+        favoritesToggleButton.isEnabled = canUseFavoritePadDeleteMode()
+        favoritesToggleButton.text = getString(
+            if (favoritePadDeleteMode) {
+                R.string.soundboard_favorite_pad_delete_mode_on_button
+            } else {
+                R.string.soundboard_favorite_pad_delete_mode_off_button
+            }
+        )
+        favoritesToggleButton.setTextColor(
+            getColor(
+                if (favoritePadDeleteMode) {
+                    R.color.screen4_error_dim
+                } else {
+                    R.color.app_text_primary
+                }
+            )
+        )
+        favoritesToggleButton.alpha = if (favoritesToggleButton.isEnabled) 1f else 0.55f
+    }
+
+    private fun canUseFavoritePadDeleteMode(): Boolean {
+        return !tutorialMode || currentTutorialPhase() == Screen3TutorialPhase.SCREEN_COMPLETE
+    }
+
+    private fun prepareTutorialFavoritePadIfNeeded() {
+        if (!tutorialMode) return
+        if (tutorialStore.loadProgress().currentStepIndex != STEP_SELECT_SLOT) return
+        if (favoritesManager.exportAssignments().isEmpty()) return
+        favoritesManager.clearCurrentPageAssignments()
+        favoritesManager.selectSlot(0)
+        selectedAssignmentSlotIndex = favoritesManager.selectedSlotIndex()
+        syncFavoritesFromManager()
+    }
+
+    private fun saveTutorialFavoritePage() {
+        val preset = favoritesManager.saveCurrentPagePreset(getString(R.string.screen3_tutorial_saved_page_name))
+        renderFavoritePadState()
+        Toast.makeText(
+            this,
+            getString(R.string.soundboard_favorite_page_saved, preset.name),
+            Toast.LENGTH_SHORT,
+        ).show()
+        tutorialStore.setCurrentScreen(TutorialScreen.SCREEN3, STEP_SCREEN_COMPLETE)
+        renderTutorialChrome()
+    }
+
+    private fun continueToSequencer() {
+        tutorialStore.markScreenCompleted(TutorialScreen.SCREEN3, TutorialScreen.SCREEN4)
+        startActivity(Intent(this, Screen4Activity::class.java))
+    }
+
+    private fun soundboardBrowserHeaderRow(): View = findViewById(R.id.soundboardBrowserHeaderRow)
+
+    private fun soundboardBrowserContainer(): View = findViewById(R.id.soundboardBrowserCard)
 
     private fun showAssignClipDialog(clip: ClipMetadata) {
         val labels = (1..FAVORITE_SLOT_COUNT).map { slotNumber ->
@@ -1054,6 +1570,21 @@ class Screen3Activity : ComponentActivity() {
         finish()
     }
 
+    private data class Screen3TutorialAssignment(
+        val slotIndex: Int,
+        val spokenPrompt: String,
+        val clipBaseName: String,
+    )
+
+    private enum class Screen3TutorialPhase {
+        INACTIVE,
+        SELECT_SLOT,
+        ASSIGN_CLIP,
+        WAITING_FOR_CLIP,
+        SAVE_PAGE,
+        SCREEN_COMPLETE,
+    }
+
     private data class FolderEntry(val name: String)
     private data class ClipMetadata(
         val id: String,
@@ -1063,7 +1594,10 @@ class Screen3Activity : ComponentActivity() {
         val durationMs: Long,
         val isPlayable: Boolean
     )
-    private companion object {
+    companion object {
+        const val EXTRA_FORCE_REBUILD_ON_START = "com.example.templei.screen3.extra.FORCE_REBUILD_ON_START"
+        const val EXTRA_TUTORIAL_ROOT_URI = "com.example.templei.screen3.extra.TUTORIAL_ROOT_URI"
+
         private const val TAG = "Screen3Soundboard"
         private const val MAX_SOUND_DURATION_MS = 6_000L
 
@@ -1075,6 +1609,10 @@ class Screen3Activity : ComponentActivity() {
         private const val DEFAULT_MAX_CACHE_SIZE = 24
         private const val DEFAULT_UNLOAD_ON_FOLDER_CHANGE = true
         private val DEFAULT_CACHE_POLICY = CachePolicy.BALANCED
+        private const val STEP_SELECT_SLOT = 0
+        private const val STEP_ASSIGN_CLIP = 1
+        private const val STEP_SAVE_PAGE = 2
+        private const val STEP_SCREEN_COMPLETE = 3
 
     }
 }

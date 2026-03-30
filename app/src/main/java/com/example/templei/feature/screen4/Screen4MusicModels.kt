@@ -44,7 +44,7 @@ data class Screen4CycleWindow(
 data class Screen4ScheduledEvent(
     val sampleId: String,
     val stepIndex: Int,
-    val offsetMs: Long,
+    val stepPosition: Double,
     val gain: Float,
     val pan: Float,
     val speed: Float,

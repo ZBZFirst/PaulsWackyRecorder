@@ -45,7 +45,8 @@ data class Screen3ClipItem(
 data class Screen3FavoriteSlotItem(
     val slotIndex: Int,
     val label: String,
-    val assignedClipId: String?
+    val assignedClipId: String?,
+    val isMissingSource: Boolean = false,
 )
 
 /**

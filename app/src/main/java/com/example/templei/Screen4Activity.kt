@@ -4,7 +4,9 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Intent
+import android.graphics.Rect
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.InputType
 import android.view.DragEvent
 import android.view.Gravity
@@ -18,14 +20,20 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.GridLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.isVisible
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.templei.feature.tutorial.TutorialScreen
+import com.example.templei.feature.tutorial.TutorialSpotlightOverlayView
+import com.example.templei.feature.tutorial.TutorialStatus
+import com.example.templei.feature.tutorial.TutorialStore
 import com.example.templei.feature.screen4.Screen4BatchAssignTarget
 import com.example.templei.feature.screen4.Screen4BarEffectState
 import com.example.templei.feature.screen4.Screen4CompileResult
@@ -34,6 +42,8 @@ import com.example.templei.feature.screen4.Screen4MusicRuntime
 import com.example.templei.feature.screen4.Screen4SequenceBarUi
 import com.example.templei.feature.screen4.Screen4UiState
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -78,6 +88,22 @@ class Screen4Activity : ComponentActivity() {
     private lateinit var stopButton: Button
     private lateinit var headerBpmChipText: TextView
     private lateinit var channelRosterContainer: LinearLayout
+    private lateinit var tutorialCard: LinearLayout
+    private lateinit var tutorialHandoffCard: LinearLayout
+    private lateinit var tutorialProgressText: TextView
+    private lateinit var tutorialPromptText: TextView
+    private lateinit var tutorialInstructionText: TextView
+    private lateinit var tutorialSkipButton: Button
+    private lateinit var continueTutorialButton: Button
+    private lateinit var closeTutorialButton: Button
+    private lateinit var tutorialOverlay: TutorialSpotlightOverlayView
+    private lateinit var mainScrollView: ScrollView
+    private val tutorialStore by lazy { TutorialStore(this) }
+    private var tutorialMode: Boolean = false
+    private var hasLaunchedScreen1Tutorial: Boolean = false
+    private var bpmDispatchJob: Job? = null
+    private var pendingBpmValue: Int? = null
+    private var lastBpmDispatchAtMs: Long = 0L
 
     private val favoriteButtons = mutableListOf<Button>()
     private val assignFavoriteDialogSlotButtons = mutableListOf<Button>()
@@ -96,15 +122,31 @@ class Screen4Activity : ComponentActivity() {
     private var assignFavoriteDialogNextButton: Button? = null
     private var assignFavoriteDialogBarIndices: List<Int> = emptyList()
     private val renderedExpandedStepButtons = mutableMapOf<Int, List<Button>>()
+    private val channelRosterChipViews = mutableMapOf<Int, View>()
+
+    private val tutorialAssignments = listOf(
+        Screen4TutorialAssignment(favoriteSlotIndex = 0, barIndex = 0, stepIndex = 0),
+        Screen4TutorialAssignment(favoriteSlotIndex = 1, barIndex = 0, stepIndex = 1),
+        Screen4TutorialAssignment(favoriteSlotIndex = 2, barIndex = 0, stepIndex = 2),
+        Screen4TutorialAssignment(favoriteSlotIndex = 3, barIndex = 0, stepIndex = 3),
+        Screen4TutorialAssignment(favoriteSlotIndex = 4, barIndex = 0, stepIndex = 4),
+        Screen4TutorialAssignment(favoriteSlotIndex = 4, barIndex = 1, stepIndex = 0),
+        Screen4TutorialAssignment(favoriteSlotIndex = 3, barIndex = 1, stepIndex = 1),
+        Screen4TutorialAssignment(favoriteSlotIndex = 2, barIndex = 1, stepIndex = 2),
+        Screen4TutorialAssignment(favoriteSlotIndex = 1, barIndex = 1, stepIndex = 3),
+        Screen4TutorialAssignment(favoriteSlotIndex = 0, barIndex = 1, stepIndex = 4),
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_screen4)
+        tutorialMode = shouldRunTutorial()
 
         bindViews()
         initializeCoordinator()
         screen4Coordinator.ensurePlayBarCount(Screen4Coordinator.MAX_PLAY_BAR_COUNT)
+        prepareTutorialWorkspaceIfNeeded()
         buildFavoritePad()
         bindButtons()
         bindInputs()
@@ -114,6 +156,7 @@ class Screen4Activity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        bpmDispatchJob?.cancel()
         assignFavoriteDialog?.dismiss()
     }
 
@@ -121,6 +164,13 @@ class Screen4Activity : ComponentActivity() {
         super.onResume()
         if (::screen4Coordinator.isInitialized) {
             screen4Coordinator.refreshSharedPad()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && tutorialMode) {
+            renderTutorialChrome(latestUiState)
         }
     }
 
@@ -159,6 +209,16 @@ class Screen4Activity : ComponentActivity() {
         stopButton = findViewById(R.id.screen4MusicStopButton)
         headerBpmChipText = findViewById(R.id.screen4HeaderBpmChip)
         channelRosterContainer = findViewById(R.id.screen4MusicChannelRosterContainer)
+        tutorialCard = findViewById(R.id.screen4TutorialCard)
+        tutorialHandoffCard = findViewById(R.id.screen4TutorialHandoffCard)
+        tutorialProgressText = findViewById(R.id.screen4TutorialProgressText)
+        tutorialPromptText = findViewById(R.id.screen4TutorialPromptText)
+        tutorialInstructionText = findViewById(R.id.screen4TutorialInstructionText)
+        tutorialSkipButton = findViewById(R.id.screen4TutorialSkipButton)
+        continueTutorialButton = findViewById(R.id.screen4ContinueTutorialButton)
+        closeTutorialButton = findViewById(R.id.screen4CloseTutorialButton)
+        tutorialOverlay = findViewById(R.id.screen4TutorialOverlay)
+        mainScrollView = findViewById(R.id.screen4MusicScrollView)
 
         val topBar = findViewById<View>(R.id.screen4TopBar)
         val bottomNav = findViewById<View>(R.id.screen4BottomNav)
@@ -201,6 +261,12 @@ class Screen4Activity : ComponentActivity() {
             windowInsets
         }
         ViewCompat.requestApplyInsets(root)
+
+        mainScrollView.setOnScrollChangeListener { _, _, _, _, _ ->
+            if (tutorialMode) {
+                tutorialOverlay.invalidate()
+            }
+        }
     }
 
     private fun initializeCoordinator() {
@@ -231,7 +297,12 @@ class Screen4Activity : ComponentActivity() {
                     1,
                     android.util.TypedValue.COMPLEX_UNIT_SP,
                 )
-                setOnClickListener { screen4Coordinator.previewFavoriteSlot(index) }
+                setOnClickListener {
+                    if (tutorialMode && handleTutorialFavoriteTap(index)) {
+                        return@setOnClickListener
+                    }
+                    screen4Coordinator.previewFavoriteSlot(index)
+                }
                 setOnLongClickListener {
                     val payload = tag as? String ?: return@setOnLongClickListener false
                     startFavoriteReferenceDrag(this, payload)
@@ -266,6 +337,9 @@ class Screen4Activity : ComponentActivity() {
         loadSongButton.setOnClickListener { showLoadSongDialog() }
         playButton.setOnClickListener { screen4Coordinator.play() }
         stopButton.setOnClickListener { screen4Coordinator.stop() }
+        tutorialSkipButton.setOnClickListener { closeTutorialAndKeepSequencing() }
+        continueTutorialButton.setOnClickListener { continueToCapture() }
+        closeTutorialButton.setOnClickListener { closeTutorialAndKeepSequencing() }
         findViewById<View>(R.id.screen4MenuButton).setOnClickListener {
             startActivity(Intent(this, MainActivity::class.java))
         }
@@ -293,13 +367,55 @@ class Screen4Activity : ComponentActivity() {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
                 val bpm = Screen4Coordinator.MIN_BPM + progress
-                screen4Coordinator.updateBpm(bpm.toString())
+                renderBpmPreview(bpm)
+                dispatchBpmChange(bpm, force = false)
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                lastBpmDispatchAtMs = 0L
+            }
 
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                val bpm = Screen4Coordinator.MIN_BPM + (seekBar?.progress ?: 0)
+                renderBpmPreview(bpm)
+                dispatchBpmChange(bpm, force = true)
+            }
         })
+    }
+
+    private fun dispatchBpmChange(
+        bpm: Int,
+        force: Boolean,
+    ) {
+        pendingBpmValue = bpm
+        val now = SystemClock.elapsedRealtime()
+        val elapsedMs = now - lastBpmDispatchAtMs
+        if (force || elapsedMs >= BPM_UPDATE_THROTTLE_MS) {
+            commitPendingBpmChange()
+            return
+        }
+        if (bpmDispatchJob?.isActive == true) {
+            return
+        }
+        bpmDispatchJob = lifecycleScope.launch {
+            delay((BPM_UPDATE_THROTTLE_MS - elapsedMs).coerceAtLeast(0L))
+            commitPendingBpmChange()
+        }
+    }
+
+    private fun commitPendingBpmChange() {
+        val bpm = pendingBpmValue ?: return
+        bpmDispatchJob?.cancel()
+        bpmDispatchJob = null
+        pendingBpmValue = null
+        lastBpmDispatchAtMs = SystemClock.elapsedRealtime()
+        screen4Coordinator.updateBpm(bpm)
+    }
+
+    private fun renderBpmPreview(bpm: Int) {
+        val normalized = bpm.coerceIn(Screen4Coordinator.MIN_BPM, Screen4Coordinator.MAX_BPM)
+        bpmValueText.text = getString(R.string.screen4_music_bpm_value, normalized)
+        headerBpmChipText.text = getString(R.string.screen4_music_bpm_value, normalized)
     }
 
     private fun collectUiState() {
@@ -418,6 +534,7 @@ class Screen4Activity : ComponentActivity() {
         } else if (needsPlaybackHighlightRefresh) {
             refreshExpandedStepButtons(state)
         }
+        renderTutorialChrome(state)
         renderAssignFavoriteDialog(state)
         hasRenderedState = true
     }
@@ -468,12 +585,363 @@ class Screen4Activity : ComponentActivity() {
         }
     }
 
+    private fun shouldRunTutorial(): Boolean {
+        val progress = tutorialStore.loadProgress()
+        return progress.status == TutorialStatus.IN_PROGRESS && progress.currentScreen == TutorialScreen.SCREEN4
+    }
+
+    private fun prepareTutorialWorkspaceIfNeeded() {
+        if (!tutorialMode) return
+        if (tutorialStore.loadProgress().currentStepIndex != STEP_OPEN_SECOND_CHANNEL) return
+        expandedBarIndices.clear()
+        expandedBarIndices += 0
+        selectionTargetBarIndex = 0
+        screen4Coordinator.prepareTutorialWorkspace()
+    }
+
+    private fun handleTutorialChannelTap(barIndex: Int, barCount: Int): Boolean {
+        if (!tutorialMode || currentTutorialPhase(latestUiState) != Screen4TutorialPhase.OPEN_SECOND_CHANNEL) {
+            return false
+        }
+        if (barIndex != SECOND_CHANNEL_INDEX) {
+            return true
+        }
+        selectionTargetBarIndex = barIndex
+        toggleExpandedBar(barIndex, barCount)
+        renderPlayBars(latestUiState.sequenceBars, latestUiState)
+        tutorialStore.setCurrentScreen(TutorialScreen.SCREEN4, stepIndexForAssignment(0))
+        renderTutorialChrome(latestUiState)
+        return true
+    }
+
+    private fun handleTutorialFavoriteTap(slotIndex: Int): Boolean {
+        val phase = currentTutorialPhase(latestUiState)
+        if (!tutorialMode || phase != Screen4TutorialPhase.DRAG_ASSIGN) {
+            return false
+        }
+        return true
+    }
+
+    private fun handleTutorialStepTap(barIndex: Int, stepIndex: Int): Boolean {
+        val phase = currentTutorialPhase(latestUiState)
+        if (!tutorialMode || phase != Screen4TutorialPhase.DRAG_ASSIGN) {
+            return false
+        }
+        val assignment = currentTutorialAssignment() ?: return true
+        if (assignment.barIndex != barIndex || assignment.stepIndex != stepIndex) {
+            return true
+        }
+        return true
+    }
+
+    private fun handleTutorialFavoriteDrop(
+        barIndex: Int,
+        stepIndex: Int,
+        favoritePageId: String,
+        favoriteSlotIndex: Int,
+    ): Boolean {
+        if (!tutorialMode) return false
+        val assignment = currentTutorialAssignment() ?: return true
+        if (currentTutorialPhase(latestUiState) != Screen4TutorialPhase.DRAG_ASSIGN) {
+            return true
+        }
+        if (
+            assignment.barIndex != barIndex ||
+            assignment.stepIndex != stepIndex ||
+            assignment.favoriteSlotIndex != favoriteSlotIndex
+        ) {
+            return true
+        }
+        screen4Coordinator.assignStepFromFavorite(
+            barIndex = barIndex,
+            stepIndex = stepIndex,
+            favoritePageId = favoritePageId,
+            favoriteSlotIndex = favoriteSlotIndex,
+        )
+        val nextAssignmentIndex = currentTutorialAssignmentIndex() + 1
+        val nextStepIndex = if (nextAssignmentIndex >= tutorialAssignments.size) {
+            STEP_PLAY_LOOP
+        } else {
+            stepIndexForAssignment(nextAssignmentIndex)
+        }
+        tutorialStore.setCurrentScreen(TutorialScreen.SCREEN4, nextStepIndex)
+        renderTutorialChrome(latestUiState)
+        return true
+    }
+
+    private fun renderTutorialChrome(state: Screen4UiState) {
+        if (!::tutorialCard.isInitialized) return
+        if (!tutorialMode) {
+            tutorialCard.isVisible = false
+            tutorialHandoffCard.isVisible = false
+            tutorialOverlay.clearTargets()
+            return
+        }
+
+        reconcileTutorialProgress(state)
+
+        val phase = currentTutorialPhase(state)
+        val assignmentIndex = currentTutorialAssignmentIndex()
+        val assignment = currentTutorialAssignment()
+        if (phase == Screen4TutorialPhase.DRAG_ASSIGN || phase == Screen4TutorialPhase.PLAY_LOOP) {
+            ensureTutorialChannelPairVisible(state)
+        }
+        tutorialCard.isVisible = phase != Screen4TutorialPhase.SCREEN_COMPLETE
+        tutorialHandoffCard.isVisible = phase == Screen4TutorialPhase.SCREEN_COMPLETE
+
+        if (phase != Screen4TutorialPhase.SCREEN_COMPLETE) {
+            tutorialProgressText.text = when (phase) {
+                Screen4TutorialPhase.OPEN_SECOND_CHANNEL ->
+                    getString(R.string.screen4_tutorial_progress, 1, tutorialAssignments.size + 2)
+                Screen4TutorialPhase.DRAG_ASSIGN ->
+                    getString(
+                        R.string.screen4_tutorial_progress,
+                        (assignmentIndex + 2).coerceAtMost(tutorialAssignments.size + 1),
+                        tutorialAssignments.size + 2,
+                    )
+                Screen4TutorialPhase.PLAY_LOOP ->
+                    getString(R.string.screen4_tutorial_progress, tutorialAssignments.size + 2, tutorialAssignments.size + 2)
+                Screen4TutorialPhase.INACTIVE,
+                Screen4TutorialPhase.SCREEN_COMPLETE -> ""
+            }
+
+            tutorialPromptText.text = when (phase) {
+                Screen4TutorialPhase.OPEN_SECOND_CHANNEL ->
+                    getString(R.string.screen4_tutorial_open_second_channel_title)
+                Screen4TutorialPhase.DRAG_ASSIGN ->
+                    getString(
+                        R.string.screen4_tutorial_drag_assignment_title,
+                        (assignment?.favoriteSlotIndex ?: 0) + 1,
+                        (assignment?.barIndex ?: 0) + 1,
+                        (assignment?.stepIndex ?: 0) + 1,
+                    )
+                Screen4TutorialPhase.PLAY_LOOP ->
+                    getString(R.string.screen4_tutorial_play_title)
+                Screen4TutorialPhase.INACTIVE,
+                Screen4TutorialPhase.SCREEN_COMPLETE -> ""
+            }
+
+            tutorialInstructionText.text = when (phase) {
+                Screen4TutorialPhase.OPEN_SECOND_CHANNEL ->
+                    getString(R.string.screen4_tutorial_open_second_channel_instruction)
+                Screen4TutorialPhase.DRAG_ASSIGN ->
+                    getString(
+                        R.string.screen4_tutorial_drag_assignment_instruction,
+                        (assignment?.favoriteSlotIndex ?: 0) + 1,
+                        (assignment?.barIndex ?: 0) + 1,
+                        (assignment?.stepIndex ?: 0) + 1,
+                    )
+                Screen4TutorialPhase.PLAY_LOOP ->
+                    getString(R.string.screen4_tutorial_play_instruction)
+                Screen4TutorialPhase.INACTIVE,
+                Screen4TutorialPhase.SCREEN_COMPLETE -> ""
+            }
+        }
+
+        renderTutorialCardEmphasis(phase)
+        renderTutorialSpotlight(state, phase, assignment)
+    }
+
+    private fun reconcileTutorialProgress(state: Screen4UiState) {
+        when (currentTutorialPhase(state)) {
+            Screen4TutorialPhase.OPEN_SECOND_CHANNEL -> {
+                if (isSecondChannelOpen()) {
+                    tutorialStore.setCurrentScreen(TutorialScreen.SCREEN4, stepIndexForAssignment(0))
+                }
+            }
+            Screen4TutorialPhase.DRAG_ASSIGN -> {
+                val assignment = currentTutorialAssignment() ?: return
+                if (isTutorialAssignmentApplied(state, assignment)) {
+                    val nextAssignmentIndex = currentTutorialAssignmentIndex() + 1
+                    val nextStepIndex = if (nextAssignmentIndex >= tutorialAssignments.size) {
+                        STEP_PLAY_LOOP
+                    } else {
+                        stepIndexForAssignment(nextAssignmentIndex)
+                    }
+                    tutorialStore.setCurrentScreen(TutorialScreen.SCREEN4, nextStepIndex)
+                }
+            }
+            Screen4TutorialPhase.PLAY_LOOP -> {
+                if (state.isPlaying) {
+                    continueToCapture()
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    private fun renderTutorialCardEmphasis(phase: Screen4TutorialPhase) {
+        val emphasized = tutorialMode && phase != Screen4TutorialPhase.SCREEN_COMPLETE
+        tutorialCard.animate()
+            .scaleX(if (emphasized) 1.04f else 1f)
+            .scaleY(if (emphasized) 1.04f else 1f)
+            .setDuration(180L)
+            .start()
+    }
+
+    private fun renderTutorialSpotlight(
+        state: Screen4UiState,
+        phase: Screen4TutorialPhase,
+        assignment: Screen4TutorialAssignment?,
+    ) {
+        val targets = tutorialSpotlightTargets(state, phase, assignment)
+        if (targets.isEmpty()) {
+            tutorialOverlay.clearTargets()
+            return
+        }
+        tutorialOverlay.post {
+            scrollTutorialTargetsIntoView(targets, tutorialPrimaryTarget(phase, assignment))
+            tutorialOverlay.post {
+                tutorialOverlay.showTargets(targets)
+            }
+        }
+    }
+
+    private fun tutorialSpotlightTargets(
+        state: Screen4UiState,
+        phase: Screen4TutorialPhase,
+        assignment: Screen4TutorialAssignment?,
+    ): List<View> {
+        return when (phase) {
+            Screen4TutorialPhase.OPEN_SECOND_CHANNEL ->
+                listOfNotNull(tutorialCard, channelRosterChipViews[SECOND_CHANNEL_INDEX])
+            Screen4TutorialPhase.DRAG_ASSIGN ->
+                listOfNotNull(
+                    tutorialCard,
+                    assignment?.let { favoriteButtons.getOrNull(it.favoriteSlotIndex) },
+                    assignment?.let { renderedExpandedStepButtons[it.barIndex]?.getOrNull(it.stepIndex) },
+                )
+            Screen4TutorialPhase.PLAY_LOOP ->
+                listOfNotNull(tutorialCard, playButton)
+            Screen4TutorialPhase.SCREEN_COMPLETE ->
+                listOfNotNull(tutorialHandoffCard, continueTutorialButton, closeTutorialButton)
+            Screen4TutorialPhase.INACTIVE -> emptyList()
+        }.filter { it.isShown }
+    }
+
+    private fun tutorialPrimaryTarget(
+        phase: Screen4TutorialPhase,
+        assignment: Screen4TutorialAssignment?,
+    ): View? {
+        return when (phase) {
+            Screen4TutorialPhase.OPEN_SECOND_CHANNEL -> channelRosterChipViews[SECOND_CHANNEL_INDEX]
+            Screen4TutorialPhase.DRAG_ASSIGN -> assignment?.let { renderedExpandedStepButtons[it.barIndex]?.getOrNull(it.stepIndex) }
+            Screen4TutorialPhase.PLAY_LOOP -> playButton
+            Screen4TutorialPhase.SCREEN_COMPLETE -> continueTutorialButton
+            Screen4TutorialPhase.INACTIVE -> null
+        }
+    }
+
+    private fun scrollTutorialTargetsIntoView(targets: List<View>, fallbackTarget: View?) {
+        val scrollContent = mainScrollView.getChildAt(0) as? ViewGroup
+        if (scrollContent == null) {
+            fallbackTarget?.let { target ->
+                val focusRect = Rect(0, -resources.displayMetrics.density.times(16).toInt(), target.width, target.height)
+                target.requestRectangleOnScreen(focusRect, true)
+            }
+            return
+        }
+
+        val focusRect = Rect()
+        var hasVisibleTarget = false
+        targets.filter { it.isShown }.forEach { target ->
+            val targetRect = Rect()
+            scrollContent.offsetDescendantRectToMyCoords(target, targetRect.apply { target.getDrawingRect(this) })
+            targetRect.inset(-dp(16), -dp(16))
+            if (!hasVisibleTarget) {
+                focusRect.set(targetRect)
+                hasVisibleTarget = true
+            } else {
+                focusRect.union(targetRect)
+            }
+        }
+        if (hasVisibleTarget) {
+            mainScrollView.requestChildRectangleOnScreen(scrollContent, focusRect, true)
+        } else {
+            fallbackTarget?.let { target ->
+                val singleTargetRect = Rect(0, -resources.displayMetrics.density.times(16).toInt(), target.width, target.height)
+                target.requestRectangleOnScreen(singleTargetRect, true)
+            }
+        }
+    }
+
+    private fun currentTutorialPhase(state: Screen4UiState): Screen4TutorialPhase {
+        if (!tutorialMode) return Screen4TutorialPhase.INACTIVE
+        val stepIndex = tutorialStore.loadProgress().currentStepIndex
+        return when {
+            stepIndex <= STEP_OPEN_SECOND_CHANNEL -> Screen4TutorialPhase.OPEN_SECOND_CHANNEL
+            stepIndex < STEP_PLAY_LOOP -> Screen4TutorialPhase.DRAG_ASSIGN
+            stepIndex == STEP_PLAY_LOOP -> Screen4TutorialPhase.PLAY_LOOP
+            else -> Screen4TutorialPhase.SCREEN_COMPLETE
+        }
+    }
+
+    private fun currentTutorialAssignmentIndex(): Int {
+        val stepIndex = tutorialStore.loadProgress().currentStepIndex
+        return (stepIndex - 1).coerceIn(0, tutorialAssignments.lastIndex)
+    }
+
+    private fun currentTutorialAssignment(): Screen4TutorialAssignment? {
+        val phase = currentTutorialPhase(latestUiState)
+        if (phase != Screen4TutorialPhase.DRAG_ASSIGN) {
+            return null
+        }
+        return tutorialAssignments.getOrNull(currentTutorialAssignmentIndex())
+    }
+
+    private fun isTutorialAssignmentApplied(
+        state: Screen4UiState,
+        assignment: Screen4TutorialAssignment,
+    ): Boolean {
+        val slot = state.sequenceBars
+            .getOrNull(assignment.barIndex)
+            ?.steps
+            ?.getOrNull(assignment.stepIndex)
+            ?: return false
+        return slot.sourcePageId == state.currentFavoritePageId &&
+            slot.sourceSlotIndex == assignment.favoriteSlotIndex &&
+            slot.sampleId != null
+    }
+
+    private fun isSecondChannelOpen(): Boolean {
+        return expandedBarIndices.distinct().containsAll(listOf(FIRST_CHANNEL_INDEX, SECOND_CHANNEL_INDEX))
+    }
+
+    private fun stepIndexForAssignment(assignmentIndex: Int): Int {
+        return 1 + assignmentIndex.coerceAtLeast(0)
+    }
+
+    private fun ensureTutorialChannelPairVisible(state: Screen4UiState) {
+        if (state.sequenceBars.size <= SECOND_CHANNEL_INDEX) return
+        if (isSecondChannelOpen()) return
+        expandedBarIndices.clear()
+        expandedBarIndices += FIRST_CHANNEL_INDEX
+        expandedBarIndices += SECOND_CHANNEL_INDEX
+        renderPlayBars(state.sequenceBars, state)
+    }
+
+    private fun continueToCapture() {
+        if (hasLaunchedScreen1Tutorial) return
+        hasLaunchedScreen1Tutorial = true
+        tutorialStore.markScreenCompleted(TutorialScreen.SCREEN4, TutorialScreen.SCREEN1)
+        tutorialMode = false
+        renderTutorialChrome(latestUiState)
+        startActivity(Intent(this, Screen1Activity::class.java))
+    }
+
+    private fun closeTutorialAndKeepSequencing() {
+        tutorialStore.skipTutorial()
+        tutorialMode = false
+        renderTutorialChrome(latestUiState)
+    }
+
     private fun renderPlayBars(
         sequenceBars: List<Screen4SequenceBarUi>,
         state: Screen4UiState,
     ) {
         clampExpandedBarIndices(sequenceBars.size)
         renderedExpandedStepButtons.clear()
+        channelRosterChipViews.clear()
         channelRosterContainer.removeAllViews()
         playBarsContainer.removeAllViews()
         if (sequenceBars.isEmpty()) return
@@ -563,11 +1031,15 @@ class Screen4Activity : ComponentActivity() {
                 )
                 textSize = 10f
                 setOnClickListener {
+                    if (tutorialMode && handleTutorialChannelTap(sequenceBar.barIndex, barCount)) {
+                        return@setOnClickListener
+                    }
                     selectionTargetBarIndex = sequenceBar.barIndex
                     toggleExpandedBar(sequenceBar.barIndex, barCount)
                     renderPlayBars(latestUiState.sequenceBars, latestUiState)
                 }
             }
+            channelRosterChipViews[sequenceBar.barIndex] = chip
             addView(
                 chip,
                 LinearLayout.LayoutParams(
@@ -750,6 +1222,9 @@ class Screen4Activity : ComponentActivity() {
                     null
                 }
                 setOnClickListener {
+                    if (tutorialMode && handleTutorialStepTap(sequenceBar.barIndex, stepIndex)) {
+                        return@setOnClickListener
+                    }
                     if (latestUiState.sequenceBars.getOrNull(sequenceBar.barIndex)?.isSelectionModeEnabled == true) {
                         screen4Coordinator.toggleSelectedStep(sequenceBar.barIndex, stepIndex)
                     } else {
@@ -757,6 +1232,9 @@ class Screen4Activity : ComponentActivity() {
                     }
                 }
                 setOnLongClickListener {
+                    if (tutorialMode && currentTutorialPhase(latestUiState) == Screen4TutorialPhase.DRAG_ASSIGN) {
+                        return@setOnLongClickListener true
+                    }
                     val payload = tag as? String
                     if (payload != null) {
                         startFavoriteReferenceDrag(this, payload)
@@ -770,12 +1248,17 @@ class Screen4Activity : ComponentActivity() {
                 }
                 setOnDragListener { _, event ->
                     handleFavoriteReferenceDrop(event) { favoritePageId, favoriteSlotIndex ->
-                        screen4Coordinator.assignStepFromFavorite(
-                            barIndex = sequenceBar.barIndex,
-                            stepIndex = stepIndex,
-                            favoritePageId = favoritePageId,
-                            favoriteSlotIndex = favoriteSlotIndex,
-                        )
+                        if (handleTutorialFavoriteDrop(sequenceBar.barIndex, stepIndex, favoritePageId, favoriteSlotIndex)) {
+                            true
+                        } else {
+                            screen4Coordinator.assignStepFromFavorite(
+                                barIndex = sequenceBar.barIndex,
+                                stepIndex = stepIndex,
+                                favoritePageId = favoritePageId,
+                                favoriteSlotIndex = favoriteSlotIndex,
+                            )
+                            true
+                        }
                     }
                 }
             }
@@ -1300,12 +1783,17 @@ class Screen4Activity : ComponentActivity() {
                 }
                 setOnDragListener { _, event ->
                     handleFavoriteReferenceDrop(event) { favoritePageId, favoriteSlotIndex ->
-                        screen4Coordinator.assignStepFromFavorite(
-                            barIndex = sequenceBar.barIndex,
-                            stepIndex = stepIndex,
-                            favoritePageId = favoritePageId,
-                            favoriteSlotIndex = favoriteSlotIndex,
-                        )
+                        if (handleTutorialFavoriteDrop(sequenceBar.barIndex, stepIndex, favoritePageId, favoriteSlotIndex)) {
+                            true
+                        } else {
+                            screen4Coordinator.assignStepFromFavorite(
+                                barIndex = sequenceBar.barIndex,
+                                stepIndex = stepIndex,
+                                favoritePageId = favoritePageId,
+                                favoriteSlotIndex = favoriteSlotIndex,
+                            )
+                            true
+                        }
                     }
                 }
             }
@@ -1416,13 +1904,40 @@ class Screen4Activity : ComponentActivity() {
     }
 
     private fun showLoadSongDialog() {
-        showSnapshotPickerDialog(
-            title = getString(R.string.screen4_music_load_song_dialog_title),
-            emptyMessage = getString(R.string.screen4_music_saved_songs_empty),
-            options = screen4Coordinator.savedSongSnapshots().map { it.name },
-        ) { savedName ->
-            screen4Coordinator.loadSavedSong(savedName)
+        val savedSongs = screen4Coordinator.savedSongSnapshots()
+        if (savedSongs.isEmpty()) {
+            showSnapshotPickerDialog(
+                title = getString(R.string.screen4_music_load_song_dialog_title),
+                emptyMessage = getString(R.string.screen4_music_saved_songs_empty),
+                options = emptyList(),
+                onSelect = {},
+            )
+            return
         }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.screen4_music_load_song_dialog_title)
+            .setItems(
+                arrayOf(
+                    getString(R.string.screen4_music_load_song_item),
+                    getString(R.string.screen4_music_delete_song_item),
+                )
+            ) { _, which ->
+                when (which) {
+                    0 -> showSongSnapshotPicker(
+                        title = R.string.screen4_music_load_song_dialog_title,
+                        savedSongs = savedSongs,
+                        onSelect = { savedName -> screen4Coordinator.loadSavedSong(savedName) },
+                    )
+                    1 -> showSongSnapshotPicker(
+                        title = R.string.screen4_music_delete_song_dialog_title,
+                        savedSongs = savedSongs,
+                        onSelect = ::confirmSavedSongDelete,
+                    )
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showSaveBarDialog(barIndex: Int) {
@@ -1434,13 +1949,88 @@ class Screen4Activity : ComponentActivity() {
     }
 
     private fun showLoadBarDialog(barIndex: Int) {
-        showSnapshotPickerDialog(
-            title = getString(R.string.screen4_music_load_bar_dialog_title, barIndex + 1),
-            emptyMessage = getString(R.string.screen4_music_saved_bars_empty),
-            options = screen4Coordinator.savedBarSnapshots().map { it.name },
-        ) { savedName ->
-            screen4Coordinator.loadSavedPlayBar(barIndex, savedName)
+        val savedBars = screen4Coordinator.savedBarSnapshots()
+        if (savedBars.isEmpty()) {
+            showSnapshotPickerDialog(
+                title = getString(R.string.screen4_music_load_bar_dialog_title, barIndex + 1),
+                emptyMessage = getString(R.string.screen4_music_saved_bars_empty),
+                options = emptyList(),
+                onSelect = {},
+            )
+            return
         }
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.screen4_music_load_bar_dialog_title, barIndex + 1))
+            .setItems(
+                arrayOf(
+                    getString(R.string.screen4_music_load_channel_item),
+                    getString(R.string.screen4_music_delete_channel_item),
+                )
+            ) { _, which ->
+                when (which) {
+                    0 -> showSavedChannelPicker(
+                        title = getString(R.string.screen4_music_load_bar_dialog_title, barIndex + 1),
+                        savedBars = savedBars.map { it.name },
+                        onSelect = { savedName -> screen4Coordinator.loadSavedPlayBar(barIndex, savedName) },
+                    )
+                    1 -> showSavedChannelPicker(
+                        title = getString(R.string.screen4_music_delete_channel_dialog_title),
+                        savedBars = savedBars.map { it.name },
+                        onSelect = ::confirmSavedChannelDelete,
+                    )
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showSongSnapshotPicker(
+        title: Int,
+        savedSongs: List<com.example.templei.feature.screen4.Screen4SavedSongSnapshot>,
+        onSelect: (String) -> Unit,
+    ) {
+        showSnapshotPickerDialog(
+            title = getString(title),
+            emptyMessage = getString(R.string.screen4_music_saved_songs_empty),
+            options = savedSongs.map { it.name },
+            onSelect = onSelect,
+        )
+    }
+
+    private fun showSavedChannelPicker(
+        title: String,
+        savedBars: List<String>,
+        onSelect: (String) -> Unit,
+    ) {
+        showSnapshotPickerDialog(
+            title = title,
+            emptyMessage = getString(R.string.screen4_music_saved_bars_empty),
+            options = savedBars,
+            onSelect = onSelect,
+        )
+    }
+
+    private fun confirmSavedSongDelete(savedName: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.screen4_music_delete_song_dialog_title)
+            .setMessage(getString(R.string.screen4_music_delete_song_dialog_message, savedName))
+            .setPositiveButton(R.string.screen4_music_delete_song) { _, _ ->
+                screen4Coordinator.deleteSavedSong(savedName)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun confirmSavedChannelDelete(savedName: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.screen4_music_delete_channel_dialog_title)
+            .setMessage(getString(R.string.screen4_music_delete_channel_dialog_message, savedName))
+            .setPositiveButton(R.string.screen4_music_delete_channel) { _, _ ->
+                screen4Coordinator.deleteSavedPlayBar(savedName)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showNameInputDialog(
@@ -1755,7 +2345,7 @@ class Screen4Activity : ComponentActivity() {
 
     private fun handleFavoriteReferenceDrop(
         event: DragEvent,
-        onDropFavoriteReference: (String, Int) -> Unit,
+        onDropFavoriteReference: (String, Int) -> Boolean,
     ): Boolean {
         return when (event.action) {
             DragEvent.ACTION_DRAG_STARTED ->
@@ -1771,7 +2361,6 @@ class Screen4Activity : ComponentActivity() {
                     favoriteSlotIndex != null
                 ) {
                     onDropFavoriteReference(favoritePageId, favoriteSlotIndex)
-                    true
                 } else {
                     false
                 }
@@ -2210,6 +2799,27 @@ class Screen4Activity : ComponentActivity() {
 
     private companion object {
         private const val FAVORITE_REFERENCE_PREFIX = "favorite-ref"
+        private const val BPM_UPDATE_THROTTLE_MS = 100L
+        private const val FIRST_CHANNEL_INDEX = 0
+        private const val SECOND_CHANNEL_INDEX = 1
+        private const val TUTORIAL_ASSIGNMENT_COUNT = 10
+        private const val STEP_OPEN_SECOND_CHANNEL = 0
+        private const val STEP_PLAY_LOOP = 1 + TUTORIAL_ASSIGNMENT_COUNT
+        private const val STEP_SCREEN_COMPLETE = STEP_PLAY_LOOP + 1
+    }
+
+    private data class Screen4TutorialAssignment(
+        val favoriteSlotIndex: Int,
+        val barIndex: Int,
+        val stepIndex: Int,
+    )
+
+    private enum class Screen4TutorialPhase {
+        INACTIVE,
+        OPEN_SECOND_CHANNEL,
+        DRAG_ASSIGN,
+        PLAY_LOOP,
+        SCREEN_COMPLETE,
     }
 
     private data class StripDensity(

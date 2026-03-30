@@ -228,6 +228,88 @@
             android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/screen4TutorialCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_app_card"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/screen4TutorialProgressText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAllCaps="true"
+                    android:textColor="@color/app_text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/screen4TutorialPromptText"
+                    style="@style/AppSectionHeaderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    android:id="@+id/screen4TutorialInstructionText"
+                    style="@style/AppBodyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+
+                <Button
+                    android:id="@+id/screen4TutorialSkipButton"
+                    style="@style/AppSecondaryActionButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/screen4_tutorial_skip" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/screen4TutorialHandoffCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_app_card"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/screen4TutorialHandoffTitle"
+                    style="@style/AppSectionHeaderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/screen4_tutorial_handoff_title" />
+
+                <TextView
+                    android:id="@+id/screen4TutorialHandoffSummary"
+                    style="@style/AppBodyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/screen4_tutorial_handoff_summary" />
+
+                <Button
+                    android:id="@+id/screen4ContinueTutorialButton"
+                    style="@style/AppPrimaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/screen4_tutorial_continue_to_capture" />
+
+                <Button
+                    android:id="@+id/screen4CloseTutorialButton"
+                    style="@style/AppSecondaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/screen4_tutorial_close_and_keep_sequencing" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/screen4TransportSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -651,4 +733,14 @@
                 android:text="@string/screen4_section_collapse" />
         </LinearLayout>
     </ScrollView>
+
+    <com.example.templei.feature.tutorial.TutorialSpotlightOverlayView
+        android:id="@+id/screen4TutorialOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/screen4BottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/screen4TopBar" />
 </androidx.constraintlayout.widget.ConstraintLayout>

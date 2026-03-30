@@ -23,7 +23,6 @@ class Screen4PatternCompiler(
                 if (flattened.isEmpty()) {
                     throw IllegalArgumentException("Pattern does not contain any playable steps.")
                 }
-                val cycleDurationMs = (4 * 60_000L) / bpm.coerceAtLeast(1)
                 val resolvedById = mutableMapOf<String, Screen4SampleDescriptor>()
                 val scheduledEvents = flattened.mapIndexedNotNull { index, node ->
                     when (node) {
@@ -36,7 +35,7 @@ class Screen4PatternCompiler(
                             Screen4ScheduledEvent(
                                 sampleId = descriptor.sampleId,
                                 stepIndex = index,
-                                offsetMs = (index * cycleDurationMs.toDouble() / flattened.size).toLong(),
+                                stepPosition = index.toDouble(),
                                 gain = node.params.gain.coerceIn(0f, 1f),
                                 pan = node.params.pan.coerceIn(-1f, 1f),
                                 speed = node.params.speed.coerceIn(0.5f, 2f),

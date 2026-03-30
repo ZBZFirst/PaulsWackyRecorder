@@ -1,78 +1,78 @@
-# Screen 4 Input Constraints
+# Screen 4 Sequencer Interaction Constraints
 
-This document defines the intended operator-facing UI constraints for Screen 4 column groups.
+This document defines the intended operator-facing interaction constraints for the current Screen 4 sequencer.
 
 ## Goals
 
-- reduce unnecessary keyboard usage
-- make input constraints visible through widget choice
-- keep normalization and validation deterministic
-- prevent the IME from obscuring focused entry fields
+- keep sequencing touch-first and explicit
+- keep transport state readable during live use
+- keep favorite assignment deterministic
+- avoid hidden automation that changes a loop without a direct operator action
+- preserve transport continuity when moving from Screen 4 to Screen 1
 
 ## Constraint Matrix
 
-### Numbers
-- Primary widgets:
-  - numeric keypad for direct numeric entry
-  - integer and decimal numeric-policy dialog during column creation
-- Input constraints:
-  - max digits
-  - decimal places
-  - separators on or off
-  - negative allowed on or off
-- Validation:
-  - numeric shape while typing
-  - digit and decimal-place enforcement on append or save
+### Favorite Pads
 
-### Dates
-- Primary widgets:
-  - date picker dialog
-- Input constraints:
-  - typed keyboard suppressed by default
-  - formatted output follows the selected date column pattern
-- Validation:
-  - picker output plus existing date validation
+- Source:
+  - favorite pages and favorite-pad assignments come from Screen 3 shared state
+- Primary interactions:
+  - tap to preview
+  - select for explicit assignment into the sequencer
+- Constraints:
+  - empty favorite slots remain visibly empty
+  - missing clips must surface as unavailable instead of silently remapping
 
-### Time
-- Primary widgets:
-  - time picker dialog
-- Input constraints:
-  - typed keyboard suppressed by default
-  - output format respects 24-hour vs AM or PM variants
-- Validation:
-  - picker output plus existing time validation
+### Favorite Pages
 
-### Enumerated Values
-- Primary widgets:
-  - dropdown or autocomplete
-- Input constraints:
-  - values should come from allowed_values whenever present
-- Validation:
-  - allowed-values enforcement on append or save
+- Primary interactions:
+  - explicit previous and next page navigation
+  - explicit add and remove actions when supported
+- Constraints:
+  - page switching must not autoplay the transport
+  - Screen 4 must stay synchronized with the shared Screen 3 page model
 
-### Contact And Identifiers
-- Primary widgets:
-  - specialized keyboard for email and phone
-  - full keyboard for free-form identifiers
-- Input constraints:
-  - regex and semantic validation remain active
+### Play Bars
 
-### Long Text
-- Primary widgets:
-  - multiline text box
-- Input constraints:
-  - expanded height
-  - sentence-capitalization keyboard
+- Primary interactions:
+  - add bar
+  - remove bar
+  - focus or expand a bar for editing
+- Constraints:
+  - bar count stays within coordinator-defined limits
+  - at least one play bar must remain
+  - selection scope must remain explicit
 
-## Keyboard Safety
+### Steps
 
-- Screen 4 long form and short form use resize-safe IME handling.
-- Focused inputs are scrolled into view when the keyboard opens.
-- Date and time picker fields suppress the keyboard and use dialogs instead.
+- Primary interactions:
+  - explicit step assignment from a favorite reference
+  - explicit clear or reassign behavior
+  - batch assignment through defined selection actions
+- Constraints:
+  - no implicit fill or randomization behavior
+  - assignments must remain inspectable at the step level
+  - empty steps must remain visibly empty
+
+### Transport
+
+- Primary interactions:
+  - play
+  - stop
+  - BPM adjustment
+- Constraints:
+  - transport does not auto-start on screen entry
+  - compile and runtime status remain visible
+  - playback continuity survives navigation by runtime design, not by duplicating transport logic in UI hosts
+
+## Navigation Safety
+
+- Screen 4 is expected to hand off naturally into Screen 1 after a loop is running.
+- Transport survival belongs to `Screen4MusicRuntime`.
+- `Screen4ShortFormActivity` and `Screen4LongFormActivity` are redirect shims, not separate editing surfaces.
 
 ## Remaining Follow-Up Ideas
 
-- add timezone picker support instead of free text
-- add timestamp picker flow for combined date and time fields
-- add grouped live formatting for separator-enabled numeric-policy fields
-- allow per-group custom widgets such as switches, chips, and segmented selectors
+- refine saved-song naming and recall affordances
+- expand visual feedback for unavailable favorite references
+- tune large-song editing ergonomics without hiding assignment rules

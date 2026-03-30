@@ -14,6 +14,9 @@ class Screen3ClipBrowserRenderer(
     private val context: Context,
     private val clipBrowserContainer: LinearLayout
 ) {
+    private val clipCardViews = linkedMapOf<String, View>()
+    private val clipAssignButtonViews = linkedMapOf<String, View>()
+
     data class ClipButtonModel(
         val displayName: String,
         val metaLabel: String,
@@ -27,6 +30,8 @@ class Screen3ClipBrowserRenderer(
         onAssign: (String) -> Unit
     ) {
         clipBrowserContainer.removeAllViews()
+        clipCardViews.clear()
+        clipAssignButtonViews.clear()
         if (clips.isEmpty()) {
             clipBrowserContainer.addView(
                 TextView(context).apply {
@@ -65,6 +70,10 @@ class Screen3ClipBrowserRenderer(
             clipBrowserContainer.addView(row)
         }
     }
+
+    fun clipCardViewFor(payloadId: String): View? = clipCardViews[payloadId]
+
+    fun clipAssignButtonViewFor(payloadId: String): View? = clipAssignButtonViews[payloadId]
 
     private fun buildClipCard(
         clip: ClipButtonModel,
@@ -146,6 +155,8 @@ class Screen3ClipBrowserRenderer(
             textColumn.addView(metaView)
             addView(textColumn)
             addView(assignButton)
+            clipCardViews[clip.payloadId] = this
+            clipAssignButtonViews[clip.payloadId] = assignButton
         }
     }
 
