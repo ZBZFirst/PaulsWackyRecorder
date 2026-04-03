@@ -444,23 +444,40 @@ class Screen1Activity : ComponentActivity() {
     }
 
     private fun reconcileTutorialProgress() {
+        val hasTutorialMediaFolder = mediaRepository.selectedFolderUri(Screen1FolderTarget.Shared) != null
+        if (!hasTutorialMediaFolder && tutorialStore.loadProgress().screen1MediaFolderConfirmed) {
+            tutorialStore.setScreen1MediaFolderConfirmed(false)
+        }
+
         when (currentTutorialPhase()) {
             Screen1TutorialPhase.CHOOSE_MEDIA_FOLDER -> {
-                if (tutorialStore.loadProgress().screen1MediaFolderConfirmed) {
+                if (tutorialStore.loadProgress().screen1MediaFolderConfirmed && hasTutorialMediaFolder) {
                     tutorialStore.setCurrentScreen(TutorialScreen.SCREEN1, STEP_START_CAMERA)
                 }
             }
             Screen1TutorialPhase.START_CAMERA -> {
+                if (!hasTutorialMediaFolder) {
+                    tutorialStore.setCurrentScreen(TutorialScreen.SCREEN1, STEP_CHOOSE_MEDIA_FOLDER)
+                    return
+                }
                 if (tutorialFeedState == Screen1CameraFeedState.Live) {
                     tutorialStore.setCurrentScreen(TutorialScreen.SCREEN1, STEP_RECORD_VIDEO)
                 }
             }
             Screen1TutorialPhase.RECORD_VIDEO -> {
+                if (!hasTutorialMediaFolder) {
+                    tutorialStore.setCurrentScreen(TutorialScreen.SCREEN1, STEP_CHOOSE_MEDIA_FOLDER)
+                    return
+                }
                 if (tutorialCaptureState == Screen1CameraCaptureState.Recording) {
                     tutorialStore.setCurrentScreen(TutorialScreen.SCREEN1, STEP_STOP_AND_SAVE)
                 }
             }
             Screen1TutorialPhase.STOP_AND_SAVE -> {
+                if (!hasTutorialMediaFolder) {
+                    tutorialStore.setCurrentScreen(TutorialScreen.SCREEN1, STEP_CHOOSE_MEDIA_FOLDER)
+                    return
+                }
                 if (tutorialVideoSaved) {
                     tutorialStore.completeTutorial()
                     tutorialMode = false

@@ -1,7 +1,9 @@
 package com.example.templei.feature.screen2
 
 import android.content.Context
+import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import com.example.templei.feature.soundboard.ClipIndexRepository
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -14,12 +16,23 @@ import java.util.Locale
 class Screen2ClipRepository(
     private val context: Context,
     private val store: Screen2RecorderStore = Screen2RecorderStore(context),
+    private val clipIndexRepository: ClipIndexRepository = ClipIndexRepository(context),
 ) {
 
-    fun selectedFolderUri() = store.loadFolderUri()
+    fun selectedFolderUri(): Uri? {
+        store.loadFolderUri()?.let { return it }
+        val fallbackUri = clipIndexRepository.getPersistedRootUri() ?: return null
+        store.saveFolderUri(fallbackUri)
+        return fallbackUri
+    }
 
-    fun saveSelectedFolderUri(uri: android.net.Uri?) {
+    fun saveSelectedFolderUri(uri: Uri?) {
         store.saveFolderUri(uri)
+        if (uri != null) {
+            clipIndexRepository.setPersistedRootUri(uri)
+            val folderName = DocumentFile.fromTreeUri(context, uri)?.name
+            clipIndexRepository.setPersistedSelectedFolderName(folderName)
+        }
     }
 
     fun selectedFolderLabel(): String? {
@@ -38,7 +51,9 @@ class Screen2ClipRepository(
 
     fun listWavFiles(): List<WavClip> {
         val folderUri = selectedFolderUri() ?: return emptyList()
-        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+        val folder = DocumentFile.fromTreeUri(context, folderUri)
+            ?.takeIf { it.canRead() }
+            ?: return emptyList()
         return folder.listFiles()
             .filter { it.isFile && (it.name?.endsWith(".wav", ignoreCase = true) == true) }
             .sortedBy { it.name?.lowercase().orEmpty() }
@@ -54,6 +69,7 @@ class Screen2ClipRepository(
     fun saveRecording(tempFile: File, fileName: String): SavedClip {
         val folderUri = selectedFolderUri() ?: throw IOException("No folder selected")
         val folder = DocumentFile.fromTreeUri(context, folderUri)
+            ?.takeIf { it.canWrite() }
             ?: throw IOException("Selected folder is unavailable")
         val outputDocument = folder.createFile(MIME_TYPE_WAV, fileName)
             ?: throw IOException("Could not create target file")

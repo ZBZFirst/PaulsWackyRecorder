@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import com.example.templei.feature.storage.PersistedTreeUriValidator
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -19,6 +20,7 @@ class Screen1MediaRepository(
     private val contentResolver: ContentResolver = appContext.contentResolver
     private val preferences = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val timestampFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+    private val treeUriValidator = PersistedTreeUriValidator(appContext)
 
     fun createPendingMediaFile(type: Screen1MediaType): File {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -41,7 +43,7 @@ class Screen1MediaRepository(
             Screen1StorageMode.Shared -> {
                 val currentShared = sharedFolderUri()
                 if (currentShared == null) {
-                    val seeded = photoFolderUriRaw() ?: videoFolderUriRaw()
+                    val seeded = photoFolderUri() ?: videoFolderUri()
                     if (seeded != null) {
                         preferences.edit().putString(KEY_SHARED_FOLDER_URI, seeded.toString()).apply()
                     }
@@ -52,10 +54,10 @@ class Screen1MediaRepository(
                 val shared = sharedFolderUri()
                 if (shared != null) {
                     val editor = preferences.edit()
-                    if (photoFolderUriRaw() == null) {
+                    if (photoFolderUri() == null) {
                         editor.putString(KEY_PHOTO_FOLDER_URI, shared.toString())
                     }
-                    if (videoFolderUriRaw() == null) {
+                    if (videoFolderUri() == null) {
                         editor.putString(KEY_VIDEO_FOLDER_URI, shared.toString())
                     }
                     editor.apply()
@@ -86,8 +88,8 @@ class Screen1MediaRepository(
     fun selectedFolderUri(target: Screen1FolderTarget): Uri? {
         return when (target) {
             Screen1FolderTarget.Shared -> sharedFolderUri()
-            Screen1FolderTarget.Photo -> photoFolderUriRaw()
-            Screen1FolderTarget.Video -> videoFolderUriRaw()
+            Screen1FolderTarget.Photo -> photoFolderUri()
+            Screen1FolderTarget.Video -> videoFolderUri()
         }
     }
 
@@ -99,8 +101,8 @@ class Screen1MediaRepository(
         return when (storageMode()) {
             Screen1StorageMode.Shared -> sharedFolderUri()
             Screen1StorageMode.Separate -> when (type) {
-                Screen1MediaType.Photo -> photoFolderUriRaw()
-                Screen1MediaType.Video -> videoFolderUriRaw()
+                Screen1MediaType.Photo -> photoFolderUri()
+                Screen1MediaType.Video -> videoFolderUri()
             }
         }
     }
@@ -117,6 +119,7 @@ class Screen1MediaRepository(
         val destinationUri = selectedFolderUri(type)
             ?: throw IllegalStateException("No destination folder selected for ${type.name.lowercase(Locale.US)} captures.")
         val folder = DocumentFile.fromTreeUri(appContext, destinationUri)
+            ?.takeIf { it.canWrite() }
             ?: throw IllegalStateException("Selected destination folder is unavailable.")
         val displayName = tempFile.name
         val mimeType = when (type) {
@@ -144,7 +147,7 @@ class Screen1MediaRepository(
             }
 
             Screen1StorageMode.Separate -> {
-                sequenceOf(photoFolderUriRaw(), videoFolderUriRaw())
+                sequenceOf(photoFolderUri(), videoFolderUri())
                     .filterNotNull()
                     .distinctBy(Uri::toString)
                     .flatMap(::listSharedFolderEntries)
@@ -154,7 +157,9 @@ class Screen1MediaRepository(
     }
 
     private fun listSharedFolderEntries(folderUri: Uri): List<Screen1MediaEntry> {
-        val folder = DocumentFile.fromTreeUri(appContext, folderUri) ?: return emptyList()
+        val folder = DocumentFile.fromTreeUri(appContext, folderUri)
+            ?.takeIf { it.canRead() }
+            ?: return emptyList()
         return folder.listFiles()
             .filter { it.isFile }
             .mapNotNull { document ->
@@ -197,9 +202,19 @@ class Screen1MediaRepository(
             ?: uri.toString()
     }
 
-    private fun sharedFolderUri(): Uri? = preferences.getString(KEY_SHARED_FOLDER_URI, null)?.let(Uri::parse)
-    private fun photoFolderUriRaw(): Uri? = preferences.getString(KEY_PHOTO_FOLDER_URI, null)?.let(Uri::parse)
-    private fun videoFolderUriRaw(): Uri? = preferences.getString(KEY_VIDEO_FOLDER_URI, null)?.let(Uri::parse)
+    private fun sharedFolderUri(): Uri? = loadPersistedFolderUri(KEY_SHARED_FOLDER_URI)
+    private fun photoFolderUri(): Uri? = loadPersistedFolderUri(KEY_PHOTO_FOLDER_URI)
+    private fun videoFolderUri(): Uri? = loadPersistedFolderUri(KEY_VIDEO_FOLDER_URI)
+
+    private fun loadPersistedFolderUri(key: String): Uri? {
+        val raw = preferences.getString(key, null) ?: return null
+        val uri = Uri.parse(raw)
+        val normalized = treeUriValidator.normalize(uri, requireWrite = true)
+        if (normalized == null) {
+            preferences.edit().remove(key).apply()
+        }
+        return normalized
+    }
 
     private companion object {
         private const val PREFS_NAME = "screen1_media_repository"

@@ -526,6 +526,7 @@ class Screen4Coordinator(
         favoritePageId: String,
         favoriteSlotIndex: Int,
         target: Screen4BatchAssignTarget,
+        clearSelectionAfterAssign: Boolean = false,
     ) {
         val normalizedBarIndex = barIndex.coerceIn(0, playBars.lastIndex)
         val normalizedFavoriteSlotIndex = favoriteSlotIndex.coerceIn(0, FAVORITE_SLOT_COUNT - 1)
@@ -555,7 +556,7 @@ class Screen4Coordinator(
                 clipId = clipId,
             )
         }
-        if (target == Screen4BatchAssignTarget.SELECTED_SLOTS) {
+        if (target == Screen4BatchAssignTarget.SELECTED_SLOTS || clearSelectionAfterAssign) {
             barSelectionStates[normalizedBarIndex] = BarSelectionState()
         }
         persistWorkingState()
@@ -873,10 +874,10 @@ class Screen4Coordinator(
 
     fun play() {
         scope.launch {
-            val compiled = buildVisualPattern().getOrElse {
+            val compiled = buildVisualPatternForPlayback().getOrElse {
                 mutableUiState.value = mutableUiState.value.copy(
                     transportState = Screen4TransportState.ERROR,
-                    runtimeStatus = "Play blocked. Assign Screen 3 pads to at least one step first.",
+                    runtimeStatus = runtimeStatusForCompileFailure(it),
                     lastError = it.message ?: "unknown",
                     patternSource = mutableUiState.value.patternSource.copy(
                         compileResult = Screen4CompileResult.Failure(it.message ?: "unknown"),
@@ -975,7 +976,7 @@ class Screen4Coordinator(
 
     private fun queueCurrentLoopForNextCycle() {
         scope.launch {
-            val compiled = buildVisualPattern().getOrElse {
+            val compiled = buildVisualPatternForPlayback().getOrElse {
                 mutableUiState.value = mutableUiState.value.copy(
                     patternSource = mutableUiState.value.patternSource.copy(
                         compileResult = Screen4CompileResult.Failure(it.message ?: "unknown"),
@@ -1073,6 +1074,38 @@ class Screen4Coordinator(
                 scheduledEvents = scheduledEvents,
                 resolvedSamples = resolvedSamples,
             )
+        }
+    }
+
+    private suspend fun buildVisualPatternForPlayback(): Result<Screen4CompiledPattern> {
+        val initialAttempt = buildVisualPattern()
+        if (initialAttempt.isSuccess) {
+            return initialAttempt
+        }
+
+        val message = initialAttempt.exceptionOrNull()?.message.orEmpty()
+        val shouldRetryAfterRefresh =
+            message.contains("sample folder", ignoreCase = true) ||
+                message.contains("Saved dependencies were deleted", ignoreCase = true)
+        if (!shouldRetryAfterRefresh) {
+            return initialAttempt
+        }
+        if (!refreshSavedLoadDependencies()) {
+            return initialAttempt
+        }
+        return buildVisualPattern()
+    }
+
+    private fun runtimeStatusForCompileFailure(error: Throwable): String {
+        val message = error.message.orEmpty()
+        return when {
+            message.contains("Assign at least one Screen 3 pad", ignoreCase = true) ->
+                "Play blocked. Assign Screen 3 pads to at least one step first."
+            message.contains("sample folder", ignoreCase = true) ->
+                "Play blocked. Choose or refresh the Screen 3 sample folder first."
+            message.contains("Saved dependencies were deleted", ignoreCase = true) ->
+                "Play blocked. Some WAV dependencies were deleted."
+            else -> "Play blocked."
         }
     }
 

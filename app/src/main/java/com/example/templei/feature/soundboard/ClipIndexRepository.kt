@@ -4,10 +4,12 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import com.example.templei.feature.storage.PersistedTreeUriValidator
 import org.json.JSONArray
 import org.json.JSONObject
 
 class ClipIndexRepository(private val context: Context) {
+    private val treeUriValidator = PersistedTreeUriValidator(context)
 
     data class IndexedClip(
         val clipId: String,
@@ -27,11 +29,24 @@ class ClipIndexRepository(private val context: Context) {
 
     fun getPersistedRootUri(): Uri? {
         val raw = prefs().getString(KEY_ROOT_FOLDER_URI, null)
-        return raw?.let(Uri::parse)
+        val uri = raw?.let(Uri::parse)
+        val normalized = treeUriValidator.normalize(uri, requireWrite = false)
+        if (uri != null && normalized == null) {
+            clearPersistedRootSelection()
+        }
+        return normalized
     }
 
     fun setPersistedRootUri(uri: Uri) {
         prefs().edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
+    }
+
+    fun clearPersistedRootSelection() {
+        prefs().edit()
+            .remove(KEY_ROOT_FOLDER_URI)
+            .remove(KEY_INDEX_ROWS)
+            .remove(KEY_SELECTED_FOLDER_NAME)
+            .apply()
     }
 
     fun getPersistedSelectedFolderName(): String? {
@@ -45,7 +60,14 @@ class ClipIndexRepository(private val context: Context) {
     }
 
     fun rebuildIndex(rootUri: Uri): RebuildSummary {
-        val root = DocumentFile.fromTreeUri(context, rootUri)
+        val normalizedRootUri = treeUriValidator.normalize(rootUri, requireWrite = false)
+            ?: run {
+                if (prefs().getString(KEY_ROOT_FOLDER_URI, null) == rootUri.toString()) {
+                    clearPersistedRootSelection()
+                }
+                return RebuildSummary(0, 0, 0)
+            }
+        val root = DocumentFile.fromTreeUri(context, normalizedRootUri)
             ?.takeIf { it.canRead() }
             ?: return RebuildSummary(0, 0, 0)
 
@@ -93,7 +115,14 @@ class ClipIndexRepository(private val context: Context) {
     }
 
     fun refreshFolder(rootUri: Uri, folderName: String): RebuildSummary {
-        val root = DocumentFile.fromTreeUri(context, rootUri)
+        val normalizedRootUri = treeUriValidator.normalize(rootUri, requireWrite = false)
+            ?: run {
+                if (prefs().getString(KEY_ROOT_FOLDER_URI, null) == rootUri.toString()) {
+                    clearPersistedRootSelection()
+                }
+                return RebuildSummary(0, 0, 0)
+            }
+        val root = DocumentFile.fromTreeUri(context, normalizedRootUri)
             ?.takeIf { it.canRead() }
             ?: return RebuildSummary(0, 0, 0)
         val folderDocument = resolveFolderDocument(root, folderName)

@@ -23,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.isVisible
@@ -114,6 +115,7 @@ class Screen4Activity : ComponentActivity() {
     private var isPlayBarCollapsed: Boolean = false
     private val expandedBarIndices = mutableListOf(0)
     private var selectionTargetBarIndex: Int = 0
+    private var padMapQuickAssignState: PadMapQuickAssignState = PadMapQuickAssignState.Idle
     private var activeFxDragCount: Int = 0
     private var hasDeferredPlayBarRender: Boolean = false
     private var assignFavoriteDialog: AlertDialog? = null
@@ -301,6 +303,9 @@ class Screen4Activity : ComponentActivity() {
                     if (tutorialMode && handleTutorialFavoriteTap(index)) {
                         return@setOnClickListener
                     }
+                    if (handlePadMapQuickAssignFavoriteTap(index)) {
+                        return@setOnClickListener
+                    }
                     screen4Coordinator.previewFavoriteSlot(index)
                 }
                 setOnLongClickListener {
@@ -327,12 +332,21 @@ class Screen4Activity : ComponentActivity() {
         }
         favoritePagePrevButton.setOnClickListener { screen4Coordinator.showPreviousFavoritePage() }
         favoritePageNextButton.setOnClickListener { screen4Coordinator.showNextFavoritePage() }
-        selectionModeButton.setOnClickListener { toggleExpandedBarSelectionMode() }
-        selectAllButton.setOnClickListener { selectExpandedBars(Screen4BatchAssignTarget.ALL_SLOTS) }
-        selectOddButton.setOnClickListener { selectExpandedBars(Screen4BatchAssignTarget.ODD_SLOTS) }
-        selectEvenButton.setOnClickListener { selectExpandedBars(Screen4BatchAssignTarget.EVEN_SLOTS) }
-        assignSelectionButton.setOnClickListener { showAssignFavoriteDialogForExpandedBars() }
-        clearSelectionButton.setOnClickListener { clearExpandedBarSelections() }
+        selectionModeButton.setOnClickListener {
+            clearPadMapQuickAssignState(resetSelectedSteps = true)
+            toggleExpandedBarSelectionMode()
+        }
+        selectAllButton.setOnClickListener { startPadMapQuickAssign(Screen4BatchAssignTarget.ALL_SLOTS) }
+        selectOddButton.setOnClickListener { startPadMapQuickAssign(Screen4BatchAssignTarget.ODD_SLOTS) }
+        selectEvenButton.setOnClickListener { startPadMapQuickAssign(Screen4BatchAssignTarget.EVEN_SLOTS) }
+        assignSelectionButton.setOnClickListener {
+            clearPadMapQuickAssignState(resetSelectedSteps = false)
+            showAssignFavoriteDialogForExpandedBars()
+        }
+        clearSelectionButton.setOnClickListener {
+            clearPadMapQuickAssignState(resetSelectedSteps = true)
+            clearExpandedBarSelections()
+        }
         saveSongButton.setOnClickListener { showSaveSongDialog() }
         loadSongButton.setOnClickListener { showLoadSongDialog() }
         playButton.setOnClickListener { screen4Coordinator.play() }
@@ -491,16 +505,28 @@ class Screen4Activity : ComponentActivity() {
                 R.string.screen4_music_group_select_toggle_off
             }
         )
-        groupSelectionStatusText.text = getString(
-            R.string.screen4_music_group_select_status,
-            (targetBar?.barIndex ?: 0) + 1,
-            selectedStepCount,
-        )
+        groupSelectionStatusText.text = when (val quickAssignState = padMapQuickAssignState) {
+            is PadMapQuickAssignState.AwaitingChannel -> getString(
+                R.string.screen4_music_group_select_status_pick_channel,
+                quickAssignTargetLabel(quickAssignState.target),
+            )
+            is PadMapQuickAssignState.AwaitingFavorite -> getString(
+                R.string.screen4_music_group_select_status_pick_pad,
+                quickAssignTargetLabel(quickAssignState.target),
+                quickAssignState.barIndex + 1,
+            )
+            PadMapQuickAssignState.Idle -> getString(
+                R.string.screen4_music_group_select_status,
+                (targetBar?.barIndex ?: 0) + 1,
+                selectedStepCount,
+            )
+        }
         assignSelectionButton.isEnabled = selectedStepCount > 0
         clearSelectionButton.isEnabled = selectedStepCount > 0
         selectAllButton.isEnabled = targetBar != null
         selectOddButton.isEnabled = targetBar != null
         selectEvenButton.isEnabled = targetBar != null
+        renderPadMapQuickAssignButtons()
 
         playBarCountText.text = getString(
             R.string.screen4_music_play_bar_count,
@@ -1005,6 +1031,9 @@ class Screen4Activity : ComponentActivity() {
     ): View {
         val isPrimary = expandedBarIndices.firstOrNull() == rosterIndex
         val isSecondary = expandedBarIndices.getOrNull(1) == rosterIndex
+        val isExpanded = expandedBarIndices.contains(sequenceBar.barIndex)
+        val awaitingChannelSelection = padMapQuickAssignState is PadMapQuickAssignState.AwaitingChannel
+        val pendingTargetBarIndex = (padMapQuickAssignState as? PadMapQuickAssignState.AwaitingFavorite)?.barIndex
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -1015,6 +1044,7 @@ class Screen4Activity : ComponentActivity() {
                 setPadding(dp(8), dp(10), dp(8), dp(10))
                 background = getDrawable(
                     when {
+                        pendingTargetBarIndex == sequenceBar.barIndex -> R.drawable.bg_screen4_roster_primary
                         isPrimary -> R.drawable.bg_screen4_roster_primary
                         isSecondary -> R.drawable.bg_screen4_roster_secondary
                         else -> R.drawable.bg_screen4_roster_idle
@@ -1023,15 +1053,27 @@ class Screen4Activity : ComponentActivity() {
                 setTextColor(
                     getColor(
                         when {
+                            pendingTargetBarIndex == sequenceBar.barIndex -> R.color.screen4_primary
                             isPrimary -> R.color.screen4_primary
                             isSecondary -> R.color.screen4_secondary
                             else -> R.color.screen4_text_secondary
                         }
                     )
                 )
+                alpha = when {
+                    pendingTargetBarIndex == sequenceBar.barIndex -> 1f
+                    awaitingChannelSelection && isExpanded -> 1f
+                    awaitingChannelSelection -> 0.45f
+                    pendingTargetBarIndex != null && isExpanded -> 0.7f
+                    pendingTargetBarIndex != null -> 0.45f
+                    else -> 1f
+                }
                 textSize = 10f
                 setOnClickListener {
                     if (tutorialMode && handleTutorialChannelTap(sequenceBar.barIndex, barCount)) {
+                        return@setOnClickListener
+                    }
+                    if (handlePadMapQuickAssignChannelTap(sequenceBar.barIndex)) {
                         return@setOnClickListener
                     }
                     selectionTargetBarIndex = sequenceBar.barIndex
@@ -2305,6 +2347,147 @@ class Screen4Activity : ComponentActivity() {
         }
     }
 
+    private fun startPadMapQuickAssign(target: Screen4BatchAssignTarget) {
+        if (expandedSequenceBars(latestUiState).isEmpty()) {
+            Toast.makeText(
+                this,
+                getString(R.string.screen4_music_group_select_open_channel_first),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return
+        }
+        if ((padMapQuickAssignState as? PadMapQuickAssignState.Pending)?.target == target) {
+            clearPadMapQuickAssignState(resetSelectedSteps = true)
+            return
+        }
+        clearExpandedBarSelectionModes()
+        clearPadMapQuickAssignState(resetSelectedSteps = true)
+        padMapQuickAssignState = PadMapQuickAssignState.AwaitingChannel(target)
+        renderPadMapQuickAssignButtons()
+        renderPlayBars(latestUiState.sequenceBars, latestUiState)
+        Toast.makeText(
+            this,
+            getString(R.string.screen4_music_group_select_pick_channel_toast, quickAssignTargetLabel(target)),
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+
+    private fun handlePadMapQuickAssignChannelTap(barIndex: Int): Boolean {
+        val pending = padMapQuickAssignState as? PadMapQuickAssignState.Pending ?: return false
+        if (expandedBarIndices.none { it == barIndex }) {
+            Toast.makeText(
+                this,
+                getString(R.string.screen4_music_group_select_open_channel_only),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return true
+        }
+        val previousTargetBarIndex = (padMapQuickAssignState as? PadMapQuickAssignState.AwaitingFavorite)?.barIndex
+        if (previousTargetBarIndex != null && previousTargetBarIndex != barIndex) {
+            screen4Coordinator.setBarSelectionMode(previousTargetBarIndex, false)
+        }
+        selectionTargetBarIndex = barIndex
+        padMapQuickAssignState = PadMapQuickAssignState.AwaitingFavorite(
+            target = pending.target,
+            barIndex = barIndex,
+        )
+        screen4Coordinator.selectBatchTarget(barIndex, pending.target)
+        return true
+    }
+
+    private fun handlePadMapQuickAssignFavoriteTap(slotIndex: Int): Boolean {
+        return when (val pending = padMapQuickAssignState) {
+            is PadMapQuickAssignState.AwaitingChannel -> {
+                Toast.makeText(
+                    this,
+                    getString(R.string.screen4_music_group_select_pick_channel_first_toast),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                true
+            }
+            is PadMapQuickAssignState.AwaitingFavorite -> {
+                val favoriteSlot = latestUiState.favoriteSlots.getOrNull(slotIndex)
+                if (favoriteSlot?.sampleId == null) {
+                    screen4Coordinator.previewFavoriteSlot(slotIndex)
+                    return true
+                }
+                padMapQuickAssignState = PadMapQuickAssignState.Idle
+                screen4Coordinator.assignFavoriteToBar(
+                    barIndex = pending.barIndex,
+                    favoritePageId = latestUiState.currentFavoritePageId,
+                    favoriteSlotIndex = slotIndex,
+                    target = pending.target,
+                    clearSelectionAfterAssign = true,
+                )
+                true
+            }
+            PadMapQuickAssignState.Idle -> false
+        }
+    }
+
+    private fun clearPadMapQuickAssignState(resetSelectedSteps: Boolean) {
+        val pending = padMapQuickAssignState as? PadMapQuickAssignState.AwaitingFavorite
+        if (resetSelectedSteps && pending != null) {
+            screen4Coordinator.setBarSelectionMode(pending.barIndex, false)
+        }
+        padMapQuickAssignState = PadMapQuickAssignState.Idle
+        renderPadMapQuickAssignButtons()
+        renderPlayBars(latestUiState.sequenceBars, latestUiState)
+    }
+
+    private fun renderPadMapQuickAssignButtons() {
+        renderPadMapQuickAssignButton(
+            button = selectAllButton,
+            active = (padMapQuickAssignState as? PadMapQuickAssignState.Pending)?.target == Screen4BatchAssignTarget.ALL_SLOTS,
+        )
+        renderPadMapQuickAssignButton(
+            button = selectOddButton,
+            active = (padMapQuickAssignState as? PadMapQuickAssignState.Pending)?.target == Screen4BatchAssignTarget.ODD_SLOTS,
+        )
+        renderPadMapQuickAssignButton(
+            button = selectEvenButton,
+            active = (padMapQuickAssignState as? PadMapQuickAssignState.Pending)?.target == Screen4BatchAssignTarget.EVEN_SLOTS,
+        )
+    }
+
+    private fun renderPadMapQuickAssignButton(button: Button, active: Boolean) {
+        button.background = getDrawable(
+            if (active) {
+                R.drawable.bg_screen4_step_selected
+            } else {
+                R.drawable.bg_screen4_transport_button
+            }
+        )
+        button.setTextColor(
+            getColor(
+                if (active) {
+                    R.color.black
+                } else {
+                    R.color.screen4_text_secondary
+                }
+            )
+        )
+    }
+
+    private fun quickAssignTargetLabel(target: Screen4BatchAssignTarget): String {
+        return getString(
+            when (target) {
+                Screen4BatchAssignTarget.ALL_SLOTS -> R.string.screen4_music_group_select_all
+                Screen4BatchAssignTarget.ODD_SLOTS -> R.string.screen4_music_group_select_odd
+                Screen4BatchAssignTarget.EVEN_SLOTS -> R.string.screen4_music_group_select_even
+                Screen4BatchAssignTarget.SELECTED_SLOTS -> R.string.screen4_music_group_select_assign
+            }
+        )
+    }
+
+    private fun clearExpandedBarSelectionModes() {
+        expandedSequenceBars(latestUiState).forEach { sequenceBar ->
+            if (sequenceBar.isSelectionModeEnabled || sequenceBar.selectedStepIndices.isNotEmpty()) {
+                screen4Coordinator.setBarSelectionMode(sequenceBar.barIndex, false)
+            }
+        }
+    }
+
     private fun renderAssignFavoriteDialog(state: Screen4UiState) {
         if (assignFavoriteDialog?.isShowing != true) return
 
@@ -2806,6 +2989,23 @@ class Screen4Activity : ComponentActivity() {
         private const val STEP_OPEN_SECOND_CHANNEL = 0
         private const val STEP_PLAY_LOOP = 1 + TUTORIAL_ASSIGNMENT_COUNT
         private const val STEP_SCREEN_COMPLETE = STEP_PLAY_LOOP + 1
+    }
+
+    private sealed interface PadMapQuickAssignState {
+        data object Idle : PadMapQuickAssignState
+
+        sealed interface Pending : PadMapQuickAssignState {
+            val target: Screen4BatchAssignTarget
+        }
+
+        data class AwaitingChannel(
+            override val target: Screen4BatchAssignTarget,
+        ) : Pending
+
+        data class AwaitingFavorite(
+            override val target: Screen4BatchAssignTarget,
+            val barIndex: Int,
+        ) : Pending
     }
 
     private data class Screen4TutorialAssignment(

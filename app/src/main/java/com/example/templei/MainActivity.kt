@@ -5,11 +5,13 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.templei.device.DeviceCapabilityProbe
@@ -17,6 +19,7 @@ import com.example.templei.device.DeviceCapabilityRegistry
 import com.example.templei.device.DeviceCapabilitySnapshot
 import com.example.templei.device.PermissionState
 import com.example.templei.device.StorageModel
+import com.example.templei.feature.mainhub.MainHubIntroStore
 import com.example.templei.feature.tutorial.TutorialProgress
 import com.example.templei.feature.tutorial.TutorialScreen
 import com.example.templei.feature.tutorial.TutorialStatus
@@ -29,17 +32,23 @@ import com.example.templei.ui.navigation.TopNavigation
  * MainActivity remains a router/status console; each screen still owns its own behavior.
  */
 class MainActivity : ComponentActivity() {
+    private lateinit var introCard: LinearLayout
+    private lateinit var introTitleText: TextView
+    private lateinit var introBodyText: TextView
+    private lateinit var introPrimaryButton: Button
+    private lateinit var introSecondaryButton: Button
     private lateinit var deviceStatusText: TextView
     private lateinit var tutorialSummaryText: TextView
     private lateinit var startTutorialButton: Button
     private lateinit var redoTutorialButton: Button
     private lateinit var skipTutorialButton: Button
     private lateinit var tutorialStore: TutorialStore
+    private lateinit var introStore: MainHubIntroStore
 
     private val permissionRequestLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
-        refreshDeviceStatus()
+        refreshHubChrome()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,15 +73,28 @@ class MainActivity : ComponentActivity() {
         }
         ViewCompat.requestApplyInsets(root)
 
+        introCard = findViewById(R.id.mainIntroCard)
+        introTitleText = findViewById(R.id.mainIntroTitleText)
+        introBodyText = findViewById(R.id.mainIntroBodyText)
+        introPrimaryButton = findViewById(R.id.mainIntroPrimaryButton)
+        introSecondaryButton = findViewById(R.id.mainIntroSecondaryButton)
         deviceStatusText = findViewById(R.id.deviceStatusText)
         tutorialSummaryText = findViewById(R.id.tutorialSummaryText)
         startTutorialButton = findViewById(R.id.startTutorialButton)
         redoTutorialButton = findViewById(R.id.redoTutorialButton)
         skipTutorialButton = findViewById(R.id.skipTutorialButton)
         tutorialStore = TutorialStore(this)
+        introStore = MainHubIntroStore(this)
 
         findViewById<Button>(R.id.requestPermissionsButton).setOnClickListener {
             requestMissingPermissions()
+        }
+        introPrimaryButton.setOnClickListener {
+            handleIntroPrimaryAction()
+        }
+        introSecondaryButton.setOnClickListener {
+            introStore.dismissIntro()
+            updateIntroCard(DeviceCapabilityProbe.snapshot(this), tutorialStore.loadProgress())
         }
         findViewById<Button>(R.id.supportProjectButton).setOnClickListener {
             openSupportPage()
@@ -88,34 +110,31 @@ class MainActivity : ComponentActivity() {
         }
         redoTutorialButton.setOnClickListener {
             tutorialStore.redoTutorial()
-            updateTutorialCard()
+            refreshHubChrome()
             launchTutorialDestination(tutorialStore.loadProgress())
         }
         skipTutorialButton.setOnClickListener {
             tutorialStore.skipTutorial()
-            updateTutorialCard()
+            refreshHubChrome()
             Toast.makeText(this, getString(R.string.mainTutorialSkippedToast), Toast.LENGTH_SHORT).show()
         }
 
         TopNavigation.bindMainMenuGrid(activity = this)
 
-        refreshDeviceStatus()
-        updateTutorialCard()
+        refreshHubChrome()
     }
 
     override fun onResume() {
         super.onResume()
-        refreshDeviceStatus()
-        updateTutorialCard()
+        refreshHubChrome()
     }
 
-    private fun requestMissingPermissions() {
-        val snapshot = DeviceCapabilityProbe.snapshot(this)
+    private fun requestMissingPermissions(snapshot: DeviceCapabilitySnapshot = DeviceCapabilityProbe.snapshot(this)) {
         val permissionsToRequest = collectRequestableMissingPermissions(snapshot)
 
         if (permissionsToRequest.isEmpty()) {
             Toast.makeText(this, getString(R.string.permission_request_none_needed), Toast.LENGTH_SHORT).show()
-            refreshDeviceStatus()
+            refreshHubChrome()
             return
         }
 
@@ -126,14 +145,63 @@ class MainActivity : ComponentActivity() {
         startActivity(Intent(this, SupportWebActivity::class.java))
     }
 
-    private fun refreshDeviceStatus() {
+    private fun refreshHubChrome() {
         val snapshot = DeviceCapabilityProbe.snapshot(this)
+        val tutorialProgress = tutorialStore.loadProgress()
+        refreshDeviceStatus(snapshot)
+        updateIntroCard(snapshot, tutorialProgress)
+        updateTutorialCard(tutorialProgress)
+    }
+
+    private fun refreshDeviceStatus(snapshot: DeviceCapabilitySnapshot) {
         DeviceCapabilityRegistry.update(snapshot)
         deviceStatusText.text = formatSnapshot(snapshot)
     }
 
-    private fun updateTutorialCard() {
-        val progress = tutorialStore.loadProgress()
+    private fun updateIntroCard(snapshot: DeviceCapabilitySnapshot, tutorialProgress: TutorialProgress) {
+        val introState = introStore.loadState()
+        val shouldShowIntro = !introState.introDismissed && tutorialProgress.status != TutorialStatus.COMPLETED
+        introCard.isVisible = shouldShowIntro
+        if (!shouldShowIntro) {
+            return
+        }
+
+        val hasMissingPermissions = collectRequestableMissingPermissions(snapshot).isNotEmpty()
+        val introTitleRes = when {
+            !introState.setupStarted -> R.string.mainHubIntroTitleWelcome
+            hasMissingPermissions -> R.string.mainHubIntroTitlePermissions
+            tutorialProgress.status == TutorialStatus.IN_PROGRESS -> R.string.mainHubIntroTitleContinue
+            else -> R.string.mainHubIntroTitleReady
+        }
+        val introBody = when {
+            !introState.setupStarted -> getString(R.string.mainHubIntroBodyWelcome)
+            hasMissingPermissions -> getString(R.string.mainHubIntroBodyPermissions)
+            tutorialProgress.status == TutorialStatus.IN_PROGRESS -> getString(
+                R.string.mainHubIntroBodyContinue,
+                tutorialLabelFor(tutorialProgress.currentScreen),
+            )
+            else -> getString(R.string.mainHubIntroBodyReady)
+        }
+        val primaryButtonRes = when {
+            !introState.setupStarted -> R.string.mainHubIntroStartSetup
+            hasMissingPermissions -> R.string.mainHubIntroRequestPermissions
+            tutorialProgress.status == TutorialStatus.IN_PROGRESS -> R.string.mainHubIntroContinueSetup
+            else -> R.string.mainHubIntroOpenTutorial
+        }
+
+        introTitleText.text = getString(introTitleRes)
+        introBodyText.text = introBody
+        introPrimaryButton.text = getString(primaryButtonRes)
+        introSecondaryButton.text = getString(
+            if (introState.setupStarted) {
+                R.string.mainHubIntroHide
+            } else {
+                R.string.mainHubIntroNotNow
+            }
+        )
+    }
+
+    private fun updateTutorialCard(progress: TutorialProgress) {
         tutorialSummaryText.text = when (progress.status) {
             TutorialStatus.NOT_STARTED -> getString(R.string.mainTutorialSummaryDefault)
             TutorialStatus.IN_PROGRESS -> getString(
@@ -150,6 +218,27 @@ class MainActivity : ComponentActivity() {
                 R.string.mainTutorialStart
             }
         )
+    }
+
+    private fun handleIntroPrimaryAction() {
+        val snapshot = DeviceCapabilityProbe.snapshot(this)
+        introStore.markSetupStarted()
+        if (collectRequestableMissingPermissions(snapshot).isNotEmpty()) {
+            requestMissingPermissions(snapshot)
+            updateIntroCard(snapshot, tutorialStore.loadProgress())
+            return
+        }
+        launchOrStartTutorial()
+    }
+
+    private fun launchOrStartTutorial() {
+        val progress = tutorialStore.loadProgress()
+        if (progress.status == TutorialStatus.IN_PROGRESS) {
+            launchTutorialDestination(progress)
+            return
+        }
+        tutorialStore.startTutorial()
+        launchTutorialDestination(tutorialStore.loadProgress())
     }
 
     private fun launchTutorialDestination(progress: TutorialProgress) {

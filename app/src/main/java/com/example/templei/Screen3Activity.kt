@@ -528,7 +528,12 @@ class Screen3Activity : ComponentActivity() {
 
     private fun refreshSelectedFolderFromDisk(showLoading: Boolean = false) {
         val indexedState = folderBrowserCoordinator.initializeFromPersistedRoot()
-        if (!indexedState.hasRootSelection) return
+        if (!indexedState.hasRootSelection) {
+            screen3Coordinator.dispatch(Screen3Intent.FolderPicked(uri = null))
+            renderNoRootSelected()
+            renderTutorialChrome()
+            return
+        }
 
         if (showLoading) {
             stateMachine.onLoading()
@@ -554,7 +559,14 @@ class Screen3Activity : ComponentActivity() {
                                 summary.folderCount
                             )
                         }
-                        applyIndexedState(folderBrowserCoordinator.currentState())
+                        val currentState = folderBrowserCoordinator.currentState()
+                        if (!currentState.hasRootSelection) {
+                            screen3Coordinator.dispatch(Screen3Intent.FolderPicked(uri = null))
+                            renderNoRootSelected()
+                            renderTutorialChrome()
+                        } else {
+                            applyIndexedState(currentState)
+                        }
                     }
                 }
                 .onFailure {
@@ -589,7 +601,14 @@ class Screen3Activity : ComponentActivity() {
                     summary.clipCount,
                     summary.folderCount
                 )
-                applyIndexedState(folderBrowserCoordinator.currentState())
+                val currentState = folderBrowserCoordinator.currentState()
+                if (!currentState.hasRootSelection) {
+                    screen3Coordinator.dispatch(Screen3Intent.FolderPicked(uri = null))
+                    renderNoRootSelected()
+                    renderTutorialChrome()
+                } else {
+                    applyIndexedState(currentState)
+                }
             }
         }.start()
     }

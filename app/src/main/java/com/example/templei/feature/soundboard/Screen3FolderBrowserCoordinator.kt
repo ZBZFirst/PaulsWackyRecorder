@@ -57,6 +57,7 @@ class Screen3FolderBrowserCoordinator(
         rootUri = uri
         clipIndexRepository.setPersistedRootUri(uri)
         val summary = clipIndexRepository.rebuildIndex(uri)
+        rootUri = clipIndexRepository.getPersistedRootUri()
         hydrateFoldersFromIndex()
         return RebuildSummary(
             folderCount = summary.folderCount,
@@ -67,11 +68,12 @@ class Screen3FolderBrowserCoordinator(
 
     /** Rebuilds index for current root if available; no-op summary otherwise. */
     fun rebuildCurrentRoot(): RebuildSummary {
-        val current = rootUri ?: clipIndexRepository.getPersistedRootUri().also { rootUri = it }
+        val current = clipIndexRepository.getPersistedRootUri().also { rootUri = it }
         if (current == null) {
             return RebuildSummary(folderCount = 0, clipCount = 0, playableCount = 0)
         }
         val summary = clipIndexRepository.rebuildIndex(current)
+        rootUri = clipIndexRepository.getPersistedRootUri()
         hydrateFoldersFromIndex()
         return RebuildSummary(
             folderCount = summary.folderCount,
@@ -81,7 +83,7 @@ class Screen3FolderBrowserCoordinator(
     }
 
     fun refreshCurrentFolder(): RebuildSummary {
-        val currentRoot = rootUri ?: clipIndexRepository.getPersistedRootUri().also { rootUri = it }
+        val currentRoot = clipIndexRepository.getPersistedRootUri().also { rootUri = it }
         val folderName = folderNames.getOrNull(selectedFolderIndex)
             ?: clipIndexRepository.getPersistedSelectedFolderName()
             ?: return RebuildSummary(folderCount = 0, clipCount = 0, playableCount = 0)
@@ -89,6 +91,7 @@ class Screen3FolderBrowserCoordinator(
             return RebuildSummary(folderCount = 0, clipCount = 0, playableCount = 0)
         }
         val summary = clipIndexRepository.refreshFolder(currentRoot, folderName)
+        rootUri = clipIndexRepository.getPersistedRootUri()
         hydrateFoldersFromIndex()
         return RebuildSummary(
             folderCount = summary.folderCount,
@@ -119,7 +122,10 @@ class Screen3FolderBrowserCoordinator(
         return buildState(currentFolderClips())
     }
 
-    fun currentState(): IndexedFolderState = buildState(currentFolderClips())
+    fun currentState(): IndexedFolderState {
+        rootUri = clipIndexRepository.getPersistedRootUri()
+        return buildState(currentFolderClips())
+    }
 
     private fun hydrateFoldersFromIndex() {
         folderNames = clipIndexRepository.getIndexedFolders()
